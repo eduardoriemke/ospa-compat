@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSPA — Compatibilização</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=IBM+Plex+Serif:wght@300;400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F8F8F8;--surface:#FFF;--surface2:#F6F5F3;--surface3:#E5E4E1;
+  --border:#E5E4E1;--border2:#CCC8C4;
+  --text:#191919;--text2:#727272;--text3:#B5B5B5;
+  --alert:#C42828;--pend:#7A5200;--resol:#1A6B48;
+  --sans:'Manrope',sans-serif;--serif:'IBM Plex Serif',serif;--mono:'IBM Plex Mono',monospace;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh}
+
+/* LOADING */
+#screen-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px}
+.loading-logo{height:40px;opacity:0.7}
+.loading-text{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:0.12em}
+
+/* PROJECTS SCREEN */
+#screen-projects{display:none;flex-direction:column;align-items:center;padding:60px 40px}
+.proj-header{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:960px;margin-bottom:48px}
+.proj-logo{height:36px}
+.proj-title{font-family:var(--serif);font-size:14px;font-weight:300;color:var(--text2);letter-spacing:0.08em}
+.proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1px;background:var(--border);width:100%;max-width:960px}
+.proj-card{background:var(--surface);padding:22px 24px;cursor:pointer;transition:background 0.1s}
+.proj-card:hover{background:var(--surface2)}
+.proj-card-code{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:7px}
+.proj-card-name{font-family:var(--serif);font-size:19px;font-weight:300;color:var(--text);margin-bottom:3px;line-height:1.2}
+.proj-card-sub{font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:14px}
+.proj-card-stats{display:flex;gap:20px;padding-top:12px;border-top:1px solid var(--border)}
+.proj-stat{font-family:var(--mono);font-size:10px;color:var(--text3)}
+.proj-stat b{color:var(--text);font-weight:600}
+.proj-stat.pend b{color:var(--pend)}
+.proj-stat.resol b{color:var(--resol)}
+.proj-new{background:transparent;border:1px dashed var(--border2);display:flex;align-items:center;justify-content:center;min-height:120px;cursor:pointer;color:var(--text3);font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;transition:all 0.1s}
+.proj-new:hover{border-color:var(--text2);color:var(--text2);background:var(--surface)}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(25,25,25,0.45);z-index:200;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);padding:32px;width:min(460px,92vw);border:1px solid var(--border)}
+.modal-lbl{font-family:var(--sans);font-size:9px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--text3);margin-bottom:18px}
+.frow{margin-bottom:12px}
+.frow label{display:block;font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.frow input{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:8px 10px;font-family:var(--sans);font-size:13px;outline:none;transition:border-color 0.12s}
+.frow input:focus{border-color:var(--text2)}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+.btn{font-family:var(--sans);font-size:12px;font-weight:600;padding:8px 18px;border:none;cursor:pointer;transition:all 0.1s;letter-spacing:0.04em}
+.btn-p{background:var(--text);color:var(--surface)}.btn-p:hover{opacity:0.85}
+.btn-g{background:transparent;border:1px solid var(--border2);color:var(--text2)}.btn-g:hover{border-color:var(--text2);color:var(--text)}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--text);color:var(--surface);font-family:var(--mono);font-size:11px;padding:9px 15px;opacity:0;transition:opacity 0.2s;pointer-events:none;z-index:999;letter-spacing:0.06em}
+.toast.show{opacity:1}
+
+/* ERROR */
+.err-banner{background:#FDF2F2;border:1px solid #F5C0C0;color:var(--alert);font-family:var(--mono);font-size:11px;padding:12px 16px;margin-bottom:16px;width:100%;max-width:960px;display:none}
+</style>
+</head>
+<body>
+
+<div id="screen-loading">
+  <img id="loading-logo" class="loading-logo" alt="OSPA">
+  <div class="loading-text">Carregando projetos…</div>
+</div>
+
+<div id="screen-projects">
+  <div class="proj-header">
+    <img id="projects-logo" class="proj-logo" alt="OSPA">
+    <div class="proj-title">Relatórios de Compatibilização</div>
+    <button class="btn btn-g" onclick="openModal()">+ Novo projeto</button>
+  </div>
+  <div class="err-banner" id="err-banner"></div>
+  <div class="proj-grid" id="proj-grid"></div>
+</div>
+
+<!-- Modal -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <div class="modal-lbl">Novo Projeto</div>
+    <div class="frow"><label>Código</label><input id="np-id" placeholder="ex: SJD_COMPAT" oninput="this.value=this.value.toUpperCase()"></div>
+    <div class="frow"><label>Empreendimento</label><input id="np-nome" placeholder="ex: Silva Jardim"></div>
+    <div class="frow"><label>Cliente</label><input id="np-cliente" placeholder="ex: Latitude Incorp."></div>
+    <div class="frow"><label>Responsável</label><input id="np-resp" placeholder="ex: Carolina Côrrea"></div>
+    <div class="modal-btns">
+      <button class="btn btn-g" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-p" onclick="createProject()">Criar projeto</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SB_URL =  + SB_URL + ;
+const SB_KEY =  + SB_KEY + ;
+const HDR = {'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
+const HDR_R = {...HDR,'Prefer':'return=representation'};
+const LOGO =  + logo_b64 + ;
+
+document.getElementById('loading-logo').src = LOGO;
+document.getElementById('projects-logo').src = LOGO;
+
+async function api(method, table, body, qs='') {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}${qs?'?'+qs:''}`, {
+    method, headers: method==='GET'?HDR:HDR_R,
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!r.ok) throw new Error((await r.json())?.message || r.status);
+  return method==='DELETE' ? null : r.json();
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 2500);
+}
+function showErr(msg) {
+  const el = document.getElementById('err-banner');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+// ── LOAD PROJECTS ──
+async function loadProjects() {
+  try {
+    const [projetos, conflitos] = await Promise.all([
+      api('GET','projetos','','order=created_at.asc'),
+      api('GET','conflitos','','select=projeto_id,status&order=projeto_id.asc'),
+    ]);
+    renderProjects(projetos, conflitos);
+    document.getElementById('screen-loading').style.display = 'none';
+    document.getElementById('screen-projects').style.display = 'flex';
+  } catch(e) {
+    document.querySelector('.loading-text').textContent = 'Erro ao conectar: ' + e.message;
+  }
+}
+
+function renderProjects(projetos, todos_conflitos) {
+  const grid = document.getElementById('proj-grid');
+  grid.innerHTML = '';
+
+  projetos.forEach(p => {
+    const cs    = todos_conflitos.filter(c => c.projeto_id === p.id);
+    const total = cs.length;
+    const pend  = cs.filter(c => c.status === 'PENDENTE').length;
+    const resol = cs.filter(c => c.status === 'RESOLVIDO').length;
+
+    const card = document.createElement('div');
+    card.className = 'proj-card';
+    card.innerHTML = `
+      <div class="proj-card-code">${p.id}</div>
+      <div class="proj-card-name">${p.nome}</div>
+      <div class="proj-card-sub">${[p.cliente, p.revisao].filter(Boolean).join(' · ')}</div>
+      <div class="proj-card-stats">
+        <div class="proj-stat"><b>${total}</b> conflitos</div>
+        <div class="proj-stat pend"><b>${pend}</b> pendentes</div>
+        <div class="proj-stat resol"><b>${resol}</b> resolvidos</div>
+      </div>`;
+    card.onclick = () => openProject(p.id);
+    grid.appendChild(card);
+  });
+
+  const newCard = document.createElement('div');
+  newCard.className = 'proj-new';
+  newCard.textContent = '+ Novo projeto';
+  newCard.onclick = openModal;
+  grid.appendChild(newCard);
+}
+
+// ── OPEN PROJECT ──
+async function openProject(id) {
+  toast('Carregando projeto…');
+  try {
+    const [projeto, config, conflitos, imagens] = await Promise.all([
+      api('GET','projetos','',`id=eq.${id}`).then(r=>r[0]),
+      api('GET','config_projeto','',`projeto_id=eq.${id}`).then(r=>r[0]||{}),
+      api('GET','conflitos','',`projeto_id=eq.${id}&order=ordem.asc,created_at.asc`),
+      api('GET','imagens','',`projeto_id=eq.${id}&order=conflito_id.asc,ordem.asc&select=conflito_id,ordem,dados`),
+    ]);
+
+    // Build IMAGES_DB
+    const imagesDB = {};
+    imagens.forEach(img => {
+      const c = conflitos.find(x => x.id === img.conflito_id);
+      if (!c) return;
+      if (!imagesDB[c.codigo]) imagesDB[c.codigo] = [];
+      imagesDB[c.codigo][img.ordem] = img.dados;
+    });
+    // Clean sparse arrays
+    Object.keys(imagesDB).forEach(k => { imagesDB[k] = imagesDB[k].filter(Boolean); });
+
+    // Build conflicts array
+    const conflictsData = conflitos.map(c => ({
+      id: c.codigo, _db: c.id,
+      alert: c.alerta, status: c.status, loc: c.local,
+      disc: c.disciplinas||[], desc: c.descricao||'',
+      sol: c.proposta||null, obs: c.observacao||null,
+    }));
+
+    // Open editor (for now: open the standalone HTML with data injected)
+    // TODO: full Supabase-connected editor
+    const meta = {
+      project: projeto.nome, address: projeto.endereco||'',
+      client: projeto.cliente||'', manager: projeto.responsavel||'',
+      code: projeto.id, rev: projeto.revisao||'REV. 00',
+      date: projeto.data||'', notes: projeto.notas||'',
+    };
+
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+      <title>OSPA — ${projeto.nome}</title>
+      <style>body{font-family:'Manrope',sans-serif;background:#F8F8F8;display:flex;align-items:center;justify-content:center;min-height:100vh;color:#191919}
+      .box{text-align:center;padding:40px}.name{font-family:'IBM Plex Serif',serif;font-size:24px;font-weight:300;margin-bottom:8px}
+      .info{font-family:'IBM Plex Mono',monospace;font-size:12px;color:#727272;margin-bottom:4px}</style>
+      </head><body><div class="box">
+      <div class="name">${projeto.nome}</div>
+      <div class="info">${conflictsData.length} conflitos carregados do Supabase</div>
+      <div class="info">${Object.keys(imagesDB).length} fichas com imagens</div>
+      <div class="info" style="margin-top:16px;color:#B5B5B5">Editor completo — próxima etapa</div>
+      </div></body></html>`);
+    win.document.close();
+
+  } catch(e) {
+    showErr('Erro ao carregar projeto: ' + e.message);
+  }
+}
+
+// ── CREATE PROJECT ──
+function openModal() { document.getElementById('modal').classList.add('open'); }
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+async function createProject() {
+  const id      = document.getElementById('np-id').value.trim();
+  const nome    = document.getElementById('np-nome').value.trim();
+  const cliente = document.getElementById('np-cliente').value.trim();
+  const resp    = document.getElementById('np-resp').value.trim();
+  if (!id || !nome) { alert('Código e nome são obrigatórios.'); return; }
+
+  try {
+    await api('POST','projetos',{id,nome,cliente,responsavel:resp,revisao:'REV. 00'});
+    await api('POST','config_projeto',{projeto_id:id});
+    closeModal();
+    toast('Projeto criado!');
+    loadProjects();
+  } catch(e) {
+    alert('Erro: ' + e.message);
+  }
+}
+
+loadProjects();
+</script>
+</body>
+</html>
