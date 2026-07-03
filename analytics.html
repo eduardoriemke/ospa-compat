@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSPA — Análises de Compatibilização</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=IBM+Plex+Serif:wght@300;400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F8F8F8;--surface:#FFF;--surface2:#F6F5F3;--surface3:#E5E4E1;
+  --border:#E5E4E1;--border2:#CCC8C4;
+  --text:#191919;--text2:#727272;--text3:#B5B5B5;
+  --pend:#7A5200;--resol:#1A6B48;--alert:#C42828;
+  --sans:'Manrope',sans-serif;--serif:'IBM Plex Serif',serif;--mono:'IBM Plex Mono',monospace;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ── LOGIN / LOADING (same pattern as projeto.html) ── */
+#screen-login{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.login-box{background:var(--surface);border:1px solid var(--border);padding:40px;width:min(380px,100%)}
+.login-logo{height:32px;margin-bottom:28px;display:block}
+.login-title{font-family:var(--serif);font-size:18px;font-weight:300;color:var(--text);margin-bottom:6px}
+.login-sub{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:28px}
+.login-field{margin-bottom:14px}
+.login-field label{display:block;font-family:var(--sans);font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:5px}
+.login-field input{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 12px;font-family:var(--sans);font-size:13px;outline:none;transition:border-color 0.12s}
+.login-field input:focus{border-color:var(--text2)}
+.login-btn{width:100%;background:var(--text);color:var(--surface);border:none;padding:11px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;margin-top:6px;transition:opacity 0.1s;letter-spacing:0.04em}
+.login-btn:hover{opacity:0.85}
+.login-err{font-family:var(--mono);font-size:11px;color:var(--alert);margin-top:10px;display:none}
+#screen-loading{display:none;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:12px}
+.loading-logo{height:36px;opacity:0.6}
+.loading-text{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:0.12em}
+#screen-app{display:none}
+
+/* ── HEADER ── */
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 40px;display:flex;align-items:center;gap:24px}
+.header-logo{height:36px;width:auto}
+.header-center{flex:1;text-align:center}
+.header-eyebrow{font-family:var(--sans);font-size:9px;font-weight:500;letter-spacing:0.22em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.header-project{font-family:var(--serif);font-size:18px;font-weight:300;color:var(--text)}
+.header-rev{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:3px}
+.header-nav{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:3px}
+.header-nav a{color:var(--text2);text-decoration:none}
+.header-nav a:hover{color:var(--text)}
+.header-right{text-align:right;flex-shrink:0}
+.user-name{font-family:var(--mono);font-size:10px;color:var(--text2)}
+.logout-btn{background:none;border:none;font-family:var(--mono);font-size:9px;color:var(--text3);cursor:pointer;padding:0;letter-spacing:0.08em;text-transform:uppercase}
+.logout-btn:hover{color:var(--alert)}
+
+/* ── MAIN / ANALYTICS ── */
+.main{padding:32px 40px 90px;max-width:1040px;margin:0 auto}
+section{margin-bottom:50px}
+.section-head{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+.section-num{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.08em}
+h2{font-family:var(--serif);font-weight:300;font-size:19px;color:var(--text)}
+.section-note{color:var(--text2);font-size:12.5px;line-height:1.6;margin:6px 0 18px;max-width:640px}
+.panel{background:var(--surface);border:1px solid var(--border);padding:22px;border-radius:2px}
+.empty-note{font-family:var(--mono);font-size:11px;color:var(--text3);padding:20px 0;text-align:center}
+
+/* Matrix */
+.matrix-grid{display:grid;gap:4px;overflow-x:auto}
+.m-label{font-family:var(--mono);font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;padding:4px 2px;border-radius:2px;letter-spacing:0.02em}
+.m-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;border-radius:2px;position:relative}
+.m-cell.diag{background:repeating-linear-gradient(135deg, var(--border) 0 1px, transparent 1px 7px)}
+.m-crit-dot{position:absolute;top:3px;right:3px;width:5px;height:5px;border-radius:50%;background:var(--alert)}
+.m-tip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:5px 9px;border-radius:2px;font-size:10px;font-family:var(--mono);white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s;z-index:5}
+.m-cell:hover .m-tip{opacity:1}
+.m-cell.selected{outline:2px solid var(--text);outline-offset:-2px}
+.m-cell.dimmed{opacity:0.3}
+.legend{display:flex;align-items:center;gap:18px;margin-top:16px;font-family:var(--mono);font-size:10px;color:var(--text2);flex-wrap:wrap}
+.legend-swatch{display:inline-flex;align-items:center;gap:6px}
+.sw{width:12px;height:12px;border-radius:2px;display:inline-block}
+
+/* Chips + filter banner */
+.chip-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.chip{font-family:var(--mono);font-size:10px;font-weight:600;padding:4px 10px;border-radius:2px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;transition:all .12s;user-select:none}
+.filter-banner{font-family:var(--mono);font-size:10.5px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:2px;padding:7px 12px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+.filter-banner button{font-family:var(--mono);font-size:10px;color:var(--text3);background:none;border:none;text-decoration:underline;cursor:pointer}
+svg text{font-family:var(--mono);fill:var(--text3);font-size:10px}
+.tl-legend{display:flex;gap:20px;margin-top:14px;font-family:var(--mono);font-size:10px;color:var(--text2);flex-wrap:wrap}
+.tl-legend span{display:inline-flex;align-items:center;gap:6px}
+.dot-leg{width:16px;height:2px;display:inline-block}
+
+/* Health cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--border);padding:16px;border-radius:2px}
+.card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.d-tag{font-family:var(--mono);font-size:10px;font-weight:600;padding:2px 7px;border-radius:2px}
+.crit-tag{font-family:var(--mono);font-size:9px;font-weight:600;color:var(--alert);display:flex;align-items:center;gap:4px}
+.crit-tag .dot{width:5px;height:5px;border-radius:50%;background:var(--alert)}
+.pct-row{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.pct{font-family:var(--serif);font-weight:300;font-size:32px}
+.frac{font-family:var(--mono);font-size:11px;color:var(--text3)}
+.bar-track{height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;margin-bottom:12px}
+.bar-fill{height:100%;border-radius:3px}
+.avg-row{font-family:var(--mono);font-size:10.5px;color:var(--text2);display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:9px}
+.avg-row b{color:var(--text);font-weight:600}
+
+/* Floors */
+.floor{display:grid;grid-template-columns:74px 1fr 108px;align-items:center;gap:12px;border-top:1px solid var(--border);padding:11px 0;transition:opacity .12s}
+.floor:last-child{border-bottom:1px solid var(--border)}
+.floor-label{font-family:var(--mono);font-size:11px;color:var(--text2);font-weight:500}
+.floor-plate{position:relative;height:40px;background:var(--surface2);border-radius:2px;overflow:hidden;border:1px solid var(--border)}
+.floor-dot{position:absolute;width:8px;height:8px;border-radius:50%;top:50%;transform:translateY(-50%)}
+.floor-dot.crit{width:11px;height:11px;background:#fff;border:2.5px solid var(--alert)}
+.floor-stats{font-family:var(--mono);font-size:10.5px;color:var(--text2);text-align:right}
+
+@media (max-width: 720px){
+  .header{padding:12px 16px;flex-wrap:wrap;gap:10px}
+  .header-center{flex-basis:100%;order:3;text-align:left}
+  .header-right{text-align:left;flex:1}
+  .main{padding:20px 16px 70px}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="screen-login">
+  <div class="login-box">
+    <img id="login-logo" class="login-logo" alt="OSPA">
+    <div class="login-title">Análises de Compatibilização</div>
+    <div class="login-sub">Acesso restrito</div>
+    <form id="login-form" autocomplete="on">
+      <div class="login-field">
+        <label>Email</label>
+        <input type="email" id="login-email" name="email" placeholder="seu@email.com" autocomplete="username">
+      </div>
+      <div class="login-field">
+        <label>Senha</label>
+        <input type="password" id="login-password" name="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button type="submit" class="login-btn" id="login-btn">Entrar</button>
+      <div class="login-err" id="login-err"></div>
+    </form>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="screen-loading">
+  <img id="loading-logo" class="loading-logo" alt="OSPA">
+  <div class="loading-text" id="loading-text">Carregando…</div>
+</div>
+
+<!-- APP -->
+<div id="screen-app">
+  <div class="header">
+    <img id="app-logo" class="header-logo" alt="OSPA">
+    <div class="header-center">
+      <div class="header-eyebrow">Análises de Compatibilização</div>
+      <div class="header-project" id="hdr-project">—</div>
+      <div class="header-nav"><a href="index.html">← Página inicial</a></div>
+    </div>
+    <div class="header-right">
+      <span class="user-name" id="user-name-badge"></span>
+      <button class="logout-btn" onclick="doLogout()" style="margin-left:12px">Sair</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <section>
+      <div class="section-head"><span class="section-num">01</span><h2>Cruzamento entre disciplinas</h2></div>
+      <p class="section-note">Ordenado pelas disciplinas mais conflituosas. O tom (vermelho→verde) mostra o quanto já foi resolvido, a saturação/tamanho do número mostra o volume. Um ponto no canto indica conflito crítico. Clique numa célula para focar o par nos gráficos abaixo.</p>
+      <div class="panel"><div id="matrixWrap"></div></div>
+    </section>
+
+    <section>
+      <div class="section-head"><span class="section-num">02</span><h2>Novos vs. resolvidos por disciplina</h2></div>
+      <p class="section-note">Linha cheia = novos conflitos, tracejada = resolvidos, uma cor por disciplina. "Resolvidos" usa a data da última atualização como aproximação (ainda não há histórico completo de status). Ligue/desligue disciplinas para comparar.</p>
+      <div class="panel">
+        <div class="chip-row" id="chipRow"></div>
+        <div id="filterBanner" class="filter-banner" style="display:none"></div>
+        <svg id="timelineSvg" viewBox="0 0 760 260" width="100%" height="260"></svg>
+        <div class="tl-legend" id="tlLegend"></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head"><span class="section-num">03</span><h2>Saúde por disciplina</h2></div>
+      <p class="section-note">Barra colorida por faixa (vermelho/amarelo/verde) indica o percentual resolvido. Críticos em aberto aparecem como alerta no topo do card.</p>
+      <div class="cards" id="cardsGrid"></div>
+    </section>
+
+    <section>
+      <div class="section-head"><span class="section-num">04</span><h2>Distribuição por pavimento</h2></div>
+      <p class="section-note">Pontos vermelhos = em aberto, verdes = resolvidos, anel vermelho = crítico. Ordem lida diretamente do cadastro de locais do projeto.</p>
+      <div class="panel">
+        <div id="buildingStack"></div>
+        <div class="legend" style="margin-top:16px">
+          <span class="legend-swatch"><span class="sw" style="background:var(--alert);border-radius:50%"></span>aberto</span>
+          <span class="legend-swatch"><span class="sw" style="background:var(--resol);border-radius:50%"></span>resolvido</span>
+          <span class="legend-swatch"><span class="sw" style="background:#fff;border:2px solid var(--alert);border-radius:50%"></span>crítico</span>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// SUPABASE CONFIG + AUTH (mesmo padrão do projeto.html)
+// ══════════════════════════════════════════════════════
+const SB_URL  = "https://jxezjuovrxajjleyjdcs.supabase.co";
+const SB_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4ZXpqdW92cnhhampsZXlqZGNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MDcwNTksImV4cCI6MjA5NjA4MzA1OX0.vaHfGesmDhZVeDMl_GSQYyIhN7E0EvRvV1vMy2vRYZY";
+const SB_AUTH = SB_URL + "/auth/v1";
+const LOGO_URL = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIyIiBoZWlnaHQ9IjkxIiB2aWV3Qm94PSIwIDAgMTIyIDkxIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0xOS45NTE4IDExLjU2OTNDMTkuOTUxOCA4Ljg2MTQ2IDE3Ljc1NjYgNi42NjYzMyAxNS4wNDg4IDYuNjY2MzNIMTEuNTY5M0M4Ljg2MTQ2IDYuNjY2MzMgNi42NjYzMyA4Ljg2MTQ2IDYuNjY2MzMgMTEuNTY5M1Y0Ni42ODA4QzYuNjY2MzMgNDkuMzg4NiA4Ljg2MTQ2IDUxLjU4MzcgMTEuNTY5MyA1MS41ODM3SDE1LjA0ODhDMTcuNzU2NiA1MS41ODM3IDE5Ljk1MTggNDkuMzg4NiAxOS45NTE4IDQ2LjY4MDhWMTEuNTY5M1oiIGZpbGw9IiMxOTE5MTkiLz48L3N2Zz4=";
+
+let SESSION = null, USER_PROFILE = null, PROJETO = null, PROJ_ID = null;
+let CONFIG = { disciplines: [], locations: [] };
+let CONFLICTS = [];
+
+function setLogos(src){ ['login-logo','loading-logo','app-logo'].forEach(id=>{ const el=document.getElementById(id); if(el) el.src=src; }); }
+setLogos(LOGO_URL);
+
+async function sbFetch(path, opts={}){
+  const headers = {'Content-Type':'application/json','apikey':SB_KEY, ...opts.headers};
+  if(SESSION) headers['Authorization'] = 'Bearer ' + SESSION.access_token;
+  return fetch(SB_URL + path, {...opts, headers});
+}
+async function api(method, table, body, qs){
+  const url = '/rest/v1/' + table + (qs ? '?' + qs : '');
+  const r = await sbFetch(url, { method, headers: method!=='GET' ? {'Prefer':'return=representation'} : {}, body: body ? JSON.stringify(body) : undefined });
+  if(!r.ok){ const err = await r.json().catch(()=>({})); throw new Error(err.message || 'HTTP ' + r.status); }
+  return method==='DELETE' ? null : r.json();
+}
+
+const SESSION_KEY = 'ospa_session';
+function saveSession(s){ try{ localStorage.setItem(SESSION_KEY, JSON.stringify(s)); }catch(e){} }
+function loadSavedSession(){ try{ return JSON.parse(localStorage.getItem(SESSION_KEY)||'null'); }catch(e){ return null; } }
+function clearSavedSession(){ try{ localStorage.removeItem(SESSION_KEY); }catch(e){} }
+async function refreshSession(refreshToken){
+  const r = await fetch(SB_AUTH + '/token?grant_type=refresh_token', { method:'POST', headers:{'Content-Type':'application/json','apikey':SB_KEY}, body: JSON.stringify({refresh_token:refreshToken}) });
+  const data = await r.json();
+  if(!r.ok) throw new Error(data.error_description || data.msg || 'Sessão expirada');
+  return data;
+}
+async function tryRestoreSession(){
+  const saved = loadSavedSession();
+  if(!saved || !saved.refresh_token) return false;
+  try{ SESSION = await refreshSession(saved.refresh_token); saveSession(SESSION); return true; }
+  catch(e){ clearSavedSession(); return false; }
+}
+async function doLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-password').value;
+  if(!email || !pass){ showLoginErr('Preencha email e senha.'); return; }
+  document.getElementById('login-btn').textContent = 'Entrando…';
+  try{
+    const r = await fetch(SB_AUTH + '/token?grant_type=password', { method:'POST', headers:{'Content-Type':'application/json','apikey':SB_KEY}, body: JSON.stringify({email, password:pass}) });
+    const data = await r.json();
+    if(!r.ok) throw new Error(data.error_description || data.msg || 'Credenciais inválidas');
+    SESSION = data; saveSession(SESSION);
+    await loadApp();
+  }catch(e){ showLoginErr(e.message); document.getElementById('login-btn').textContent='Entrar'; }
+}
+function showLoginErr(msg){ const el=document.getElementById('login-err'); el.textContent=msg; el.style.display='block'; }
+function doLogout(){ SESSION=null; USER_PROFILE=null; clearSavedSession(); show('login'); }
+function show(screen){
+  ['login','loading','app'].forEach(s=>{
+    const el = document.getElementById('screen-'+s);
+    if(el) el.style.display = s===screen ? (s==='app' ? 'block' : 'flex') : 'none';
+  });
+}
+function setLoadingText(t){ document.getElementById('loading-text').textContent = t; }
+
+// ══════════════════════════════════════════════════════
+// LOAD APP
+// ══════════════════════════════════════════════════════
+async function loadApp(){
+  show('loading');
+  setLoadingText('Identificando usuário…');
+  const params = new URLSearchParams(window.location.search);
+  PROJ_ID = params.get('id');
+  if(!PROJ_ID){ setLoadingText('Nenhum projeto especificado. Use ?id=CODIGO na URL.'); return; }
+
+  try{
+    const uid = SESSION.user.id;
+    const meArr = await api('GET','usuarios',null,'id=eq.'+uid);
+    if(!meArr || !meArr.length){ setLoadingText('Usuário não cadastrado no sistema.'); return; }
+    const me = meArr[0];
+
+    if(me.papel_global === 'admin'){
+      USER_PROFILE = { id:uid, email:me.email, nome:me.nome, papel:'admin' };
+    } else {
+      const perfis = await api('GET','projeto_usuarios_v2',null,'usuario_id=eq.'+uid+'&projeto_id=eq.'+PROJ_ID);
+      if(!perfis || !perfis.length){ setLoadingText('Você não tem acesso a este projeto.'); return; }
+      USER_PROFILE = { id:uid, email:me.email, nome:me.nome, papel:perfis[0].papel };
+    }
+
+    setLoadingText('Carregando conflitos…');
+    const [proj, cfg, cfls] = await Promise.all([
+      api('GET','projetos',null,'id=eq.'+PROJ_ID).then(r=>r[0]),
+      api('GET','config_projeto',null,'projeto_id=eq.'+PROJ_ID).then(r=>r[0]||{}),
+      api('GET','conflitos',null,'projeto_id=eq.'+PROJ_ID)
+    ]);
+
+    PROJETO = proj;
+    CONFIG.disciplines = cfg.disciplinas || ['ARQ','HID','EST','INT','CLI','ELE','GAS','PSG','IMP','MOD'];
+    CONFIG.locations   = cfg.locais || [];
+
+    CONFLICTS = cfls
+      .filter(c => c.publicado !== false)
+      .map(c => ({ alerta:c.alerta, status:c.status, local:c.local, disciplinas:c.disciplinas||[], created_at:c.created_at, updated_at:c.updated_at }));
+
+    document.getElementById('hdr-project').textContent = PROJETO.nome || '';
+    document.getElementById('user-name-badge').textContent = USER_PROFILE.nome || '';
+
+    renderAnalytics();
+    show('app');
+  }catch(e){
+    setLoadingText('Erro: ' + e.message);
+    console.error(e);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// COLOR HELPERS (mapa conhecido + fallback determinístico p/ disciplinas novas)
+// ══════════════════════════════════════════════════════
+const KNOWN_COLORS = {
+  ARQ:{c:'#2A6080',bg:'#EBF2F6'}, HID:{c:'#1A5A8A',bg:'#E8F0F8'}, EST:{c:'#7A4E14',bg:'#F6EEE2'},
+  INT:{c:'#5A3490',bg:'#EEE8F6'}, CLI:{c:'#166050',bg:'#E4F2EE'}, ELE:{c:'#606000',bg:'#F4F4E0'},
+  GAS:{c:'#802010',bg:'#F6EAE8'}, PSG:{c:'#206420',bg:'#E8F4E8'}, IMP:{c:'#802840',bg:'#F6E8EE'},
+  MOD:{c:'#284088',bg:'#E8EEF8'}
+};
+const colorCache = {};
+function getDiscColor(d){
+  if(KNOWN_COLORS[d]) return KNOWN_COLORS[d];
+  if(colorCache[d]) return colorCache[d];
+  let hash=0; for(let i=0;i<d.length;i++){ hash = d.charCodeAt(i) + ((hash<<5)-hash); hash|=0; }
+  const hue = Math.abs(hash) % 360;
+  const result = { c:`hsl(${hue},45%,32%)`, bg:`hsl(${hue},45%,93%)` };
+  colorCache[d] = result;
+  return result;
+}
+
+// ══════════════════════════════════════════════════════
+// DERIVED DATA
+// ══════════════════════════════════════════════════════
+function pairCell(a,b){
+  let n=0,r=0,c=0;
+  CONFLICTS.forEach(cf=>{
+    if(cf.disciplinas.includes(a) && cf.disciplinas.includes(b)){
+      n++;
+      if(cf.status==='RESOLVIDO') r++;
+      if(cf.alerta) c++;
+    }
+  });
+  return {n,r,c};
+}
+function monthKey(dateStr){ const d=new Date(dateStr); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function lastMonths(n){
+  const arr=[]; const now=new Date();
+  for(let i=n-1;i>=0;i--){ const d=new Date(now.getFullYear(), now.getMonth()-i, 1); arr.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), label:d.toLocaleDateString('pt-BR',{month:'short'}).replace('.','')}); }
+  return arr;
+}
+
+let selectedPair = null;
+let allDisc = [], disciplinasOrdenadas = [];
+let activeDiscs = new Set();
+let defaultActive = new Set();
+const months = lastMonths(6);
+
+function renderAnalytics(){
+  allDisc = CONFIG.disciplines.filter(d => CONFLICTS.some(cf=>cf.disciplinas.includes(d)));
+  if(allDisc.length===0) allDisc = CONFIG.disciplines;
+
+  const totals = {};
+  allDisc.forEach(d=>{ totals[d] = allDisc.reduce((sum,o)=> sum + (o===d?0:pairCell(d,o).n), 0); });
+  disciplinasOrdenadas = [...allDisc].sort((a,b)=> totals[b]-totals[a]);
+  defaultActive = new Set(disciplinasOrdenadas.slice(0,3));
+  activeDiscs = new Set(defaultActive);
+
+  renderMatrix();
+  renderChips();
+  renderTimeline();
+  renderHealthCards();
+  renderFloors();
+}
+
+// ---- 01: matrix ----
+function hslFor(n, ratio){
+  const hue = Math.round(ratio*135);
+  const light = n===0 ? 95 : Math.max(38, 82 - n*6);
+  const sat = n===0 ? 0 : 62;
+  return { bg:`hsl(${hue},${sat}%,${light}%)`, text: (n>0 && light<58) ? '#fff' : 'var(--text)' };
+}
+function renderMatrix(){
+  const wrap = document.getElementById('matrixWrap');
+  if(disciplinasOrdenadas.length < 2){ wrap.innerHTML = '<div class="empty-note">Não há conflitos suficientes envolvendo mais de uma disciplina ainda.</div>'; return; }
+  wrap.innerHTML = '<div class="matrix-grid" id="matrixGrid" style="grid-template-columns:64px repeat('+disciplinasOrdenadas.length+', minmax(48px,1fr));min-width:'+(64+disciplinasOrdenadas.length*54)+'px"></div>'+
+    '<div class="legend">'+
+      '<span class="legend-swatch"><span class="sw" style="background:hsl(0,70%,60%)"></span>pouco resolvido</span>'+
+      '<span class="legend-swatch"><span class="sw" style="background:hsl(45,70%,55%)"></span>parcial</span>'+
+      '<span class="legend-swatch"><span class="sw" style="background:hsl(150,55%,42%)"></span>maior parte resolvida</span>'+
+      '<span class="legend-swatch"><span class="m-crit-dot" style="position:static"></span>tem crítico</span>'+
+    '</div>';
+  const grid = document.getElementById('matrixGrid');
+  grid.appendChild(document.createElement('div'));
+  disciplinasOrdenadas.forEach(d=>{
+    const lab=document.createElement('div'); lab.className='m-label'; lab.textContent=d;
+    const col=getDiscColor(d); lab.style.color=col.c; lab.style.background=col.bg;
+    grid.appendChild(lab);
+  });
+  disciplinasOrdenadas.forEach(row=>{
+    const rowLab=document.createElement('div'); rowLab.className='m-label'; rowLab.textContent=row;
+    const rc=getDiscColor(row); rowLab.style.color=rc.c; rowLab.style.background=rc.bg;
+    grid.appendChild(rowLab);
+    disciplinasOrdenadas.forEach(col=>{
+      const cell=document.createElement('div');
+      if(row===col){ cell.className='m-cell diag'; grid.appendChild(cell); return; }
+      const c = pairCell(row,col);
+      const ratio = c.n ? c.r/c.n : 0;
+      const {bg,text} = hslFor(c.n, ratio);
+      cell.className='m-cell';
+      cell.style.background=bg; cell.style.color=text;
+      cell.style.border = c.n===0 ? '1px solid var(--border)' : 'none';
+      cell.style.fontSize = c.n>=6 ? '15px':'12px';
+      cell.style.cursor = c.n>0 ? 'pointer':'default';
+      if(selectedPair && ((selectedPair[0]===row&&selectedPair[1]===col)||(selectedPair[0]===col&&selectedPair[1]===row))) cell.classList.add('selected');
+      else if(selectedPair) cell.classList.add('dimmed');
+      if(c.n>0){
+        cell.innerHTML = c.n + '<span class="m-tip">'+row+' × '+col+': '+c.n+' · '+Math.round(ratio*100)+'% resolvido'+(c.c>0?' · '+c.c+' crítico'+(c.c===1?'':'s'):'')+'</span>';
+        if(c.c>0){ const dot=document.createElement('span'); dot.className='m-crit-dot'; cell.appendChild(dot); }
+        cell.addEventListener('click', ()=>{
+          selectedPair = (selectedPair && selectedPair[0]===row && selectedPair[1]===col) ? null : [row,col];
+          activeDiscs = selectedPair ? new Set(selectedPair) : new Set(defaultActive);
+          renderMatrix(); renderChips(); renderTimeline(); renderFloors();
+        });
+      }
+      grid.appendChild(cell);
+    });
+  });
+}
+
+// ---- 02: timeline ----
+function discSeriesFor(d){
+  const novos = months.map(m=> CONFLICTS.filter(cf=> cf.disciplinas.includes(d) && monthKey(cf.created_at)===m.key).length);
+  const resolvidos = months.map(m=> CONFLICTS.filter(cf=> cf.disciplinas.includes(d) && cf.status==='RESOLVIDO' && monthKey(cf.updated_at)===m.key).length);
+  return {novos, resolvidos};
+}
+function renderChips(){
+  const chipRow = document.getElementById('chipRow');
+  chipRow.innerHTML='';
+  disciplinasOrdenadas.forEach(d=>{
+    const chip=document.createElement('button');
+    chip.className='chip'+(activeDiscs.has(d)?' on':'');
+    chip.textContent=d;
+    const col=getDiscColor(d);
+    if(activeDiscs.has(d)){ chip.style.borderColor=col.c; chip.style.color=col.c; chip.style.background=col.bg; }
+    chip.addEventListener('click', ()=>{
+      if(activeDiscs.has(d)) activeDiscs.delete(d); else activeDiscs.add(d);
+      selectedPair=null;
+      renderChips(); renderMatrix(); renderTimeline(); renderFloors();
+    });
+    chipRow.appendChild(chip);
+  });
+}
+function renderFilterBanner(){
+  const banner=document.getElementById('filterBanner');
+  if(selectedPair){
+    banner.style.display='flex';
+    banner.innerHTML='<span>Filtrando pelo par <b>'+selectedPair[0]+' × '+selectedPair[1]+'</b></span>';
+    const btn=document.createElement('button'); btn.textContent='limpar filtro';
+    btn.addEventListener('click', ()=>{ selectedPair=null; activeDiscs=new Set(defaultActive); renderMatrix(); renderChips(); renderTimeline(); renderFloors(); });
+    banner.appendChild(btn);
+  } else { banner.style.display='none'; }
+}
+function renderTimeline(){
+  renderFilterBanner();
+  const svgNS="http://www.w3.org/2000/svg";
+  const svg=document.getElementById('timelineSvg');
+  svg.innerHTML='';
+  const active = disciplinasOrdenadas.filter(d=>activeDiscs.has(d));
+  const padL=30,padR=14,padT=14,padB=26,W=760,H=260;
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+  if(active.length===0){ const t=document.createElementNS(svgNS,'text'); t.setAttribute('x',W/2); t.setAttribute('y',H/2); t.setAttribute('text-anchor','middle'); t.textContent='Nenhuma disciplina selecionada'; svg.appendChild(t); document.getElementById('tlLegend').innerHTML=''; return; }
+  const allVals = active.flatMap(d=>{ const s=discSeriesFor(d); return [...s.novos, ...s.resolvidos]; });
+  const maxVal = Math.max(2, ...allVals);
+  for(let i=0;i<=4;i++){
+    const y=padT+plotH-(i/4)*plotH;
+    const line=document.createElementNS(svgNS,'line');
+    line.setAttribute('x1',padL); line.setAttribute('x2',W-padR); line.setAttribute('y1',y); line.setAttribute('y2',y);
+    line.setAttribute('stroke','#E5E4E1'); line.setAttribute('stroke-width','1');
+    svg.appendChild(line);
+    const t=document.createElementNS(svgNS,'text'); t.setAttribute('x',padL-6); t.setAttribute('y',y+3); t.setAttribute('text-anchor','end'); t.textContent=Math.round((i/4)*maxVal); svg.appendChild(t);
+  }
+  months.forEach((m,i)=>{
+    const x=padL+(i/(months.length-1))*plotW;
+    const t=document.createElementNS(svgNS,'text'); t.setAttribute('x',x); t.setAttribute('y',H-6); t.setAttribute('text-anchor','middle'); t.textContent=m.label; svg.appendChild(t);
+  });
+  function drawLine(values,color,dashed){
+    const pts=values.map((v,i)=>{ const x=padL+(i/(months.length-1))*plotW; const y=padT+plotH-(v/maxVal)*plotH; return [x,y]; });
+    const path=document.createElementNS(svgNS,'path');
+    path.setAttribute('d', pts.map((p,i)=>(i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' '));
+    path.setAttribute('fill','none'); path.setAttribute('stroke',color); path.setAttribute('stroke-width','2.3');
+    if(dashed) path.setAttribute('stroke-dasharray','6,4');
+    path.setAttribute('stroke-linecap','round');
+    svg.appendChild(path);
+    pts.forEach(p=>{ const c=document.createElementNS(svgNS,'circle'); c.setAttribute('cx',p[0]); c.setAttribute('cy',p[1]); c.setAttribute('r','2.8'); c.setAttribute('fill',color); svg.appendChild(c); });
+  }
+  active.forEach(d=>{ const s=discSeriesFor(d); const col=getDiscColor(d); drawLine(s.novos,col.c,false); drawLine(s.resolvidos,col.c,true); });
+  document.getElementById('tlLegend').innerHTML = active.map(d=>'<span><span class="dot-leg" style="background:'+getDiscColor(d).c+'"></span>'+d+' (cheia=novos, tracejada=resolvidos)</span>').join('');
+}
+
+// ---- 03: health cards ----
+function barColor(pct){ if(pct<40) return '#C42828'; if(pct<70) return '#B8860B'; return '#1A6B48'; }
+function renderHealthCards(){
+  const grid=document.getElementById('cardsGrid'); grid.innerHTML='';
+  disciplinasOrdenadas.forEach(d=>{
+    const conf = CONFLICTS.filter(cf=>cf.disciplinas.includes(d));
+    const total = conf.length;
+    if(total===0) return;
+    const resolved = conf.filter(cf=>cf.status==='RESOLVIDO');
+    const pct = Math.round((resolved.length/total)*100);
+    const avgDays = resolved.length ? Math.round(resolved.reduce((sum,cf)=> sum + (new Date(cf.updated_at)-new Date(cf.created_at))/86400000, 0)/resolved.length) : 0;
+    const crit = conf.filter(cf=>cf.alerta && cf.status!=='RESOLVIDO').length;
+    const bc = barColor(pct);
+    const col = getDiscColor(d);
+    const card=document.createElement('div'); card.className='card';
+    card.innerHTML = `
+      <div class="card-top">
+        <span class="d-tag" style="color:${col.c};background:${col.bg}">${d}</span>
+        ${crit>0 ? '<span class="crit-tag"><span class="dot"></span>'+crit+' crítico'+(crit===1?'':'s')+'</span>' : ''}
+      </div>
+      <div class="pct-row"><span class="pct" style="color:${bc}">${pct}%</span><span class="frac">${resolved.length}/${total} resolvidos</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${bc}"></div></div>
+      <div class="avg-row"><span>tempo médio de resolução</span><b>${avgDays}d</b></div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+// ---- 04: floors (ordem lida de CONFIG.locations, invertida p/ exibir topo→base) ----
+function seeded(seed){ let s=seed; return ()=>{ s=(s*9301+49297)%233280; return s/233280; }; }
+function renderFloors(){
+  const container=document.getElementById('buildingStack');
+  container.innerHTML='';
+  const locaisOrdenados = [...CONFIG.locations].reverse();
+  if(locaisOrdenados.length===0){ container.innerHTML='<div class="empty-note">Nenhum local cadastrado no projeto ainda.</div>'; return; }
+  locaisOrdenados.forEach((loc,idx)=>{
+    const conf = CONFLICTS.filter(cf=>cf.local===loc);
+    const open = conf.filter(cf=>cf.status!=='RESOLVIDO');
+    const resolved = conf.filter(cf=>cf.status==='RESOLVIDO');
+    const total = conf.length;
+    const matches = !selectedPair || conf.some(cf=>cf.disciplinas.includes(selectedPair[0]) && cf.disciplinas.includes(selectedPair[1]));
+    const row=document.createElement('div'); row.className='floor';
+    if(selectedPair && !matches) row.style.opacity='0.3';
+    const plate=document.createElement('div'); plate.className='floor-plate';
+    const rnd=seeded(idx*97+13);
+    open.forEach(cf=>{
+      const d=document.createElement('div');
+      d.className='floor-dot'+(cf.alerta?' crit':'');
+      if(!cf.alerta) d.style.background='var(--alert)';
+      d.style.left=(6+rnd()*88)+'%'; d.style.top=(20+rnd()*55)+'%';
+      plate.appendChild(d);
+    });
+    resolved.forEach(()=>{
+      const d=document.createElement('div');
+      d.className='floor-dot'; d.style.background='var(--resol)';
+      d.style.left=(6+rnd()*88)+'%'; d.style.top=(20+rnd()*55)+'%';
+      plate.appendChild(d);
+    });
+    const label=document.createElement('div'); label.className='floor-label'; label.textContent=loc;
+    const stats=document.createElement('div'); stats.className='floor-stats'; stats.textContent=total+' total · '+open.length+' abertos';
+    row.appendChild(label); row.appendChild(plate); row.appendChild(stats);
+    container.appendChild(row);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════
+document.getElementById('login-form').addEventListener('submit', e => { e.preventDefault(); doLogin(); });
+(async () => {
+  show('loading');
+  setLoadingText('Restaurando sessão…');
+  const restored = await tryRestoreSession();
+  if(restored){ await loadApp(); } else { show('login'); }
+})();
+</script>
+</body>
+</html>
