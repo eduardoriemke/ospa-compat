@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSPA — Página Inicial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=IBM+Plex+Serif:wght@300;400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="sidebar.css?v=3">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F8F8F8;--surface:#FFF;--surface2:#F6F5F3;--surface3:#E5E4E1;
+  --border:#E5E4E1;--border2:#CCC8C4;
+  --text:#191919;--text2:#727272;--text3:#B5B5B5;
+  --pend:#7A5200;--resol:#1A6B48;--alert:#C42828;
+  --sans:'Manrope',sans-serif;--serif:'IBM Plex Serif',serif;--mono:'IBM Plex Mono',monospace;
+}
+
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ── LOGIN (idêntico às outras páginas — mesma sessão compartilhada) ── */
+#screen-login{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.login-box{background:var(--surface);border:1px solid var(--border);padding:40px;width:min(380px,100%)}
+.login-logo{height:32px;margin-bottom:28px;display:block}
+.login-title{font-family:var(--serif);font-size:18px;font-weight:300;color:var(--text);margin-bottom:6px}
+.login-sub{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:28px}
+.login-field{margin-bottom:14px}
+.login-field label{display:block;font-family:var(--sans);font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:5px}
+.login-field input{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 12px;font-family:var(--sans);font-size:13px;outline:none;transition:border-color 0.12s}
+.login-field input:focus{border-color:var(--text2)}
+.login-btn{width:100%;background:var(--text);color:var(--surface);border:none;padding:11px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;margin-top:6px;transition:opacity 0.1s;letter-spacing:0.04em}
+.login-btn:hover{opacity:0.85}
+.login-err{font-family:var(--mono);font-size:11px;color:var(--alert);margin-top:10px;display:none}
+
+/* ── LOADING ── */
+#screen-loading{display:none;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:12px}
+.loading-logo{height:36px;opacity:0.6}
+.loading-text{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:0.12em}
+
+/* ── LAYOUT (sidebar sempre presente — "casca" fixa da página; só o
+   conteúdo à direita troca entre login/loading/app) ── */
+.app-shell{display:flex;min-height:100vh}
+.shell-content{flex:1;min-width:0;display:flex;flex-direction:column}
+#screen-app{display:none} /* controlado via JS (show()) */
+.page-body{padding:32px 40px 60px;max-width:820px}
+
+/* ── RESUMO DO PROJETO ── */
+.proj-hero{margin-bottom:28px}
+.proj-hero-code{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:6px}
+.proj-hero-name{font-family:var(--serif);font-size:26px;font-weight:300;color:var(--text);margin-bottom:4px}
+.proj-hero-sub{font-family:var(--mono);font-size:11px;color:var(--text2)}
+
+.meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:24px}
+.meta-cell{background:var(--surface);padding:16px 18px}
+.meta-label{font-family:var(--sans);font-size:9px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
+.meta-value{font-family:var(--sans);font-size:14px;color:var(--text)}
+.meta-value.empty{color:var(--text3);font-style:italic}
+
+.disc-chips{display:flex;flex-wrap:wrap;gap:6px}
+.disc-chip{font-family:var(--mono);font-size:10px;font-weight:500;padding:3px 9px;border:1px solid var(--border2);border-radius:2px;color:var(--text2);background:var(--surface2)}
+
+/* ── MOBILE ── */
+@media (max-width: 720px) {
+  .page-body{padding:20px 16px 40px}
+  .proj-hero-name{font-size:20px}
+}
+</style>
+</head>
+<body data-page="inicio">
+
+<div class="app-shell">
+  <div id="ospa-sidebar"></div>
+  <div class="shell-content">
+
+<!-- LOGIN -->
+<div id="screen-login">
+  <div class="login-box">
+    <img id="login-logo" class="login-logo" alt="OSPA">
+    <div class="login-title">Página Inicial do Projeto</div>
+    <div class="login-sub">Acesso restrito</div>
+    <form id="login-form" autocomplete="on">
+      <div class="login-field">
+        <label>Email</label>
+        <input type="email" id="login-email" name="email" placeholder="seu@email.com" autocomplete="username">
+      </div>
+      <div class="login-field">
+        <label>Senha</label>
+        <input type="password" id="login-password" name="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button type="submit" class="login-btn" id="login-btn">Entrar</button>
+      <div class="login-err" id="login-err"></div>
+    </form>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="screen-loading">
+  <img id="loading-logo" class="loading-logo" alt="OSPA">
+  <div class="loading-text" id="loading-text">Carregando…</div>
+</div>
+
+<!-- APP -->
+<div id="screen-app">
+  <div class="page-body">
+      <div class="proj-hero">
+        <div class="proj-hero-code" id="hero-code">—</div>
+        <div class="proj-hero-name" id="hero-name">—</div>
+        <div class="proj-hero-sub" id="hero-sub"></div>
+      </div>
+
+      <div class="meta-grid">
+        <div class="meta-cell">
+          <div class="meta-label">Cliente</div>
+          <div class="meta-value" id="meta-cliente">—</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-label">Coordenador</div>
+          <div class="meta-value" id="meta-coordenador">—</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-label">Disciplinas</div>
+          <div class="meta-value" id="meta-disciplinas">—</div>
+        </div>
+      </div>
+  </div>
+</div>
+
+  </div>
+</div>
+
+<script src="sidebar.js?v=3"></script>
+<script src="editor-launcher.js?v=3"></script>
+<script>
+const SB_URL  = "https://jxezjuovrxajjleyjdcs.supabase.co";
+
+// Alimenta o sidebar com o código do projeto assim que possível — antes de
+// qualquer autenticação — pra ele já nascer certo na primeira renderização
+// (feita pelo próprio sidebar.js no DOMContentLoaded), sem esperar o login.
+document.body.dataset.projeto = new URLSearchParams(window.location.search).get('id') || '';
+const SB_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4ZXpqdW92cnhhampsZXlqZGNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MDcwNTksImV4cCI6MjA5NjA4MzA1OX0.vaHfGesmDhZVeDMl_GSQYyIhN7E0EvRvV1vMy2vRYZY";
+const SB_AUTH = SB_URL + "/auth/v1";
+
+const LOGO_URL = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIyIiBoZWlnaHQ9IjkxIiB2aWV3Qm94PSIwIDAgMTIyIDkxIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBkPSJNMTkuOTUxOCAxMS41NjkzQzE5Ljk1MTggOC44NjE0NiAxNy43NTY2IDYuNjY2MzMgMTUuMDQ4OCA2LjY2NjMzSDExLjU2OTNDOC44NjE0NiA2LjY2NjMzIDYuNjY2MzMgOC44NjE0NiA2LjY2NjMzIDExLjU2OTNWNDYuNjgwOEM2LjY2NjMzIDQ5LjM4ODYgOC44NjE0NiA1MS41ODM3IDExLjU2OTMgNTEuNTgzN0gxNS4wNDg4QzE3Ljc1NjYgNTEuNTgzNyAxOS45NTE4IDQ5LjM4ODYgMTkuOTUxOCA0Ni42ODA4VjExLjU2OTNaTTI1Ljk2MTggNDYuNjgwOEMyNS45NjE4IDUyLjcwNzkgMjEuMDc1OSA1Ny41OTM4IDE1LjA0ODggNTcuNTkzOEgxMS41NjkzQzUuNTQyMTggNTcuNTkzOCAwLjY1NjI1IDUyLjcwNzkgMC42NTYyNSA0Ni42ODA4VjExLjU2OTNDMC42NTYyNSA1LjU0MjE4IDUuNTQyMTggMC42NTYyNSAxMS41NjkzIDAuNjU2MjVIMTUuMDQ4OEMyMS4wNzU5IDAuNjU2MjUgMjUuOTYxOCA1LjU0MjE4IDI1Ljk2MTggMTEuNTY5M1Y0Ni42ODA4WiIgZmlsbD0iIzE5MTkxOSIvPgo8cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0iTTEwOS45NDUgMC42NTYyNUMxMTUuOTcyIDAuNjU2MjUgMTIwLjg1OCA1LjU0MjE4IDEyMC44NTggMTEuNTY5M1Y1Ny4xMTkzQzEyMC44NTggNTcuMzgxNCAxMjAuNjQ2IDU3LjU5MzggMTIwLjM4NCA1Ny41OTM4SDExNS4zMjNDMTE1LjA2MSA1Ny41OTM4IDExNC44NDggNTcuMzgxNCAxMTQuODQ4IDU3LjExOTNWNDYuNjAxN0MxMTQuODQ4IDQ2LjQ3MDcgMTE0Ljc0MiA0Ni4zNjQ1IDExNC42MTEgNDYuMzY0NUgxMDEuOEMxMDEuNjY5IDQ2LjM2NDUgMTAxLjU2MyA0Ni40NzA3IDEwMS41NjMgNDYuNjAxN1Y1Ny4xMTkzQzEwMS41NjMgNTcuMzgxNCAxMDEuMzUgNTcuNTkzOCAxMDEuMDg4IDU3LjU5MzhIOTYuMDI3MkM5NS43NjUyIDU3LjU5MzggOTUuNTUyNyA1Ny4zODE0IDk1LjU1MjcgNTcuMTE5M1YxMS41NjkzQzk1LjU1MjcgNS41NDIxOCAxMDAuNDM5IDAuNjU2MjUgMTA2LjQ2NiAwLjY1NjI1SDEwOS45NDVaTTEwNi40NjYgNi42NjYzM0MxMDMuNzU4IDYuNjY2MzMgMTAxLjU2MyA4Ljg2MTQ2IDEwMS41NjMgMTEuNTY5M1Y0MC4xMTcyQzEwMS41NjMgNDAuMjQ4MiAxMDEuNjY5IDQwLjM1NDQgMTAxLjggNDAuMzU0NEgxMTQuNjExQzExNC43NDIgNDAuMzU0NCAxMTQuODQ4IDQwLjI0ODIgMTE0Ljg0OCA0MC4xMTcyVjExLjU2OTNDMTE0Ljg0OCA4Ljg2MTQ2IDExMi42NTMgNi42NjYzMyAxMDkuOTQ1IDYuNjY2MzNIMTA2LjQ2NloiIGZpbGw9IiMxOTE5MTkiLz4KPHBhdGggZD0iTTU3LjU5NDcgNDYuNjgwOEM1Ny41OTQ3IDUyLjcwNzkgNTIuNzA4NyA1Ny41OTM4IDQ2LjY4MTYgNTcuNTkzOEg0My4yMDIxQzM3LjE3NSA1Ny41OTM4IDMyLjI4OTEgNTIuNzA3OSAzMi4yODkxIDQ2LjY4MDhWMzguNjE0NkMzMi4yODkxIDM4LjM1MjYgMzIuNTAxNSAzOC4xNDAyIDMyLjc2MzUgMzguMTQwMkgzNy44MjQ3QzM4LjA4NjcgMzguMTQwMiAzOC4yOTkxIDM4LjM1MjYgMzguMjk5MSAzOC42MTQ2VjQ2LjY4MDhDMzguMjk5MSA0OS4zODg2IDQwLjQ5NDMgNTEuNTgzNyA0My4yMDIxIDUxLjU4MzdINDYuNjgxNkM0OS4zODk0IDUxLjU4MzcgNTEuNTg0NiA0OS4zODg2IDUxLjU4NDYgNDYuNjgwOFYzNy4wMzNDNTEuNTg0NiAzNC4zNjc1IDQ5LjQ1NzYgMzIuMTk4OCA0Ni44MDgzIDMyLjEzMTZMNDMuMjAyMSAzMi4xMzAxQzM3LjI2OTIgMzIuMTMwMSAzMi40NDIyIDI3LjM5NTcgMzIuMjkyOCAyMS40OTg4TDMyLjI4OTEgMTEuNTY5M0MzMi4yODkxIDUuNTQyMTggMzcuMTc1IDAuNjU2MjUgNDMuMjAyMSAwLjY1NjI1SDQ2LjY4MTZDNTIuNzA4NyAwLjY1NjI1IDU3LjU5NDcgNS41NDIxOCA1Ny41OTQ3IDExLjU2OTNWMTkuNjM1NEM1Ny41OTQ3IDE5Ljg5NzUgNTcuMzgyMiAyMC4xMDk5IDU3LjEyMDIgMjAuMTA5OUg1Mi4wNTkxQzUxLjc5NyAyMC4xMDk5IDUxLjU4NDYgMTkuODk3NSA1MS41ODQ2IDE5LjYzNTRWMTEuNTY5M0M1MS41ODQ2IDguODYxNDYgNDkuMzg5NCA2LjY2NjMzIDQ2LjY4MTYgNi42NjYzM0g0My4yMDIxQzQwLjQ5NDMgNi42NjYzMyAzOC4yOTkxIDguODYxNDYgMzguMjk5MSAxMS41NjkzVjIxLjIxN0MzOC4yOTkxIDIzLjkyNDkgNDAuNDk0MyAyNi4xMiA0My4yMDIxIDI2LjEySDQ2LjY4MTZDNTIuNzA4NyAyNi4xMiA1Ny41OTQ3IDMxLjAwNTkgNTcuNTk0NyAzNy4wMzNWNDYuNjgwOFoiIGZpbGw9IiMxOTE5MTkiLz4KPHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik04OS4yMjE4IDM1LjczMzJDODkuMDcyNCA0MS42MzAxIDg0LjI0NTQgNDYuMzY0NSA3OC4zMTI1IDQ2LjM2NDVINzAuMTY3MkM3MC4wMzYyIDQ2LjM2NDUgNjkuOTMgNDYuNDcwNyA2OS45MyA0Ni42MDE3VjU3LjExOTNDNjkuOTMgNTcuMzgxNCA2OS43MTc2IDU3LjU5MzggNjkuNDU1NSA1Ny41OTM4SDY0LjM5NDRDNjQuMTMyNCA1Ny41OTM4IDYzLjkxOTkgNTcuMzgxNCA2My45MTk5IDU3LjExOTNWMTEuNTY5M0M2My45MTk5IDUuNTQyMTggNjguODA1OSAwLjY1NjI1IDc0LjgzMyAwLjY1NjI1SDc4LjMxMjVDODQuMzM5NiAwLjY1NjI1MSA4OS4yMjU1IDUuNTQyMTggODkuMjI1NSAxMS41NjkzTDg5LjIyMTggMzUuNzMzMlpNODMuMjE1NCAxMS41NjkzQzgzLjIxNTQgOC44NjE0NiA4MS4wMjAzIDYuNjY2MzMgNzguMzEyNSA2LjY2NjMzSDc0LjgzM0M3Mi4xMjUxIDYuNjY2MzMgNjkuOTMgOC44NjE0NiA2OS45MyAxMS41NjkzVjQwLjExNzFDNjkuOTMgNDAuMjQ4MSA3MC4wMzYyIDQwLjM1NDQgNzAuMTY3MyA0MC4zNTQzTDc4LjQzOTEgNDAuMzUyOEM4MS4wODg0IDQwLjI4NTcgODMuMjE1NCAzOC4xMTY5IDgzLjIxNTQgMzUuNDUxNFYxMS41NjkzWiIgZmlsbD0iIzE5MTkxOSIvPgo8cGF0aCBkPSJNMTA4LjMwNCA3Mi4wOTM4SDEwOC45MjRWNzQuMjUwNUgxMDcuODE5QzEwNC45MzQgNzQuMjUwNSAxMDQuMTUyIDc2LjY0OTkgMTA0LjE1MiA3OC44MzM2Vjg1Ljg0MzFIMTAxLjk0MVY3Mi4wOTM4SDEwNC4xNTJWNzQuMTY5NkMxMDQuNzk5IDczLjExODIgMTA1Ljg1MSA3Mi4wOTM4IDEwOC4zMDQgNzIuMDkzOFoiIGZpbGw9IiMxOTE5MTkiLz4KPHBhdGggZD0iTTk3Ljg4NTUgNzguOTY4NFY3Mi4wOTM4SDEwMC4wOTZWODUuODQzMUg5Ny44ODU1Vjg0LjAwOThDOTcuMDc2NyA4NS4wMzQzIDk1Ljc1NTcgODYuMDA0OCA5My40OTExIDg2LjAwNDhDOTAuNDcxNyA4Ni4wMDQ4IDg4LjA3MjMgODQuMzA2NCA4OC4wNzIzIDc5Ljc1MDJWNzIuMDkzOEg5MC4yODI5Vjc5LjYxNTRDOTAuMjgyOSA4Mi40NzMyIDkxLjU3NyA4My45ODI5IDkzLjg2ODYgODMuOTgyOUM5Ni4zNzU4IDgzLjk4MjkgOTcuODg1NSA4Mi4wNjg4IDk3Ljg4NTUgNzguOTY4NFoiIGZpbGw9IiMxOTE5MTkiLz4KPHBhdGggZD0iTTgwLjI0IDgyLjI1NThWNzQuMTE0SDc3Ljc1OThWNzIuMDkyMUg4MC4yNFY2OC42NjAySDgyLjQ1MDdWNzIuMDkyMUg4Ni4wMDk0Vjc0LjExNEg4Mi40NTA3VjgyLjIyODlDODIuNDUwNyA4My4zODgxIDgyLjg1NTEgODMuODE5NSA4NC4wNDEzIDgzLjgxOTVIODYuMjI1Vjg1Ljg0MTRIODMuODI1NkM4MS4xODM2IDg1Ljg0MTQgODAuMjQgODQuNjgyMiA4MC4yNCA4Mi4yNTU4WiIgZmlsbD0iIzE5MTkxOSIvPgo8cGF0aCBkPSJNNzAuODQ4MSA4Ni4wMDQ1QzY2LjcyMzMgODYuMDA0NSA2NC4wMjczIDgzLjE3MzcgNjQuMDI3MyA3OC45NjgxQzY0LjAyNzMgNzQuNzg5MyA2Ni42Njk0IDcxLjkzMTYgNzAuNTUxNSA3MS45MzE2Qzc0LjQzMzcgNzEuOTMxNiA3Ni45Njc5IDc0LjM4NSA3Ny4wNzU3IDc4LjQ1NThDNzcuMDc1NyA3OC43NTI0IDc3LjA0ODggNzkuMDc1OSA3Ny4wMjE4IDc5LjM5OTRINjYuMzQ1OVY3OS41ODgxQzY2LjQyNjcgODIuMjAzMiA2OC4wNzEzIDg0LjAzNjUgNzAuNjg2MyA4NC4wMzY1QzcyLjYyNzQgODQuMDM2NSA3NC4xMzcyIDgzLjAxMiA3NC41OTU1IDgxLjIzMjdINzYuODMzMUM3Ni4yOTM5IDgzLjk4MjUgNzQuMDI5MyA4Ni4wMDQ1IDcwLjg0ODEgODYuMDA0NVpNNjYuNDgwNyA3Ny41NjYySDc0LjcwMzNDNzQuNDg3NiA3NS4xOTM3IDcyLjg3MDEgNzMuODcyNyA3MC41Nzg1IDczLjg3MjdDNjguNTU2NSA3My44NzI3IDY2LjY5NjMgNzUuMzI4NSA2Ni40ODA3IDc3LjU2NjJaIiBmaWxsPSIjMTkxOTE5Ii8+CjxwYXRoIGQ9Ik01Ny4zNTUzIDgyLjI1NzlWNzQuMTE2MUg1NC44NzVWNzIuMDk0Mkg1Ny4zNTUzVjY4LjY1NDNINTkuNTY2VjcyLjA5NDJINjMuMTI0NlY3NC4xMTYxSDU5LjU2NlY4Mi4yMzA5QzU5LjU2NiA4My4zOTAyIDU5Ljk3MDMgODMuODIxNSA2MS4xNTY2IDgzLjgyMTVINjMuMzQwM1Y4NS44NDM1SDYwLjk0MDlDNTguMjk4OSA4NS44NDM1IDU3LjM1NTMgODQuNjg0MiA1Ny4zNTUzIDgyLjI1NzlaIiBmaWxsPSIjMTkxOTE5Ii8+CjxwYXRoIGQ9Ik01MS4wNzYyIDg1Ljg0MzFWNzIuMDkzOEg1My4yODY5Vjg1Ljg0MzFINTEuMDc2MloiIGZpbGw9IiMxOTE5MTkiLz4KPHBhdGggZD0iTTUxLjA3NjIgNjguNjU0M0g1My4yODdWNzAuNDkzOEg1MS4wNzYyVjY4LjY1NDNaIiBmaWxsPSIjMTkxOTE5Ii8+CjxwYXRoIGQ9Ik00Ni40NjE3IDc4Ljk2ODRWNzIuMDkzOEg0OC42NzI0Vjg1Ljg0MzFINDYuNDYxN1Y4NC4wMDk4QzQ1LjY1MjkgODUuMDM0MyA0NC4zMzE5IDg2LjAwNDggNDIuMDY3MyA4Ni4wMDQ4QzM5LjA0NzggODYuMDA0OCAzNi42NDg0IDg0LjMwNjQgMzYuNjQ4NCA3OS43NTAyVjcyLjA5MzhIMzguODU5MVY3OS42MTU0QzM4Ljg1OTEgODIuNDczMiA0MC4xNTMyIDgzLjk4MjkgNDIuNDQ0NyA4My45ODI5QzQ0Ljk1MiA4My45ODI5IDQ2LjQ2MTcgODIuMDY4OCA0Ni40NjE3IDc4Ljk2ODRaIiBmaWxsPSIjMTkxOTE5Ii8+CjxwYXRoIGQ9Ik0zMi43MjE0IDc0LjE5NjJWNzIuMDkzNEgzNC45MzIxVjkwLjk3OTVIMzIuNzIxNFY4My42MzIxQzMxLjgwNDggODQuODk5MiAzMC4zMjIgODYuMDA0NSAyOC4wMDM1IDg2LjAwNDVDMjQuMjAyMiA4Ni4wMDQ1IDIxLjM5ODQgODMuNDQzMyAyMS4zOTg0IDc4Ljk2ODFDMjEuMzk4NCA3NC43NjI0IDI0LjIwMjIgNzEuOTMxNiAyOC4wMDM1IDcxLjkzMTZDMzAuMzIyIDcxLjkzMTYgMzEuODg1NyA3Mi44NzUyIDMyLjcyMTQgNzQuMTk2MlpNMjguMjE5MiA4NC4wMzY1QzMwLjkxNTEgODQuMDM2NSAzMi43NDg0IDgxLjk2MDYgMzIuNzQ4NCA3OS4wMjJDMzIuNzQ4NCA3Ni4wMDI1IDMwLjkxNTEgNzMuODk5NyAyOC4yMTkyIDczLjg5OTdDMjUuNDk2MyA3My44OTk3IDIzLjY2MyA3NS45NzU2IDIzLjY2MyA3OC45NjgxQzIzLjY2MyA4MS45NjA2IDI1LjQ5NjMgODQuMDM2NSAyOC4yMTkyIDg0LjAzNjVaIiBmaWxsPSIjMTkxOTE5Ii8+CjxwYXRoIGQ9Ik0yMC40MzQ3IDcyLjA5MzhIMjEuMDU0OFY3NC4yNTA1SDE5Ljk0OTRDMTcuMDY0OCA3NC4yNTA1IDE2LjI4MjkgNzYuNjQ5OSAxNi4yODI5IDc4LjgzMzZWODUuODQzMUgxNC4wNzIzVjcyLjA5MzhIMTYuMjgyOVY3NC4xNjk2QzE2LjkzIDczLjExODIgMTcuOTgxNCA3Mi4wOTM4IDIwLjQzNDcgNzIuMDkzOFoiIGZpbGw9IiMxOTE5MTkiLz4KPHBhdGggZD0iTTEyLjM1NTUgODUuODQyN0gxMC4yNTI3VjgzLjcxMjlDOS4zODk5NyA4NC45NTMxIDguMDE1MDQgODYuMDA0NSA1LjY0MjYgODYuMDA0NUMyLjYyMzE0IDg2LjAwNDUgMC41NzQyMTkgODQuNDk0OCAwLjU3NDIxOSA4MS45ODc1QzAuNTc0MjE5IDc5LjIzNzcgMi40ODgzNCA3Ny43MDEgNi4xMDA5MiA3Ny43MDFIMTAuMTQ0OFY3Ni43NTc0QzEwLjE0NDggNzQuOTc4MSA4Ljg3Nzc0IDczLjg5OTcgNi43MjA5OCA3My44OTk3QzQuNzc5OSA3My44OTk3IDMuNDg1ODQgNzQuODE2MyAzLjIxNjI1IDc2LjIxODJIMS4wMDU1N0MxLjMyOTA4IDczLjUyMjMgMy41MTI4IDcxLjkzMTYgNi44Mjg4MiA3MS45MzE2QzEwLjMzMzYgNzEuOTMxNiAxMi4zNTU1IDczLjY4NCAxMi4zNTU1IDc2Ljg5MjJWODUuODQyN1pNMTAuMTQ0OCA4MC4yMzUyVjc5LjU2MTJINS44ODUyNEMzLjkxNzIgNzkuNTYxMiAyLjgxMTg2IDgwLjI4OTEgMi44MTE4NiA4MS44NTI3QzIuODExODYgODMuMjAwNyAzLjk3MTExIDg0LjExNzMgNS44MDQzNiA4NC4xMTczQzguNTU0MjMgODQuMTE3MyAxMC4xNDQ4IDgyLjUyNjcgMTAuMTQ0OCA4MC4yMzUyWiIgZmlsbD0iIzE5MTkxOSIvPgo8cGF0aCBkPSJNMTIxLjE4MiA4NS45NDA0SDExOS4wNzlWODMuODEwNkMxMTguMjE2IDg1LjA1MDcgMTE2Ljg0MSA4Ni4xMDIyIDExNC40NjkgODYuMTAyMkMxMTEuNDQ5IDg2LjEwMjIgMTA5LjQgODQuNTkyNCAxMDkuNCA4Mi4wODUyQzEwOS40IDc5LjMzNTMgMTExLjMxNSA3Ny43OTg2IDExNC45MjcgNzcuNzk4NkgxMTguOTcxVjc2Ljg1NUMxMTguOTcxIDc1LjA3NTcgMTE3LjcwNCA3My45OTczIDExNS41NDcgNzMuOTk3M0MxMTMuNjA2IDczLjk5NzMgMTEyLjMxMiA3NC45MTQgMTEyLjA0MiA3Ni4zMTU5SDEwOS44MzJDMTEwLjE1NSA3My42MTk5IDExMi4zMzkgNzIuMDI5MyAxMTUuNjU1IDcyLjAyOTNDMTE5LjE2IDcyLjAyOTMgMTIxLjE4MiA3My43ODE3IDEyMS4xODIgNzYuOTg5OFY4NS45NDA0Wk0xMTguOTcxIDgwLjMzMjhWNzkuNjU4OEgxMTQuNzExQzExMi43NDMgNzkuNjU4OCAxMTEuNjM4IDgwLjM4NjcgMTExLjYzOCA4MS45NTA0QzExMS42MzggODMuMjk4NCAxMTIuNzk3IDg0LjIxNSAxMTQuNjMxIDg0LjIxNUMxMTcuMzggODQuMjE1IDExOC45NzEgODIuNjI0NCAxMTguOTcxIDgwLjMzMjhaIiBmaWxsPSIjMTkxOTE5Ii8+Cjwvc3ZnPgo=";
+
+let SESSION = null;
+let USER_PROFILE = null;
+let PROJETO = null;
+let COORDENADOR_NOME = '';
+let DISCIPLINAS = [];
+
+// ── LOGO ──
+function setLogos(src) {
+  ['login-logo','loading-logo'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.src = src;
+  });
+}
+setLogos(LOGO_URL);
+
+// ── SUPABASE HELPERS (idêntico às outras páginas) ──
+async function sbFetch(path, opts={}) {
+  const headers = {
+    'Content-Type': 'application/json',
+    'apikey': SB_KEY,
+    ...opts.headers
+  };
+  if (SESSION) headers['Authorization'] = 'Bearer ' + SESSION.access_token;
+  const r = await fetch(SB_URL + path, {...opts, headers});
+  return r;
+}
+
+async function api(method, table, body, qs, customHeaders) {
+  const url = '/rest/v1/' + table + (qs ? '?' + qs : '');
+  const r = await sbFetch(url, {
+    method,
+    headers: customHeaders || (method !== 'GET' ? {'Prefer':'return=representation'} : {}),
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.message || 'HTTP ' + r.status);
+  }
+  return (method === 'DELETE' || (customHeaders && customHeaders.Prefer && customHeaders.Prefer.indexOf('return=minimal') >= 0)) ? null : r.json();
+}
+
+// ── AUTH (idêntico às outras páginas — mesma chave de sessão) ──
+const SESSION_KEY = 'ospa_session';
+
+function saveSession(s) {
+  try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch(e) {}
+}
+function loadSavedSession() {
+  try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch(e) { return null; }
+}
+function clearSavedSession() {
+  try { localStorage.removeItem(SESSION_KEY); } catch(e) {}
+}
+
+async function refreshSession(refreshToken) {
+  const r = await fetch(SB_AUTH + '/token?grant_type=refresh_token', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','apikey':SB_KEY},
+    body: JSON.stringify({refresh_token: refreshToken})
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error_description || data.msg || 'Sessão expirada');
+  return data;
+}
+
+async function tryRestoreSession() {
+  const saved = loadSavedSession();
+  if (!saved || !saved.refresh_token) return false;
+
+  // Se o access_token salvo ainda vale por pelo menos mais 60s, reaproveita
+  // direto — evita um round-trip de rede pro Supabase em toda troca de página.
+  const agora = Math.floor(Date.now() / 1000);
+  if (saved.access_token && saved.expires_at && saved.expires_at - agora > 60) {
+    SESSION = saved;
+    return true;
+  }
+
+  try {
+    SESSION = await refreshSession(saved.refresh_token);
+    saveSession(SESSION);
+    return true;
+  } catch(e) {
+    clearSavedSession();
+    return false;
+  }
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-password').value;
+  const err   = document.getElementById('login-err');
+  err.style.display = 'none';
+
+  if (!email || !pass) { showLoginErr('Preencha email e senha.'); return; }
+
+  document.getElementById('login-btn').textContent = 'Entrando…';
+  try {
+    const r = await fetch(SB_AUTH + '/token?grant_type=password', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','apikey':SB_KEY},
+      body: JSON.stringify({email, password: pass})
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error_description || data.msg || 'Credenciais inválidas');
+    SESSION = data;
+    saveSession(SESSION);
+    await loadApp();
+  } catch(e) {
+    showLoginErr(e.message);
+    document.getElementById('login-btn').textContent = 'Entrar';
+  }
+}
+
+function showLoginErr(msg) {
+  const el = document.getElementById('login-err');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function doLogout() {
+  SESSION = null; USER_PROFILE = null;
+  clearSavedSession();
+  show('login');
+  document.getElementById('login-password').value = '';
+  document.getElementById('login-btn').textContent = 'Entrar';
+}
+
+// Contrato usado pelo sidebar.js: o link "Sair" do menu chama window.ospaLogout()
+window.ospaLogout = doLogout;
+
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ── LOAD APP ──
+async function loadApp() {
+  show('loading');
+  setLoadingText('Identificando usuário…');
+
+  const params = new URLSearchParams(window.location.search);
+  const projId = params.get('id');
+
+  if (!projId) {
+    setLoadingText('Nenhum projeto especificado. Use ?id=CODIGO na URL.');
+    return;
+  }
+
+  try {
+    // Mesma verificação de permissão das outras páginas: admin vê tudo,
+    // outros usuários precisam ter vínculo com este projeto específico.
+    const uid = SESSION.user.id;
+    const meArr = await api('GET','usuarios',null,'id=eq.'+uid);
+    if (!meArr || !meArr.length) {
+      setLoadingText('Usuário não cadastrado no sistema.');
+      return;
+    }
+    const me = meArr[0];
+
+    if (me.papel_global === 'admin') {
+      USER_PROFILE = { id: uid, email: me.email, nome: me.nome, papel: 'admin', disciplinas: [] };
+    } else {
+      const perfis = await api('GET','projeto_usuarios_v2',null,
+        'usuario_id=eq.'+uid+'&projeto_id=eq.'+projId);
+      if (!perfis || !perfis.length) {
+        setLoadingText('Você não tem acesso a este projeto.');
+        return;
+      }
+      USER_PROFILE = {
+        id: uid, email: me.email, nome: me.nome,
+        papel: perfis[0].papel, disciplinas: perfis[0].disciplinas || []
+      };
+    }
+
+    setLoadingText('Carregando projeto…');
+
+    const [proj, cfg, acessos] = await Promise.all([
+      api('GET','projetos',null,'id=eq.'+projId).then(r=>r[0]),
+      api('GET','config_projeto',null,'projeto_id=eq.'+projId).then(r=>r[0]||{}),
+      api('GET','projeto_usuarios_v2',null,'projeto_id=eq.'+projId+'&papel=eq.coordenador'),
+    ]);
+
+    PROJETO = proj;
+    DISCIPLINAS = cfg.disciplinas || [];
+
+    // Nome do(s) coordenador(es) do projeto (papel='coordenador' em projeto_usuarios_v2)
+    COORDENADOR_NOME = '';
+    if (acessos && acessos.length) {
+      const ids = acessos.map(a => a.usuario_id);
+      const usuarios = await api('GET','usuarios',null,'id=in.('+ids.join(',')+')');
+      COORDENADOR_NOME = usuarios.map(u => u.nome).filter(Boolean).join(', ');
+    }
+
+    renderSidebar();
+    renderPage();
+    show('app');
+
+  } catch(e) {
+    setLoadingText('Erro: ' + e.message);
+    console.error(e);
+  }
+}
+
+// Sidebar compartilhado (sidebar.js): alimenta via data-* e re-renderiza
+function renderSidebar() {
+  document.body.dataset.userName = USER_PROFILE.nome || '';
+  document.body.dataset.userRole = USER_PROFILE.papel || 'projetista';
+  document.body.dataset.projeto = PROJETO.id || '';
+  document.body.dataset.userDisciplinas = (USER_PROFILE.disciplinas || []).join(',');
+  if (typeof ospaRenderSidebar === 'function') ospaRenderSidebar();
+}
+
+function renderPage() {
+  document.getElementById('hero-code').textContent = PROJETO.id || '';
+  document.getElementById('hero-name').textContent = PROJETO.nome || '';
+  document.getElementById('hero-sub').textContent = PROJETO.revisao || '';
+
+  document.getElementById('meta-cliente').textContent = PROJETO.cliente || '—';
+
+  const coordEl = document.getElementById('meta-coordenador');
+  coordEl.textContent = COORDENADOR_NOME || 'Não definido';
+  coordEl.classList.toggle('empty', !COORDENADOR_NOME);
+
+  const discEl = document.getElementById('meta-disciplinas');
+  if (DISCIPLINAS.length) {
+    discEl.innerHTML = '<div class="disc-chips">' +
+      DISCIPLINAS.map(d => '<span class="disc-chip">'+esc(d)+'</span>').join('') +
+      '</div>';
+  } else {
+    discEl.textContent = 'Nenhuma configurada';
+    discEl.classList.add('empty');
+  }
+}
+
+function show(screen) {
+  ['login','loading','app'].forEach(s => {
+    const el = document.getElementById('screen-'+s);
+    if (!el) return;
+    if (s !== screen) { el.style.display = 'none'; return; }
+    el.style.display = (s === 'app') ? 'block' : 'flex';
+  });
+  const sb = document.getElementById('ospa-sidebar');
+  if (sb) sb.style.display = (screen === 'login') ? 'none' : '';
+}
+
+function setLoadingText(t) {
+  document.getElementById('loading-text').textContent = t;
+}
+
+document.getElementById('login-form').addEventListener('submit', e => { e.preventDefault(); doLogin(); });
+
+(async () => {
+  show('loading');
+  setLoadingText('Restaurando sessão…');
+  const restored = await tryRestoreSession();
+  if (restored) {
+    await loadApp();
+  } else {
+    show('login');
+  }
+})();
+</script>
+</body>
+</html>

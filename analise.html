@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSPA — Análise</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=IBM+Plex+Serif:wght@300;400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="sidebar.css?v=3">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F8F8F8;--surface:#FFF;--surface2:#F6F5F3;--surface3:#E5E4E1;
+  --border:#E5E4E1;--border2:#CCC8C4;
+  --text:#191919;--text2:#727272;--text3:#B5B5B5;
+  --pend:#7A5200;--resol:#1A6B48;--alert:#C42828;
+  --sans:'Manrope',sans-serif;--serif:'IBM Plex Serif',serif;--mono:'IBM Plex Mono',monospace;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ── LOGIN / LOADING (idêntico às demais páginas — mesma sessão) ── */
+#screen-login{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.login-box{background:var(--surface);border:1px solid var(--border);padding:40px;width:min(380px,100%)}
+.login-logo{height:32px;margin-bottom:28px;display:block}
+.login-title{font-family:var(--serif);font-size:18px;font-weight:300;color:var(--text);margin-bottom:6px}
+.login-sub{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:28px}
+.login-field{margin-bottom:14px}
+.login-field label{display:block;font-family:var(--sans);font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:5px}
+.login-field input{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 12px;font-family:var(--sans);font-size:13px;outline:none;transition:border-color 0.12s}
+.login-field input:focus{border-color:var(--text2)}
+.login-btn{width:100%;background:var(--text);color:var(--surface);border:none;padding:11px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;margin-top:6px;transition:opacity 0.1s;letter-spacing:0.04em}
+.login-btn:hover{opacity:0.85}
+.login-err{font-family:var(--mono);font-size:11px;color:var(--alert);margin-top:10px;display:none}
+
+#screen-loading{display:none;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:12px}
+.loading-logo{height:36px;opacity:0.6}
+.loading-text{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:0.12em}
+
+#screen-denied{display:none;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:12px;text-align:center;padding:20px}
+.denied-title{font-family:var(--serif);font-size:18px;font-weight:300;color:var(--text)}
+.denied-text{font-family:var(--mono);font-size:11px;color:var(--text3);max-width:340px}
+
+/* ── LAYOUT (sidebar sempre presente — "casca" fixa da página; só o
+   conteúdo à direita troca entre login/loading/denied/app) ── */
+.app-shell{display:flex;min-height:100vh}
+.shell-content{flex:1;min-width:0;display:flex;flex-direction:column}
+#screen-app{display:none} /* controlado via JS (show()) */
+
+/* ── MAIN ── */
+.main{padding:24px 40px 80px;max-width:1100px;margin:0 auto}
+.main-hdr{font-family:var(--sans);font-size:9px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--text3);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+
+/* ── RODADA ABERTA ── */
+.rodada-box{background:var(--surface);border:1px solid var(--border);margin-bottom:32px}
+.rodada-hdr{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.rodada-nome{font-family:var(--serif);font-size:17px;font-weight:300;color:var(--text)}
+.rodada-meta{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:3px}
+.rodada-progresso{font-family:var(--mono);font-size:10px;color:var(--text2)}
+.rodada-progresso b{color:var(--text)}
+
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1px;background:var(--border)}
+.disc-card{background:var(--surface);padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.disc-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.d-tag{font-family:var(--mono);font-size:9px;font-weight:500;padding:2px 7px;border-radius:2px;background:var(--surface2);color:var(--text2);border:1px solid var(--border2);white-space:nowrap}
+.d-tag.d-ARQ{background:#EBF2F6;color:#2A6080;border-color:#C4D8E4}
+.d-tag.d-HID{background:#E8F0F8;color:#1A5A8A;border-color:#B8D0E8}
+.d-tag.d-EST{background:#F6EEE2;color:#7A4E14;border-color:#E4D0B0}
+.d-tag.d-INT{background:#EEE8F6;color:#5A3490;border-color:#D4C0E8}
+.d-tag.d-CLI{background:#E4F2EE;color:#166050;border-color:#B0D8CC}
+.d-tag.d-ELE{background:#F4F4E0;color:#606000;border-color:#D8D890}
+.d-tag.d-GAS{background:#F6EAE8;color:#802010;border-color:#E4B8B0}
+.d-tag.d-PSG{background:#E8F4E8;color:#206420;border-color:#B0D4B0}
+.d-tag.d-IMP{background:#F6E8EE;color:#802840;border-color:#E4B4C4}
+.d-tag.d-MOD{background:#E8EEF8;color:#284088;border-color:#B8C8E8}
+.d-tag.d-PPCI{background:#FBEEE2;color:#B5530D;border-color:#ECD0B0}
+.d-tag.d-ACU{background:#F8E6E0;color:#9A3520;border-color:#EAC0B0}
+.d-tag.d-CVI{background:#FBE6EE;color:#B03060;border-color:#EEC0D4}
+.d-tag.d-FUN{background:#EFEAE2;color:#4A3A28;border-color:#D4C8B4}
+.d-tag.d-PIS{background:#E0F4F6;color:#0A7A8A;border-color:#A8DCE2}
+.d-tag.d-LUM{background:#F8F2DE;color:#8A6A10;border-color:#E0D0A0}
+.d-tag.d-TOP{background:#EDF0F1;color:#4A5560;border-color:#CDD4D8}
+
+.status-select{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;padding:4px 8px;border-radius:2px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer}
+.status-select.st-pendente{color:var(--text3);border-color:var(--border2)}
+.status-select.st-em_analise{color:var(--pend);border-color:var(--pend);background:#FBF3E0}
+.status-select.st-concluido{color:var(--resol);border-color:var(--resol);background:#EAF6F0}
+
+.alerta-novo{font-family:var(--mono);font-size:9px;color:var(--alert);border:1px solid var(--alert);background:#FBEAEA;padding:2px 7px;border-radius:2px;display:inline-block;width:fit-content}
+
+.consid-area{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:8px 10px;font-family:var(--sans);font-size:12.5px;outline:none;resize:vertical;min-height:56px;transition:border-color 0.12s}
+.consid-area:focus{border-color:var(--text2)}
+.consid-area::placeholder{color:var(--text3)}
+
+.disc-card-meta{font-family:var(--mono);font-size:9.5px;color:var(--text3)}
+
+/* ── AÇÕES / BOTÕES ── */
+.btn{font-family:var(--sans);font-size:11.5px;font-weight:600;padding:7px 14px;border:none;cursor:pointer;letter-spacing:0.03em;transition:all 0.1s;white-space:nowrap}
+.btn-p{background:var(--text);color:var(--surface)}.btn-p:hover{opacity:0.85}
+.btn-g{background:transparent;border:1px solid var(--border2);color:var(--text2)}.btn-g:hover{border-color:var(--text2);color:var(--text)}
+.btn-danger{background:transparent;border:1px solid var(--alert);color:var(--alert)}.btn-danger:hover{background:var(--alert);color:#fff}
+
+.empty-state{padding:60px 20px;text-align:center;color:var(--text3);font-family:var(--mono);font-size:11px;background:var(--surface);border:1px solid var(--border)}
+
+/* ── HISTÓRICO ── */
+.hist-item{background:var(--surface);border:1px solid var(--border);margin-bottom:1px;cursor:pointer}
+.hist-item-hdr{padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.hist-item-hdr:hover{background:var(--surface2)}
+.hist-nome{font-family:var(--sans);font-size:13px;font-weight:600;color:var(--text)}
+.hist-meta{font-family:var(--mono);font-size:9.5px;color:var(--text3);margin-top:2px}
+.hist-stats{font-family:var(--mono);font-size:10px;color:var(--text2)}
+.hist-body{display:none;border-top:1px solid var(--border)}
+.hist-body.open{display:block}
+
+/* ── MODAL ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(25,25,25,0.45);z-index:200;align-items:center;justify-content:center;padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);padding:28px;width:min(560px,100%);border:1px solid var(--border);max-height:88vh;overflow-y:auto}
+.modal-lbl{font-family:var(--sans);font-size:9px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--text3);margin-bottom:18px}
+.frow{margin-bottom:14px}
+.frow label{display:block;font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.frow input{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:8px 10px;font-family:var(--sans);font-size:13px;outline:none}
+.frow input:focus{border-color:var(--text2)}
+.disc-check-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);margin-bottom:6px}
+.disc-check-row input{width:15px;height:15px;cursor:pointer;accent-color:var(--text)}
+.disc-check-label{flex:1;display:flex;align-items:center;gap:8px}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+
+.toast{position:fixed;bottom:20px;right:20px;background:var(--text);color:var(--surface);font-family:var(--mono);font-size:11px;padding:9px 15px;opacity:0;transition:opacity 0.2s;pointer-events:none;z-index:999}
+.toast.show{opacity:1}
+
+@media (max-width: 720px) {
+  .main{padding:14px 16px 60px}
+  .login-box{padding:28px 22px}
+  .rodada-hdr{flex-direction:column;align-items:flex-start}
+}
+</style>
+</head>
+<body data-page="analise">
+
+<div class="app-shell">
+  <div id="ospa-sidebar"></div>
+  <div class="shell-content">
+
+<!-- LOGIN -->
+<div id="screen-login">
+  <div class="login-box">
+    <img id="login-logo" class="login-logo" alt="OSPA">
+    <div class="login-title">Análise de Compatibilização</div>
+    <div class="login-sub">Acesso restrito</div>
+    <form id="login-form" autocomplete="on">
+      <div class="login-field">
+        <label>Email</label>
+        <input type="email" id="login-email" name="email" placeholder="seu@email.com" autocomplete="username">
+      </div>
+      <div class="login-field">
+        <label>Senha</label>
+        <input type="password" id="login-password" name="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button type="submit" class="login-btn" id="login-btn">Entrar</button>
+      <div class="login-err" id="login-err"></div>
+    </form>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="screen-loading">
+  <img id="loading-logo" class="loading-logo" alt="OSPA">
+  <div class="loading-text" id="loading-text">Carregando…</div>
+</div>
+
+<!-- ACESSO NEGADO -->
+<div id="screen-denied">
+  <img id="denied-logo" class="loading-logo" alt="OSPA">
+  <div class="denied-title">Acesso restrito</div>
+  <div class="denied-text" id="denied-text">Esta página é exclusiva para coordenadores e administradores do projeto.</div>
+  <button class="btn btn-g" onclick="doLogout()" style="margin-top:8px">Sair</button>
+</div>
+
+<!-- APP -->
+<div id="screen-app">
+
+  <div class="main">
+    <div id="rodada-atual-wrap"></div>
+
+    <div class="main-hdr">Rodadas encerradas</div>
+    <div id="historico-wrap"></div>
+  </div>
+</div>
+
+  </div>
+</div>
+
+<!-- MODAL: ABRIR RODADA -->
+<div class="modal-bg" id="modal-abrir">
+  <div class="modal">
+    <div class="modal-lbl">Abrir nova rodada</div>
+    <div class="frow">
+      <label>Nome da rodada</label>
+      <input id="nova-rodada-nome" placeholder="ex: Rodada 03 — jul/2026">
+    </div>
+    <div class="frow">
+      <label>Disciplinas a incluir</label>
+      <div id="disc-checklist"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-g" onclick="fecharModalAbrir()">Cancelar</button>
+      <button class="btn btn-p" onclick="confirmarAbrirRodada()">Abrir rodada</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="sidebar.js?v=3"></script>
+<script src="editor-launcher.js?v=3"></script>
+<script>
+const SB_URL  = "https://jxezjuovrxajjleyjdcs.supabase.co";
+
+// Alimenta o sidebar com o código do projeto assim que possível — antes de
+// qualquer autenticação — pra ele já nascer certo na primeira renderização
+// (feita pelo próprio sidebar.js no DOMContentLoaded), sem esperar o login.
+document.body.dataset.projeto = new URLSearchParams(window.location.search).get('id') || '';
+const SB_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4ZXpqdW92cnhhampsZXlqZGNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MDcwNTksImV4cCI6MjA5NjA4MzA1OX0.vaHfGesmDhZVeDMl_GSQYyIhN7E0EvRvV1vMy2vRYZY";
+const SB_AUTH = SB_URL + "/auth/v1";
+
+let SESSION = null;
+let USER_PROFILE = null;
+let PROJETO = null;
+let PROJ_ID = null;
+let DOCS = [];
+let RODADAS = [];       // todas as rodadas do projeto
+let RODADA_ABERTA = null;
+let LINHAS_ABERTA = []; // rodada_disciplinas da rodada aberta
+let CONFIG = { disciplines: [] };
+let ULTIMA_ANALISE = {}; // disciplina -> última linha concluída (qualquer rodada)
+
+// ── SUPABASE HELPERS (idêntico às demais páginas) ──
+async function sbFetch(path, opts={}) {
+  const headers = { 'Content-Type':'application/json', 'apikey':SB_KEY, ...opts.headers };
+  if (SESSION) headers['Authorization'] = 'Bearer ' + SESSION.access_token;
+  return fetch(SB_URL + path, {...opts, headers});
+}
+async function api(method, table, body, qs, customHeaders) {
+  const url = '/rest/v1/' + table + (qs ? '?' + qs : '');
+  const r = await sbFetch(url, {
+    method,
+    headers: customHeaders || (method !== 'GET' ? {'Prefer':'return=representation'} : {}),
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!r.ok) { const err = await r.json().catch(()=>({})); throw new Error(err.message || 'HTTP '+r.status); }
+  const minimal = customHeaders && customHeaders.Prefer && customHeaders.Prefer.indexOf('return=minimal') >= 0;
+  return (method === 'DELETE' || minimal) ? null : r.json();
+}
+async function apiTodos(table, qs) {
+  const PAGINA = 1000;
+  let resultado = []; let offset = 0;
+  while (true) {
+    const lote = await api('GET', table, null, qs + '&limit=' + PAGINA + '&offset=' + offset);
+    resultado = resultado.concat(lote);
+    if (lote.length < PAGINA) break;
+    offset += PAGINA;
+  }
+  return resultado;
+}
+
+const LOGO_URL = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIyIiBoZWlnaHQ9IjkxIiB2aWV3Qm94PSIwIDAgMTIyIDkxIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBkPSJNMTkuOTUxOCAxMS41NjkzQzE5Ljk1MTggOC44NjE0NiAxNy43NTY2IDYuNjY2MzMgMTUuMDQ4OCA2LjY2NjMzSDExLjU2OTNDOC44NjE0NiA2LjY2NjMzIDYuNjY2MzMgOC44NjE0NiA2LjY2NjMzIDExLjU2OTNWNDYuNjgwOEM2LjY2NjMzIDQ5LjM4ODYgOC44NjE0NiA1MS41ODM3IDExLjU2OTMgNTEuNTgzN0gxNS4wNDg4QzE3Ljc1NjYgNTEuNTgzNyAxOS45NTE4IDQ5LjM4ODYgMTkuOTUxOCA0Ni42ODA4VjExLjU2OTNaIiBmaWxsPSIjMTkxOTE5Ii8+Cjwvc3ZnPgo=";
+function setLogos(src) { ['login-logo','loading-logo','app-logo','denied-logo'].forEach(id => { const el = document.getElementById(id); if (el) el.src = src; }); }
+setLogos(LOGO_URL);
+
+function esc(s){return (s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n').replace(/\r/g,'');}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── SESSÃO (idêntico às demais páginas) ──
+const SESSION_KEY = 'ospa_session';
+function saveSession(s) { try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch(e) {} }
+function loadSavedSession() { try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch(e) { return null; } }
+function clearSavedSession() { try { localStorage.removeItem(SESSION_KEY); } catch(e) {} }
+
+async function refreshSession(refreshToken) {
+  const r = await fetch(SB_AUTH + '/token?grant_type=refresh_token', {
+    method: 'POST', headers: {'Content-Type':'application/json','apikey':SB_KEY},
+    body: JSON.stringify({refresh_token: refreshToken})
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error_description || data.msg || 'Sessão expirada');
+  return data;
+}
+async function tryRestoreSession() {
+  const saved = loadSavedSession();
+  if (!saved || !saved.refresh_token) return false;
+  // Se o access_token salvo ainda vale por pelo menos mais 60s, reaproveita
+  // direto — evita um round-trip de rede pro Supabase em toda troca de página.
+  const agora = Math.floor(Date.now() / 1000);
+  if (saved.access_token && saved.expires_at && saved.expires_at - agora > 60) { SESSION = saved; return true; }
+  try { SESSION = await refreshSession(saved.refresh_token); saveSession(SESSION); return true; }
+  catch(e) { clearSavedSession(); return false; }
+}
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-password').value;
+  if (!email || !pass) { showLoginErr('Preencha email e senha.'); return; }
+  document.getElementById('login-btn').textContent = 'Entrando…';
+  try {
+    const r = await fetch(SB_AUTH + '/token?grant_type=password', {
+      method: 'POST', headers: {'Content-Type':'application/json','apikey':SB_KEY},
+      body: JSON.stringify({email, password: pass})
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error_description || data.msg || 'Credenciais inválidas');
+    SESSION = data; saveSession(SESSION);
+    await loadApp();
+  } catch(e) {
+    showLoginErr(e.message);
+    document.getElementById('login-btn').textContent = 'Entrar';
+  }
+}
+function showLoginErr(msg) {
+  const el = document.getElementById('login-err');
+  el.textContent = msg; el.style.display = 'block';
+}
+function doLogout() {
+  SESSION = null; USER_PROFILE = null;
+  clearSavedSession();
+  show('login');
+  document.getElementById('login-password').value = '';
+  document.getElementById('login-btn').textContent = 'Entrar';
+}
+// Contrato usado pelo sidebar.js: o link "Sair" do menu chama window.ospaLogout()
+window.ospaLogout = doLogout;
+function show(screen) {
+  ['login','loading','denied','app'].forEach(s => {
+    const el = document.getElementById('screen-'+s);
+    if (!el) return;
+    el.style.display = (s !== screen) ? 'none' : (s === 'app' ? 'block' : 'flex');
+  });
+  const sb = document.getElementById('ospa-sidebar');
+  if (sb) sb.style.display = (screen === 'login' || screen === 'denied') ? 'none' : '';
+}
+function setLoadingText(t) { document.getElementById('loading-text').textContent = t; }
+
+// ── CARREGAR APP ──
+async function loadApp() {
+  show('loading');
+  setLoadingText('Identificando usuário…');
+
+  const params = new URLSearchParams(window.location.search);
+  PROJ_ID = params.get('id');
+  if (!PROJ_ID) { setLoadingText('Nenhum projeto especificado. Use ?id=CODIGO na URL.'); return; }
+
+  try {
+    const uid = SESSION.user.id;
+    const meArr = await api('GET','usuarios',null,'id=eq.'+uid);
+    if (!meArr || !meArr.length) { setLoadingText('Usuário não cadastrado no sistema.'); return; }
+    const me = meArr[0];
+
+    if (me.papel_global === 'admin') {
+      USER_PROFILE = { id: uid, email: me.email, nome: me.nome, papel: 'admin', disciplinas: [] };
+    } else {
+      const perfis = await api('GET','projeto_usuarios_v2',null,'usuario_id=eq.'+uid+'&projeto_id=eq.'+PROJ_ID);
+      if (!perfis || !perfis.length) { setLoadingText('Você não tem acesso a este projeto.'); return; }
+      USER_PROFILE = { id: uid, email: me.email, nome: me.nome, papel: perfis[0].papel, disciplinas: perfis[0].disciplinas || [] };
+    }
+
+    if (USER_PROFILE.papel !== 'admin' && USER_PROFILE.papel !== 'coordenador') {
+      show('denied');
+      return;
+    }
+
+    setLoadingText('Carregando dados do projeto…');
+
+    const [proj, docs, rodadas] = await Promise.all([
+      api('GET','projetos',null,'id=eq.'+PROJ_ID).then(r=>r[0]),
+      apiTodos('documentos_projeto','projeto_id=eq.'+PROJ_ID+'&removido_em=is.null&order=disciplina.asc'),
+      api('GET','rodadas_compatibilizacao',null,'projeto_id=eq.'+PROJ_ID+'&order=data_abertura.desc'),
+    ]);
+
+    PROJETO = proj; DOCS = docs; RODADAS = rodadas;
+
+    CONFIG.disciplines = [...new Set(DOCS.map(d => d.disciplina))].filter(d => d && d !== 'CPT').sort();
+
+    RODADA_ABERTA = RODADAS.find(r => r.status === 'aberta') || null;
+    if (RODADA_ABERTA) {
+      LINHAS_ABERTA = await api('GET','rodada_disciplinas',null,'rodada_id=eq.'+RODADA_ABERTA.id+'&order=disciplina.asc');
+    } else {
+      LINHAS_ABERTA = [];
+    }
+
+    // última análise concluída de cada disciplina, em qualquer rodada,
+    // usada pra detectar arquivo novo e sugerir pendências ao abrir rodada
+    if (RODADAS.length) {
+      const idsRodadas = RODADAS.map(r => r.id).join(',');
+      const concluidas = await api('GET','rodada_disciplinas',null,
+        'rodada_id=in.('+idsRodadas+')&status=eq.concluido&order=analisado_em.desc');
+      ULTIMA_ANALISE = {};
+      concluidas.forEach(row => { if (!ULTIMA_ANALISE[row.disciplina]) ULTIMA_ANALISE[row.disciplina] = row; });
+    } else {
+      ULTIMA_ANALISE = {};
+    }
+
+    renderHeader();
+    renderRodadaAtual();
+    renderHistorico();
+    show('app');
+
+  } catch(e) {
+    setLoadingText('Erro: ' + e.message);
+    console.error(e);
+  }
+}
+
+// (o header próprio da página foi removido — as informações do projeto e do
+// usuário já aparecem no sidebar compartilhado, inclusive o link Documentos)
+function renderHeader() {
+  document.body.dataset.userName = USER_PROFILE.nome || '';
+  document.body.dataset.userRole = USER_PROFILE.papel || 'projetista';
+  document.body.dataset.projeto = PROJETO.id || '';
+  document.body.dataset.userDisciplinas = (USER_PROFILE.disciplinas || []).join(',');
+  if (typeof ospaRenderSidebar === 'function') ospaRenderSidebar();
+}
+
+// ── ARQUIVOS VIGENTES POR DISCIPLINA (pra âncora e comparação) ──
+function arquivosVigentes(disciplina) {
+  return DOCS.filter(d => d.disciplina === disciplina && d.vigente)
+    .map(d => ({ id_arquivo_drive: d.id_arquivo_drive, revisao: d.revisao || '' }))
+    .sort((a,b) => a.id_arquivo_drive.localeCompare(b.id_arquivo_drive));
+}
+function assinatura(lista) {
+  return (lista || []).slice().sort((a,b) => a.id_arquivo_drive.localeCompare(b.id_arquivo_drive))
+    .map(x => x.id_arquivo_drive + ':' + x.revisao).join('|');
+}
+function temArquivoNovo(disciplina, ancora) {
+  if (!ancora) return false;
+  return assinatura(arquivosVigentes(disciplina)) !== assinatura(ancora);
+}
+
+// ── RODADA ATUAL ──
+function renderRodadaAtual() {
+  const wrap = document.getElementById('rodada-atual-wrap');
+  wrap.innerHTML = '';
+
+  if (!RODADA_ABERTA) {
+    const box = document.createElement('div');
+    box.className = 'main-hdr';
+    box.innerHTML = 'Rodada atual';
+    wrap.appendChild(box);
+
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.style.marginBottom = '32px';
+    empty.innerHTML = 'Nenhuma rodada aberta no momento.<br><br>';
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-p'; btn.textContent = 'Abrir nova rodada';
+    btn.onclick = abrirModalAbrir;
+    empty.appendChild(btn);
+    wrap.appendChild(empty);
+    return;
+  }
+
+  const box = document.createElement('div');
+  box.className = 'rodada-box';
+
+  const total = LINHAS_ABERTA.length;
+  const concluidas = LINHAS_ABERTA.filter(l => l.status === 'concluido').length;
+  const todasConcluidas = total > 0 && concluidas === total;
+
+  const hdr = document.createElement('div');
+  hdr.className = 'rodada-hdr';
+  hdr.innerHTML =
+    '<div><div class="rodada-nome">' + (RODADA_ABERTA.nome || '') + '</div>' +
+    '<div class="rodada-meta">aberta em ' + fmtDate(RODADA_ABERTA.data_abertura) + '</div></div>' +
+    '<div style="display:flex;align-items:center;gap:14px">' +
+      '<div class="rodada-progresso"><b>' + concluidas + '</b> de <b>' + total + '</b> disciplinas concluídas' +
+        (todasConcluidas ? ' · pronta para encerrar' : '') + '</div>' +
+    '</div>';
+  const encerrarBtn = document.createElement('button');
+  encerrarBtn.className = 'btn ' + (todasConcluidas ? 'btn-p' : 'btn-g');
+  encerrarBtn.textContent = 'Encerrar rodada';
+  encerrarBtn.onclick = () => encerrarRodada(todasConcluidas);
+  hdr.querySelector('div:last-child').appendChild(encerrarBtn);
+  box.appendChild(hdr);
+
+  const grid = document.createElement('div');
+  grid.className = 'cards-grid';
+  LINHAS_ABERTA.forEach(linha => grid.appendChild(criarCardDisciplina(linha, true)));
+  box.appendChild(grid);
+
+  wrap.appendChild(box);
+}
+
+function criarCardDisciplina(linha, editavel) {
+  const card = document.createElement('div');
+  card.className = 'disc-card';
+
+  const top = document.createElement('div');
+  top.className = 'disc-card-top';
+  const tag = document.createElement('span');
+  tag.className = 'd-tag d-' + linha.disciplina;
+  tag.textContent = linha.disciplina;
+  top.appendChild(tag);
+
+  if (editavel) {
+    const sel = document.createElement('select');
+    sel.className = 'status-select st-' + linha.status;
+    [['pendente','pendente'],['em_analise','em análise'],['concluido','concluído']].forEach(([v,l]) => {
+      const opt = document.createElement('option'); opt.value = v; opt.textContent = l;
+      if (v === linha.status) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    sel.onchange = () => atualizarStatus(linha, sel.value, sel);
+    top.appendChild(sel);
+  } else {
+    const st = document.createElement('span');
+    st.className = 'status-select st-' + linha.status;
+    st.textContent = { pendente:'pendente', em_analise:'em análise', concluido:'concluído' }[linha.status] || linha.status;
+    top.appendChild(st);
+  }
+  card.appendChild(top);
+
+  if (linha.status === 'concluido' && temArquivoNovo(linha.disciplina, linha.ancora_arquivos)) {
+    const alerta = document.createElement('div');
+    alerta.className = 'alerta-novo';
+    alerta.textContent = 'arquivo novo desde a última análise';
+    card.appendChild(alerta);
+  }
+
+  if (editavel) {
+    const area = document.createElement('textarea');
+    area.className = 'consid-area';
+    area.placeholder = 'Considerações da análise (mesmo sem apontamentos, registre aqui)…';
+    area.value = linha.consideracao || '';
+    area.onblur = () => salvarConsideracao(linha, area.value);
+    card.appendChild(area);
+  } else if (linha.consideracao) {
+    const p = document.createElement('div');
+    p.className = 'disc-card-meta';
+    p.style.color = 'var(--text2)'; p.style.fontFamily = 'var(--sans)'; p.style.fontSize = '12px';
+    p.textContent = linha.consideracao;
+    card.appendChild(p);
+  }
+
+  const meta = document.createElement('div');
+  meta.className = 'disc-card-meta';
+  meta.textContent = linha.analisado_em ? ('analisado em ' + fmtDate(linha.analisado_em)) : 'ainda não analisado';
+  card.appendChild(meta);
+
+  return card;
+}
+
+async function atualizarStatus(linha, novoStatus, selEl) {
+  const patch = { status: novoStatus };
+  if (novoStatus === 'concluido') {
+    patch.ancora_arquivos = arquivosVigentes(linha.disciplina);
+    patch.analisado_por = USER_PROFILE.id;
+    patch.analisado_em = new Date().toISOString();
+  }
+  try {
+    await api('PATCH','rodada_disciplinas',patch,'id=eq.'+linha.id,{'Content-Type':'application/json','Prefer':'return=minimal'});
+    Object.assign(linha, patch);
+    selEl.className = 'status-select st-' + novoStatus;
+    renderRodadaAtual();
+    toast('Status atualizado.');
+  } catch(e) {
+    alert('Erro ao atualizar status: ' + e.message);
+  }
+}
+
+async function salvarConsideracao(linha, texto) {
+  if (texto === (linha.consideracao || '')) return;
+  try {
+    await api('PATCH','rodada_disciplinas',{consideracao:texto},'id=eq.'+linha.id,{'Content-Type':'application/json','Prefer':'return=minimal'});
+    linha.consideracao = texto;
+    toast('Consideração salva.');
+  } catch(e) {
+    alert('Erro ao salvar consideração: ' + e.message);
+  }
+}
+
+async function encerrarRodada(todasConcluidas) {
+  const pendentes = LINHAS_ABERTA.filter(l => l.status !== 'concluido').length;
+  const msg = todasConcluidas
+    ? 'Encerrar "' + RODADA_ABERTA.nome + '"?'
+    : pendentes + ' disciplina(s) ainda não concluída(s). Encerrar mesmo assim? Elas ficarão marcadas como não analisadas nesta rodada.';
+  if (!confirm(msg)) return;
+  try {
+    await api('PATCH','rodadas_compatibilizacao',
+      { status:'encerrada', encerrada_por: USER_PROFILE.id, data_encerramento: new Date().toISOString() },
+      'id=eq.'+RODADA_ABERTA.id, {'Content-Type':'application/json','Prefer':'return=minimal'});
+    toast('Rodada encerrada.');
+    await loadApp();
+  } catch(e) {
+    alert('Erro ao encerrar rodada: ' + e.message);
+  }
+}
+
+// ── ABRIR NOVA RODADA ──
+function abrirModalAbrir() {
+  const proximoNumero = RODADAS.length + 1;
+  const agora = new Date();
+  const mesAno = agora.toLocaleDateString('pt-BR',{month:'short',year:'numeric'}).replace('.','');
+  document.getElementById('nova-rodada-nome').value =
+    'Rodada ' + String(proximoNumero).padStart(2,'0') + ' — ' + mesAno;
+
+  const list = document.getElementById('disc-checklist');
+  list.innerHTML = '';
+  CONFIG.disciplines.forEach(disc => {
+    const ultima = ULTIMA_ANALISE[disc];
+    const pendencia = !ultima || temArquivoNovo(disc, ultima.ancora_arquivos);
+
+    const row = document.createElement('div');
+    row.className = 'disc-check-row';
+    const check = document.createElement('input');
+    check.type = 'checkbox'; check.checked = pendencia; check.value = disc;
+    row.appendChild(check);
+    const lbl = document.createElement('div');
+    lbl.className = 'disc-check-label';
+    const tag = document.createElement('span'); tag.className = 'd-tag d-' + disc; tag.textContent = disc;
+    lbl.appendChild(tag);
+    if (pendencia) {
+      const badge = document.createElement('span');
+      badge.className = 'alerta-novo';
+      badge.textContent = ultima ? 'arquivo novo desde a última análise' : 'nunca analisada';
+      lbl.appendChild(badge);
+    }
+    row.appendChild(lbl);
+    list.appendChild(row);
+  });
+
+  document.getElementById('modal-abrir').classList.add('open');
+}
+function fecharModalAbrir() { document.getElementById('modal-abrir').classList.remove('open'); }
+
+async function confirmarAbrirRodada() {
+  const nome = document.getElementById('nova-rodada-nome').value.trim();
+  if (!nome) { alert('Dê um nome para a rodada.'); return; }
+  const selecionadas = [...document.querySelectorAll('#disc-checklist input:checked')].map(c => c.value);
+  if (!selecionadas.length) { alert('Selecione ao menos uma disciplina.'); return; }
+
+  try {
+    const novaRodada = await api('POST','rodadas_compatibilizacao',
+      { projeto_id: PROJ_ID, nome, aberta_por: USER_PROFILE.id }, null,
+      {'Content-Type':'application/json','Prefer':'return=representation'});
+    const rodadaId = novaRodada[0].id;
+    await api('POST','rodada_disciplinas',
+      selecionadas.map(d => ({ rodada_id: rodadaId, disciplina: d })), null,
+      {'Content-Type':'application/json','Prefer':'return=minimal'});
+    fecharModalAbrir();
+    toast('Rodada aberta.');
+    await loadApp();
+  } catch(e) {
+    alert('Erro ao abrir rodada: ' + e.message);
+  }
+}
+
+// ── HISTÓRICO ──
+function renderHistorico() {
+  const wrap = document.getElementById('historico-wrap');
+  wrap.innerHTML = '';
+  const encerradas = RODADAS.filter(r => r.status === 'encerrada');
+  if (!encerradas.length) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.textContent = 'Nenhuma rodada encerrada ainda.';
+    wrap.appendChild(empty);
+    return;
+  }
+  encerradas.forEach(r => wrap.appendChild(criarItemHistorico(r)));
+}
+
+function criarItemHistorico(rodada) {
+  const item = document.createElement('div');
+  item.className = 'hist-item';
+  const hdr = document.createElement('div');
+  hdr.className = 'hist-item-hdr';
+  hdr.innerHTML =
+    '<div><div class="hist-nome">' + (rodada.nome||'') + '</div>' +
+    '<div class="hist-meta">' + fmtDate(rodada.data_abertura) + ' → ' + fmtDate(rodada.data_encerramento) + '</div></div>' +
+    '<div class="hist-stats">ver disciplinas ▾</div>';
+  const body = document.createElement('div');
+  body.className = 'hist-body';
+  let carregado = false;
+  hdr.onclick = async () => {
+    body.classList.toggle('open');
+    if (body.classList.contains('open') && !carregado) {
+      carregado = true;
+      body.innerHTML = '<div class="empty-state">Carregando…</div>';
+      const linhas = await api('GET','rodada_disciplinas',null,'rodada_id=eq.'+rodada.id+'&order=disciplina.asc');
+      const grid = document.createElement('div');
+      grid.className = 'cards-grid';
+      linhas.forEach(l => grid.appendChild(criarCardDisciplina(l, false)));
+      body.innerHTML = '';
+      body.appendChild(grid);
+    }
+  };
+  item.appendChild(hdr); item.appendChild(body);
+  return item;
+}
+
+// ── UTILS ──
+function fmtDate(s) {
+  if (!s) return '—';
+  const d = new Date(s);
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+
+// ── INIT ──
+document.getElementById('login-form').addEventListener('submit', e => { e.preventDefault(); doLogin(); });
+
+(async () => {
+  show('loading');
+  setLoadingText('Restaurando sessão…');
+  const restored = await tryRestoreSession();
+  if (restored) { await loadApp(); } else { show('login'); }
+})();
+</script>
+</body>
+</html>
