@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSPA — Monitor de Conflitos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=IBM+Plex+Serif:wght@300;400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="sidebar.css?v=3">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F8F8F8;--surface:#FFF;--surface2:#F6F5F3;--surface3:#E5E4E1;
+  --border:#E5E4E1;--border2:#CCC8C4;
+  --text:#191919;--text2:#727272;--text3:#B5B5B5;
+  --pend:#7A5200;--resol:#1A6B48;--alert:#C42828;
+  --sans:'Manrope',sans-serif;--serif:'IBM Plex Serif',serif;--mono:'IBM Plex Mono',monospace;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ── LOGIN / LOADING (same pattern as projeto.html) ── */
+#screen-login{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.login-box{background:var(--surface);border:1px solid var(--border);padding:40px;width:min(380px,100%)}
+.login-logo{height:32px;margin-bottom:28px;display:block}
+.login-title{font-family:var(--serif);font-size:18px;font-weight:300;color:var(--text);margin-bottom:6px}
+.login-sub{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:28px}
+.login-field{margin-bottom:14px}
+.login-field label{display:block;font-family:var(--sans);font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:5px}
+.login-field input{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 12px;font-family:var(--sans);font-size:13px;outline:none;transition:border-color 0.12s}
+.login-field input:focus{border-color:var(--text2)}
+.login-btn{width:100%;background:var(--text);color:var(--surface);border:none;padding:11px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;margin-top:6px;transition:opacity 0.1s;letter-spacing:0.04em}
+.login-btn:hover{opacity:0.85}
+.login-err{font-family:var(--mono);font-size:11px;color:var(--alert);margin-top:10px;display:none}
+#screen-loading{display:none;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:12px}
+.loading-logo{height:36px;opacity:0.6}
+.loading-text{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:0.12em}
+
+/* ── LAYOUT (sidebar sempre presente — "casca" fixa da página; só o
+   conteúdo à direita troca entre login/loading/app) ── */
+.app-shell{display:flex;min-height:100vh}
+.shell-content{flex:1;min-width:0;display:flex;flex-direction:column}
+#screen-app{display:none} /* controlado via JS (show()) */
+
+/* ── MAIN / ANALYTICS ── */
+.main{padding:32px 40px 90px;max-width:1040px;margin:0 auto}
+section{margin-bottom:50px}
+.section-head{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+.section-num{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.08em}
+h2{font-family:var(--serif);font-weight:300;font-size:19px;color:var(--text)}
+.section-note{color:var(--text2);font-size:12.5px;line-height:1.6;margin:6px 0 18px;max-width:640px}
+.panel{background:var(--surface);border:1px solid var(--border);padding:22px;border-radius:2px}
+.empty-note{font-family:var(--mono);font-size:11px;color:var(--text3);padding:20px 0;text-align:center}
+.legend{display:flex;align-items:center;gap:18px;margin-top:16px;font-family:var(--mono);font-size:10px;color:var(--text2);flex-wrap:wrap}
+.legend-swatch{display:inline-flex;align-items:center;gap:6px}
+.sw{width:12px;height:12px;border-radius:2px;display:inline-block}
+
+/* KPI row (resumo) */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--border);border:1px solid var(--border)}
+.kpi{background:var(--surface);padding:20px 22px}
+.kpi-label{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
+.kpi-value{font-family:var(--serif);font-weight:300;font-size:30px;color:var(--text)}
+.kpi-value.alert{color:var(--alert)}
+.kpi-value.resol{color:var(--resol)}
+
+/* Chips */
+.chip-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.chip{font-family:var(--mono);font-size:10px;font-weight:600;padding:4px 10px;border-radius:2px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;transition:all .12s;user-select:none}
+svg text{font-family:var(--mono);fill:var(--text3);font-size:10px}
+.tl-legend{display:flex;gap:20px;margin-top:14px;font-family:var(--mono);font-size:10px;color:var(--text2);flex-wrap:wrap}
+.tl-legend span{display:inline-flex;align-items:center;gap:6px}
+.dot-leg{width:16px;height:2px;display:inline-block}
+.chart-caveat{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:12px;line-height:1.5}
+
+/* Health cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--border);padding:16px;border-radius:2px}
+.card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.d-tag{font-family:var(--mono);font-size:10px;font-weight:600;padding:2px 7px;border-radius:2px}
+.crit-tag{font-family:var(--mono);font-size:9px;font-weight:600;color:var(--alert);display:flex;align-items:center;gap:4px}
+.crit-tag .dot{width:5px;height:5px;border-radius:50%;background:var(--alert)}
+.pct-row{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.pct{font-family:var(--serif);font-weight:300;font-size:32px}
+.frac{font-family:var(--mono);font-size:11px;color:var(--text3)}
+.bar-track{height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;margin-bottom:12px}
+.bar-fill{height:100%;border-radius:3px}
+.avg-row{font-family:var(--mono);font-size:10.5px;color:var(--text2);display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:9px}
+.avg-row b{color:var(--text);font-weight:600}
+
+/* Floors — barra horizontal, um segmento por conflito */
+.floor{display:grid;grid-template-columns:74px 1fr 108px;align-items:center;gap:12px;border-top:1px solid var(--border);padding:11px 0}
+.floor:last-child{border-bottom:1px solid var(--border)}
+.floor-label{font-family:var(--mono);font-size:11px;color:var(--text2);font-weight:500}
+.floor-plate{position:relative;height:22px;background:var(--surface2);border-radius:2px;overflow:hidden;border:1px solid var(--border);display:flex;align-items:stretch;gap:2px;padding:2px}
+.floor-seg{width:9px;flex-shrink:0;border-radius:1px;background:var(--alert)}
+.floor-seg.resolved{background:var(--resol)}
+.floor-seg.crit{background-image:repeating-linear-gradient(45deg, rgba(255,255,255,0.55) 0 2px, transparent 2px 5px)}
+.floor-stats{font-family:var(--mono);font-size:10.5px;color:var(--text2);text-align:right}
+.crit-swatch{background:var(--alert);background-image:repeating-linear-gradient(45deg, rgba(255,255,255,0.55) 0 2px, transparent 2px 5px)}
+
+@media (max-width: 720px){
+  .main{padding:20px 16px 70px}
+}
+</style>
+</head>
+<body data-page="analises">
+
+<div class="app-shell">
+  <div id="ospa-sidebar"></div>
+  <div class="shell-content">
+
+<!-- LOGIN -->
+<div id="screen-login">
+  <div class="login-box">
+    <img id="login-logo" class="login-logo" alt="OSPA">
+    <div class="login-title">Monitor de Conflitos</div>
+    <div class="login-sub">Acesso restrito</div>
+    <form id="login-form" autocomplete="on">
+      <div class="login-field">
+        <label>Email</label>
+        <input type="email" id="login-email" name="email" placeholder="seu@email.com" autocomplete="username">
+      </div>
+      <div class="login-field">
+        <label>Senha</label>
+        <input type="password" id="login-password" name="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button type="submit" class="login-btn" id="login-btn">Entrar</button>
+      <div class="login-err" id="login-err"></div>
+    </form>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="screen-loading">
+  <img id="loading-logo" class="loading-logo" alt="OSPA">
+  <div class="loading-text" id="loading-text">Carregando…</div>
+</div>
+
+<!-- APP -->
+<div id="screen-app">
+
+  <div class="main">
+    <section>
+      <div class="section-head"><span class="section-num">01</span><h2>Resumo de conflitos</h2></div>
+      <p class="section-note">Panorama geral do projeto.</p>
+      <div class="kpi-row" id="kpiRow"></div>
+    </section>
+
+    <section>
+      <div class="section-head"><span class="section-num">02</span><h2>Saúde por disciplina</h2></div>
+      <p class="section-note">Barra colorida por faixa (vermelho/amarelo/verde) indica o percentual resolvido. Críticos em aberto aparecem como alerta no topo do card.</p>
+      <div class="cards" id="cardsGrid"></div>
+    </section>
+
+    <section>
+      <div class="section-head"><span class="section-num">03</span><h2>Conflitos em aberto ao longo do tempo</h2></div>
+      <p class="section-note">Quantos conflitos estavam em aberto ao final de cada mês, por disciplina — facilita comparar quem está reduzindo ou acumulando fila. Ligue/desligue disciplinas para comparar.</p>
+      <div class="panel">
+        <div class="chip-row" id="chipRow"></div>
+        <svg id="timelineSvg" viewBox="0 0 760 260" width="100%" height="260"></svg>
+        <div class="tl-legend" id="tlLegend"></div>
+        <p class="chart-caveat">Estimativa: como ainda não há histórico completo de mudança de status, um conflito é considerado "aberto" até a última atualização que o marcou como resolvido.</p>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head"><span class="section-num">04</span><h2>Conflitos por pavimento</h2></div>
+      <p class="section-note">Cada barra é um conflito: verde = resolvido, vermelho = em aberto. Listrado diagonal = crítico. Ordem lida diretamente do cadastro de locais do projeto.</p>
+      <div class="panel">
+        <div id="buildingStack"></div>
+        <div class="legend" style="margin-top:16px">
+          <span class="legend-swatch"><span class="sw" style="background:var(--alert)"></span>aberto</span>
+          <span class="legend-swatch"><span class="sw" style="background:var(--resol)"></span>resolvido</span>
+          <span class="legend-swatch"><span class="sw crit-swatch"></span>crítico</span>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+  </div>
+</div>
+
+<script src="sidebar.js?v=3"></script>
+<script src="editor-launcher.js?v=3"></script>
+<script>
+// ══════════════════════════════════════════════════════
+// SUPABASE CONFIG + AUTH (mesmo padrão do projeto.html)
+// ══════════════════════════════════════════════════════
+const SB_URL  = "https://jxezjuovrxajjleyjdcs.supabase.co";
+const SB_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4ZXpqdW92cnhhampsZXlqZGNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MDcwNTksImV4cCI6MjA5NjA4MzA1OX0.vaHfGesmDhZVeDMl_GSQYyIhN7E0EvRvV1vMy2vRYZY";
+const SB_AUTH = SB_URL + "/auth/v1";
+const LOGO_URL = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIyIiBoZWlnaHQ9IjkxIiB2aWV3Qm94PSIwIDAgMTIyIDkxIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0xOS45NTE4IDExLjU2OTNDMTkuOTUxOCA4Ljg2MTQ2IDE3Ljc1NjYgNi42NjYzMyAxNS4wNDg4IDYuNjY2MzNIMTEuNTY5M0M4Ljg2MTQ2IDYuNjY2MzMgNi42NjYzMyA4Ljg2MTQ2IDYuNjY2MzMgMTEuNTY5M1Y0Ni42ODA4QzYuNjY2MzMgNDkuMzg4NiA4Ljg2MTQ2IDUxLjU4MzcgMTEuNTY5MyA1MS41ODM3SDE1LjA0ODhDMTcuNzU2NiA1MS41ODM3IDE5Ljk1MTggNDkuMzg4NiAxOS45NTE4IDQ2LjY4MDhWMTEuNTY5M1oiIGZpbGw9IiMxOTE5MTkiLz48L3N2Zz4=";
+
+// Alimenta o sidebar com o código do projeto assim que possível — antes de
+// qualquer autenticação — pra ele já nascer certo na primeira renderização
+// (feita pelo próprio sidebar.js no DOMContentLoaded), sem esperar o login.
+document.body.dataset.projeto = new URLSearchParams(window.location.search).get('id') || '';
+
+let SESSION = null, USER_PROFILE = null, PROJETO = null, PROJ_ID = null;
+let CONFIG = { disciplines: [], locations: [] };
+let CONFLICTS = [];
+
+function setLogos(src){ ['login-logo','loading-logo','app-logo'].forEach(id=>{ const el=document.getElementById(id); if(el) el.src=src; }); }
+setLogos(LOGO_URL);
+
+async function sbFetch(path, opts={}){
+  const headers = {'Content-Type':'application/json','apikey':SB_KEY, ...opts.headers};
+  if(SESSION) headers['Authorization'] = 'Bearer ' + SESSION.access_token;
+  return fetch(SB_URL + path, {...opts, headers});
+}
+async function api(method, table, body, qs){
+  const url = '/rest/v1/' + table + (qs ? '?' + qs : '');
+  const r = await sbFetch(url, { method, headers: method!=='GET' ? {'Prefer':'return=representation'} : {}, body: body ? JSON.stringify(body) : undefined });
+  if(!r.ok){ const err = await r.json().catch(()=>({})); throw new Error(err.message || 'HTTP ' + r.status); }
+  return method==='DELETE' ? null : r.json();
+}
+
+const SESSION_KEY = 'ospa_session';
+function saveSession(s){ try{ localStorage.setItem(SESSION_KEY, JSON.stringify(s)); }catch(e){} }
+function loadSavedSession(){ try{ return JSON.parse(localStorage.getItem(SESSION_KEY)||'null'); }catch(e){ return null; } }
+function clearSavedSession(){ try{ localStorage.removeItem(SESSION_KEY); }catch(e){} }
+async function refreshSession(refreshToken){
+  const r = await fetch(SB_AUTH + '/token?grant_type=refresh_token', { method:'POST', headers:{'Content-Type':'application/json','apikey':SB_KEY}, body: JSON.stringify({refresh_token:refreshToken}) });
+  const data = await r.json();
+  if(!r.ok) throw new Error(data.error_description || data.msg || 'Sessão expirada');
+  return data;
+}
+async function tryRestoreSession(){
+  const saved = loadSavedSession();
+  if(!saved || !saved.refresh_token) return false;
+  // Se o access_token salvo ainda vale por pelo menos mais 60s, reaproveita
+  // direto — evita um round-trip de rede pro Supabase em toda troca de página.
+  const agora = Math.floor(Date.now() / 1000);
+  if (saved.access_token && saved.expires_at && saved.expires_at - agora > 60) { SESSION = saved; return true; }
+  try{ SESSION = await refreshSession(saved.refresh_token); saveSession(SESSION); return true; }
+  catch(e){ clearSavedSession(); return false; }
+}
+async function doLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-password').value;
+  if(!email || !pass){ showLoginErr('Preencha email e senha.'); return; }
+  document.getElementById('login-btn').textContent = 'Entrando…';
+  try{
+    const r = await fetch(SB_AUTH + '/token?grant_type=password', { method:'POST', headers:{'Content-Type':'application/json','apikey':SB_KEY}, body: JSON.stringify({email, password:pass}) });
+    const data = await r.json();
+    if(!r.ok) throw new Error(data.error_description || data.msg || 'Credenciais inválidas');
+    SESSION = data; saveSession(SESSION);
+    await loadApp();
+  }catch(e){ showLoginErr(e.message); document.getElementById('login-btn').textContent='Entrar'; }
+}
+function showLoginErr(msg){ const el=document.getElementById('login-err'); el.textContent=msg; el.style.display='block'; }
+function doLogout(){ SESSION=null; USER_PROFILE=null; clearSavedSession(); show('login'); }
+// Contrato usado pelo sidebar.js: o link "Sair" do menu chama window.ospaLogout()
+window.ospaLogout = doLogout;
+function show(screen){
+  ['login','loading','app'].forEach(s=>{
+    const el = document.getElementById('screen-'+s);
+    if(el) el.style.display = s===screen ? (s==='app' ? 'block' : 'flex') : 'none';
+  });
+  const sb = document.getElementById('ospa-sidebar');
+  if (sb) sb.style.display = (screen === 'login') ? 'none' : '';
+}
+function setLoadingText(t){ document.getElementById('loading-text').textContent = t; }
+
+// ══════════════════════════════════════════════════════
+// LOAD APP
+// ══════════════════════════════════════════════════════
+async function loadApp(){
+  show('loading');
+  setLoadingText('Identificando usuário…');
+  const params = new URLSearchParams(window.location.search);
+  PROJ_ID = params.get('id');
+  if(!PROJ_ID){ setLoadingText('Nenhum projeto especificado. Use ?id=CODIGO na URL.'); return; }
+
+  try{
+    const uid = SESSION.user.id;
+    const meArr = await api('GET','usuarios',null,'id=eq.'+uid);
+    if(!meArr || !meArr.length){ setLoadingText('Usuário não cadastrado no sistema.'); return; }
+    const me = meArr[0];
+
+    if(me.papel_global === 'admin'){
+      USER_PROFILE = { id:uid, email:me.email, nome:me.nome, papel:'admin', disciplinas: [] };
+    } else {
+      const perfis = await api('GET','projeto_usuarios_v2',null,'usuario_id=eq.'+uid+'&projeto_id=eq.'+PROJ_ID);
+      if(!perfis || !perfis.length){ setLoadingText('Você não tem acesso a este projeto.'); return; }
+      USER_PROFILE = { id:uid, email:me.email, nome:me.nome, papel:perfis[0].papel, disciplinas: perfis[0].disciplinas || [] };
+    }
+
+    setLoadingText('Carregando conflitos…');
+    const [proj, cfg, cfls] = await Promise.all([
+      api('GET','projetos',null,'id=eq.'+PROJ_ID).then(r=>r[0]),
+      api('GET','config_projeto',null,'projeto_id=eq.'+PROJ_ID).then(r=>r[0]||{}),
+      api('GET','conflitos',null,'projeto_id=eq.'+PROJ_ID)
+    ]);
+
+    PROJETO = proj;
+    CONFIG.disciplines = cfg.disciplinas || ['ARQ','HID','EST','INT','CLI','ELE','GAS','PSG','IMP','MOD'];
+    CONFIG.locations   = cfg.locais || [];
+
+    CONFLICTS = cfls
+      .filter(c => c.publicado !== false)
+      .map(c => ({ alerta:c.alerta, status:c.status, local:c.local, disciplinas:c.disciplinas||[], created_at:c.created_at, updated_at:c.updated_at }));
+
+    // Sidebar compartilhado (sidebar.js): alimenta via data-* e re-renderiza
+    document.body.dataset.userName = USER_PROFILE.nome || '';
+    document.body.dataset.userRole = USER_PROFILE.papel || 'projetista';
+    document.body.dataset.projeto = PROJETO.id || '';
+    document.body.dataset.userDisciplinas = (USER_PROFILE.disciplinas || []).join(',');
+    if (typeof ospaRenderSidebar === 'function') ospaRenderSidebar();
+
+    renderAnalytics();
+    show('app');
+  }catch(e){
+    setLoadingText('Erro: ' + e.message);
+    console.error(e);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// COLOR HELPERS (mapa conhecido + fallback determinístico p/ disciplinas novas)
+// ══════════════════════════════════════════════════════
+const KNOWN_COLORS = {
+  ARQ:{c:'#2A6080',bg:'#EBF2F6'}, HID:{c:'#1A5A8A',bg:'#E8F0F8'}, EST:{c:'#7A4E14',bg:'#F6EEE2'},
+  INT:{c:'#5A3490',bg:'#EEE8F6'}, CLI:{c:'#166050',bg:'#E4F2EE'}, ELE:{c:'#606000',bg:'#F4F4E0'},
+  GAS:{c:'#802010',bg:'#F6EAE8'}, PSG:{c:'#206420',bg:'#E8F4E8'}, IMP:{c:'#802840',bg:'#F6E8EE'},
+  MOD:{c:'#284088',bg:'#E8EEF8'}
+};
+const colorCache = {};
+function getDiscColor(d){
+  if(KNOWN_COLORS[d]) return KNOWN_COLORS[d];
+  if(colorCache[d]) return colorCache[d];
+  let hash=0; for(let i=0;i<d.length;i++){ hash = d.charCodeAt(i) + ((hash<<5)-hash); hash|=0; }
+  const hue = Math.abs(hash) % 360;
+  const result = { c:`hsl(${hue},45%,32%)`, bg:`hsl(${hue},45%,93%)` };
+  colorCache[d] = result;
+  return result;
+}
+
+// ══════════════════════════════════════════════════════
+// DERIVED DATA
+// ══════════════════════════════════════════════════════
+function monthKey(dateStr){ const d=new Date(dateStr); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function lastMonths(n){
+  const arr=[]; const now=new Date();
+  for(let i=n-1;i>=0;i--){ const d=new Date(now.getFullYear(), now.getMonth()-i, 1); arr.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), end:new Date(d.getFullYear(),d.getMonth()+1,0,23,59,59), label:d.toLocaleDateString('pt-BR',{month:'short'}).replace('.','')}); }
+  return arr;
+}
+
+let allDisc = [], disciplinasOrdenadas = [];
+let activeDiscs = new Set();
+const months = lastMonths(6);
+
+function renderAnalytics(){
+  allDisc = CONFIG.disciplines.filter(d => CONFLICTS.some(cf=>cf.disciplinas.includes(d)));
+  if(allDisc.length===0) allDisc = CONFIG.disciplines;
+
+  const totals = {};
+  allDisc.forEach(d=>{ totals[d] = CONFLICTS.filter(cf=>cf.disciplinas.includes(d)).length; });
+  disciplinasOrdenadas = [...allDisc].sort((a,b)=> totals[b]-totals[a]);
+  activeDiscs = new Set(disciplinasOrdenadas); // todas ligadas por padrão
+
+  renderKpis();
+  renderChips();
+  renderTimeline();
+  renderHealthCards();
+  renderFloors();
+}
+
+// ---- 01: resumo (KPIs) ----
+function renderKpis(){
+  const total = CONFLICTS.length;
+  const abertos = CONFLICTS.filter(cf=>cf.status!=='RESOLVIDO').length;
+  const criticos = CONFLICTS.filter(cf=>cf.alerta && cf.status!=='RESOLVIDO').length;
+  const pctResolvido = total ? Math.round(((total-abertos)/total)*100) : 0;
+  const grid = document.getElementById('kpiRow');
+  grid.innerHTML = `
+    <div class="kpi"><div class="kpi-label">Total de conflitos</div><div class="kpi-value">${total}</div></div>
+    <div class="kpi"><div class="kpi-label">Em aberto</div><div class="kpi-value alert">${abertos}</div></div>
+    <div class="kpi"><div class="kpi-label">Críticos em aberto</div><div class="kpi-value alert">${criticos}</div></div>
+    <div class="kpi"><div class="kpi-label">% resolvido geral</div><div class="kpi-value resol">${pctResolvido}%</div></div>
+  `;
+}
+
+// ---- 02: chips (toggle simples, sem matriz) ----
+function renderChips(){
+  const chipRow = document.getElementById('chipRow');
+  chipRow.innerHTML='';
+  disciplinasOrdenadas.forEach(d=>{
+    const chip=document.createElement('button');
+    chip.className='chip'+(activeDiscs.has(d)?' on':'');
+    chip.textContent=d;
+    const col=getDiscColor(d);
+    if(activeDiscs.has(d)){ chip.style.borderColor=col.c; chip.style.color=col.c; chip.style.background=col.bg; }
+    chip.addEventListener('click', ()=>{
+      if(activeDiscs.has(d)) activeDiscs.delete(d); else activeDiscs.add(d);
+      renderChips(); renderTimeline();
+    });
+    chipRow.appendChild(chip);
+  });
+}
+
+// ---- 03: conflitos em aberto ao longo do tempo ----
+// "Aberto no fim do mês X" = criado até o fim do mês E (ainda não resolvido, OU resolvido depois do fim do mês)
+function openSeriesFor(d){
+  return months.map(m => CONFLICTS.filter(cf=>
+    cf.disciplinas.includes(d) &&
+    new Date(cf.created_at) <= m.end &&
+    (cf.status!=='RESOLVIDO' || new Date(cf.updated_at) > m.end)
+  ).length);
+}
+function renderTimeline(){
+  const svgNS="http://www.w3.org/2000/svg";
+  const svg=document.getElementById('timelineSvg');
+  svg.innerHTML='';
+  const active = disciplinasOrdenadas.filter(d=>activeDiscs.has(d));
+  const padL=30,padR=14,padT=14,padB=26,W=760,H=260;
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+  if(active.length===0){ const t=document.createElementNS(svgNS,'text'); t.setAttribute('x',W/2); t.setAttribute('y',H/2); t.setAttribute('text-anchor','middle'); t.textContent='Nenhuma disciplina selecionada'; svg.appendChild(t); document.getElementById('tlLegend').innerHTML=''; return; }
+  const allVals = active.flatMap(d=>openSeriesFor(d));
+  const maxVal = Math.max(2, ...allVals);
+  for(let i=0;i<=4;i++){
+    const y=padT+plotH-(i/4)*plotH;
+    const line=document.createElementNS(svgNS,'line');
+    line.setAttribute('x1',padL); line.setAttribute('x2',W-padR); line.setAttribute('y1',y); line.setAttribute('y2',y);
+    line.setAttribute('stroke','#E5E4E1'); line.setAttribute('stroke-width','1');
+    svg.appendChild(line);
+    const t=document.createElementNS(svgNS,'text'); t.setAttribute('x',padL-6); t.setAttribute('y',y+3); t.setAttribute('text-anchor','end'); t.textContent=Math.round((i/4)*maxVal); svg.appendChild(t);
+  }
+  months.forEach((m,i)=>{
+    const x=padL+(i/(months.length-1))*plotW;
+    const t=document.createElementNS(svgNS,'text'); t.setAttribute('x',x); t.setAttribute('y',H-6); t.setAttribute('text-anchor','middle'); t.textContent=m.label; svg.appendChild(t);
+  });
+  function drawLine(values,color){
+    const pts=values.map((v,i)=>{ const x=padL+(i/(months.length-1))*plotW; const y=padT+plotH-(v/maxVal)*plotH; return [x,y]; });
+    const path=document.createElementNS(svgNS,'path');
+    path.setAttribute('d', pts.map((p,i)=>(i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' '));
+    path.setAttribute('fill','none'); path.setAttribute('stroke',color); path.setAttribute('stroke-width','2.3');
+    path.setAttribute('stroke-linecap','round');
+    svg.appendChild(path);
+    pts.forEach(p=>{ const c=document.createElementNS(svgNS,'circle'); c.setAttribute('cx',p[0]); c.setAttribute('cy',p[1]); c.setAttribute('r','2.8'); c.setAttribute('fill',color); svg.appendChild(c); });
+  }
+  active.forEach(d=>{ drawLine(openSeriesFor(d), getDiscColor(d).c); });
+  document.getElementById('tlLegend').innerHTML = active.map(d=>'<span><span class="dot-leg" style="background:'+getDiscColor(d).c+'"></span>'+d+'</span>').join('');
+}
+
+// ---- 04: saúde por disciplina ----
+function barColor(pct){ if(pct<40) return '#C42828'; if(pct<70) return '#B8860B'; return '#1A6B48'; }
+function renderHealthCards(){
+  const grid=document.getElementById('cardsGrid'); grid.innerHTML='';
+  disciplinasOrdenadas.forEach(d=>{
+    const conf = CONFLICTS.filter(cf=>cf.disciplinas.includes(d));
+    const total = conf.length;
+    if(total===0) return;
+    const resolved = conf.filter(cf=>cf.status==='RESOLVIDO');
+    const pct = Math.round((resolved.length/total)*100);
+    const avgDays = resolved.length ? Math.round(resolved.reduce((sum,cf)=> sum + (new Date(cf.updated_at)-new Date(cf.created_at))/86400000, 0)/resolved.length) : 0;
+    const crit = conf.filter(cf=>cf.alerta && cf.status!=='RESOLVIDO').length;
+    const bc = barColor(pct);
+    const col = getDiscColor(d);
+    const card=document.createElement('div'); card.className='card';
+    card.innerHTML = `
+      <div class="card-top">
+        <span class="d-tag" style="color:${col.c};background:${col.bg}">${d}</span>
+        ${crit>0 ? '<span class="crit-tag"><span class="dot"></span>'+crit+' crítico'+(crit===1?'':'s')+'</span>' : ''}
+      </div>
+      <div class="pct-row"><span class="pct" style="color:${bc}">${pct}%</span><span class="frac">${resolved.length}/${total} resolvidos</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${bc}"></div></div>
+      <div class="avg-row"><span>tempo médio de resolução</span><b>${avgDays}d</b></div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+// ---- 05: conflitos por pavimento (barra de segmentos) ----
+function renderFloors(){
+  const container=document.getElementById('buildingStack');
+  container.innerHTML='';
+  const locaisOrdenados = [...CONFIG.locations].reverse();
+  if(locaisOrdenados.length===0){ container.innerHTML='<div class="empty-note">Nenhum local cadastrado no projeto ainda.</div>'; return; }
+  locaisOrdenados.forEach(loc=>{
+    const conf = CONFLICTS.filter(cf=>cf.local===loc);
+    const open = conf.filter(cf=>cf.status!=='RESOLVIDO');
+    const resolved = conf.filter(cf=>cf.status==='RESOLVIDO');
+    const total = conf.length;
+    const row=document.createElement('div'); row.className='floor';
+    const plate=document.createElement('div'); plate.className='floor-plate';
+    open.forEach(cf=>{
+      const seg=document.createElement('div');
+      seg.className='floor-seg'+(cf.alerta?' crit':'');
+      plate.appendChild(seg);
+    });
+    resolved.forEach(cf=>{
+      const seg=document.createElement('div');
+      seg.className='floor-seg resolved'+(cf.alerta?' crit':'');
+      plate.appendChild(seg);
+    });
+    const label=document.createElement('div'); label.className='floor-label'; label.textContent=loc;
+    const stats=document.createElement('div'); stats.className='floor-stats'; stats.textContent=total+' total · '+open.length+' abertos';
+    row.appendChild(label); row.appendChild(plate); row.appendChild(stats);
+    container.appendChild(row);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════
+document.getElementById('login-form').addEventListener('submit', e => { e.preventDefault(); doLogin(); });
+(async () => {
+  show('loading');
+  setLoadingText('Restaurando sessão…');
+  const restored = await tryRestoreSession();
+  if(restored){ await loadApp(); } else { show('login'); }
+})();
+</script>
+</body>
+</html>
