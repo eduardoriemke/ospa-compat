@@ -14,8 +14,8 @@ const OSPA_NAV_ITEMS = [
   { key: 'relatorio',  label: 'Relatório',   href: 'projeto.html',    icon: 'ti-file-text',  roles: ['projetista','coordenador','admin'], needsId: true },
   { key: 'documentos', label: 'Documentos',  href: 'documentos.html', icon: 'ti-folder',      roles: ['projetista','coordenador','admin'], needsId: true },
   { key: 'analises',   label: 'Monitor de Conflitos', href: 'analytics.html', icon: 'ti-chart-bar',   roles: ['projetista','coordenador','admin'], needsId: true },
-  { key: 'analise',    label: 'Análise',     href: 'analise.html',   icon: 'ti-list-check',  roles: ['projetista','coordenador','admin'], needsId: true },
   { key: 'divider' },
+  { key: 'analise',    label: 'Análise',     href: 'analise.html',   icon: 'ti-list-check',  roles: ['coordenador','admin'], needsId: true },
   // Editor: continua sendo o "blob" independente que já existe hoje (gerado
   // via editor-launcher.js), sem sidebar, aberto em nova aba. Diferente dos
   // outros itens, não navega — dispara window.ospaOpenEditor() diretamente,
