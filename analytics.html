@@ -79,13 +79,12 @@ svg text{font-family:var(--mono);fill:var(--text3);font-size:10px}
 .d-tag{font-family:var(--mono);font-size:10px;font-weight:600;padding:2px 7px;border-radius:2px}
 .crit-tag{font-family:var(--mono);font-size:9px;font-weight:600;color:var(--alert);display:flex;align-items:center;gap:4px}
 .crit-tag .dot{width:5px;height:5px;border-radius:50%;background:var(--alert)}
-.pct-row{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
-.pct{font-family:var(--serif);font-weight:300;font-size:32px}
-.frac{font-family:var(--mono);font-size:11px;color:var(--text3)}
-.bar-track{height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;margin-bottom:12px}
-.bar-fill{height:100%;border-radius:3px}
-.avg-row{font-family:var(--mono);font-size:10.5px;color:var(--text2);display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:9px}
-.avg-row b{color:var(--text);font-weight:600}
+.card-body{display:flex;align-items:center;gap:14px}
+.donut{flex-shrink:0}
+.donut-track{fill:none;stroke:var(--surface3)}
+.donut-fill{fill:none;stroke-linecap:round;transition:stroke-dashoffset .2s}
+.donut-label{font-family:var(--serif);font-weight:300;font-size:16px;fill:var(--text)}
+.frac-row{font-family:var(--mono);font-size:11px;color:var(--text2);border-top:1px solid var(--border);padding-top:9px;margin-top:14px}
 
 /* Floors — barra horizontal, um segmento por conflito */
 .floor{display:grid;grid-template-columns:74px 1fr 108px;align-items:center;gap:12px;border-top:1px solid var(--border);padding:11px 0}
@@ -148,7 +147,7 @@ svg text{font-family:var(--mono);fill:var(--text3);font-size:10px}
 
     <section>
       <div class="section-head"><span class="section-num">02</span><h2>Saúde por disciplina</h2></div>
-      <p class="section-note">Barra colorida por faixa (vermelho/amarelo/verde) indica o percentual resolvido. Críticos em aberto aparecem como alerta no topo do card.</p>
+      <p class="section-note">O anel mostra o percentual resolvido, colorido por faixa (vermelho/amarelo/verde). Críticos em aberto aparecem como alerta no topo do card.</p>
       <div class="cards" id="cardsGrid"></div>
     </section>
 
@@ -446,6 +445,16 @@ function renderTimeline(){
 
 // ---- 04: saúde por disciplina ----
 function barColor(pct){ if(pct<40) return '#C42828'; if(pct<70) return '#B8860B'; return '#1A6B48'; }
+function donutSvg(pct, color){
+  const size=64, sw=7, r=(size-sw)/2, c=2*Math.PI*r;
+  const offset = c - (pct/100)*c;
+  return `<svg class="donut" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <circle class="donut-track" cx="${size/2}" cy="${size/2}" r="${r}" stroke-width="${sw}"></circle>
+    <circle class="donut-fill" cx="${size/2}" cy="${size/2}" r="${r}" stroke-width="${sw}" stroke="${color}"
+      stroke-dasharray="${c}" stroke-dashoffset="${offset}" transform="rotate(-90 ${size/2} ${size/2})"></circle>
+    <text class="donut-label" x="50%" y="52%" text-anchor="middle" dominant-baseline="middle">${pct}%</text>
+  </svg>`;
+}
 function renderHealthCards(){
   const grid=document.getElementById('cardsGrid'); grid.innerHTML='';
   disciplinasOrdenadas.forEach(d=>{
@@ -454,7 +463,6 @@ function renderHealthCards(){
     if(total===0) return;
     const resolved = conf.filter(cf=>cf.status==='RESOLVIDO');
     const pct = Math.round((resolved.length/total)*100);
-    const avgDays = resolved.length ? Math.round(resolved.reduce((sum,cf)=> sum + (new Date(cf.updated_at)-new Date(cf.created_at))/86400000, 0)/resolved.length) : 0;
     const crit = conf.filter(cf=>cf.alerta && cf.status!=='RESOLVIDO').length;
     const bc = barColor(pct);
     const col = getDiscColor(d);
@@ -464,9 +472,8 @@ function renderHealthCards(){
         <span class="d-tag" style="color:${col.c};background:${col.bg}">${d}</span>
         ${crit>0 ? '<span class="crit-tag"><span class="dot"></span>'+crit+' crítico'+(crit===1?'':'s')+'</span>' : ''}
       </div>
-      <div class="pct-row"><span class="pct" style="color:${bc}">${pct}%</span><span class="frac">${resolved.length}/${total} resolvidos</span></div>
-      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${bc}"></div></div>
-      <div class="avg-row"><span>tempo médio de resolução</span><b>${avgDays}d</b></div>
+      <div class="card-body">${donutSvg(pct, bc)}</div>
+      <div class="frac-row">${resolved.length}/${total} resolvidos</div>
     `;
     grid.appendChild(card);
   });
