@@ -64,18 +64,11 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 /* ── EQUIPE ── */
 .equipe-table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border)}
-.equipe-table th{
-  font-family:var(--sans);font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;
-  color:var(--text3);text-align:left;padding:9px 14px;border-bottom:1px solid var(--border);
-}
 .equipe-table td{padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:top}
 .equipe-table tr:last-child td{border-bottom:none}
-.equipe-nome{font-weight:600}
+.equipe-nome{font-weight:600;display:flex;align-items:center;gap:8px}
 .equipe-email{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:2px}
-.papel-badge{font-family:var(--mono);font-size:9px;font-weight:600;padding:2px 7px;border-radius:2px;letter-spacing:0.06em;text-transform:uppercase;white-space:nowrap}
-.papel-badge.p-admin{background:var(--text);color:var(--surface)}
-.papel-badge.p-coordenador{background:#E4F2EE;color:var(--resol)}
-.papel-badge.p-projetista{background:var(--surface2);color:var(--text2);border:1px solid var(--border2)}
+.papel-badge.p-coordenador{font-family:var(--mono);font-size:9px;font-weight:600;padding:2px 7px;border-radius:2px;letter-spacing:0.06em;text-transform:uppercase;white-space:nowrap;background:#E4F2EE;color:var(--resol)}
 .equipe-vazio{background:var(--surface);border:1px solid var(--border);padding:16px 18px;font-family:var(--mono);font-size:11px;color:var(--text3)}
 
 /* ── MOBILE ── */
@@ -424,17 +417,16 @@ function renderEquipe() {
     const discs = p.disciplinas.length
       ? '<div class="disc-chips">' + p.disciplinas.map(d => '<span class="disc-chip">'+esc(d)+'</span>').join('') + '</div>'
       : '<span style="color:var(--text3)">—</span>';
+    const coordBadge = p.papel === 'coordenador' ? ' <span class="papel-badge p-coordenador">Coordenador</span>' : '';
     return '<tr>' +
-      '<td><div class="equipe-nome">'+esc(p.nome)+'</div>' +
+      '<td><div class="equipe-nome">'+esc(p.nome)+coordBadge+'</div>' +
         (p.email ? '<div class="equipe-email">'+esc(p.email)+'</div>' : '') + '</td>' +
-      '<td><span class="papel-badge p-'+esc(p.papel)+'">'+esc(p.papel)+'</span></td>' +
       '<td>'+discs+'</td>' +
     '</tr>';
   }).join('');
 
   wrap.innerHTML =
     '<table class="equipe-table">' +
-      '<thead><tr><th>Nome</th><th>Papel</th><th>Disciplinas</th></tr></thead>' +
       '<tbody>'+linhas+'</tbody>' +
     '</table>';
 }
