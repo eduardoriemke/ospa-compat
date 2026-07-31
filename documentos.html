@@ -205,7 +205,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     <div class="main-hdr">Resumo por disciplina</div>
     <div class="resumo-wrap">
       <table class="resumo-table">
-        <thead><tr><th>Disciplina</th><th>Arquivos</th><th>Última postagem</th><th>Servidor</th></tr></thead>
+        <thead><tr><th>Disciplina</th><th>Arquivos</th><th>Última postagem</th><th id="th-servidor">Servidor</th></tr></thead>
         <tbody id="resumo-tbody"></tbody>
       </table>
     </div>
@@ -639,6 +639,10 @@ function renderResumo() {
   const tbody = document.getElementById('resumo-tbody');
   tbody.innerHTML = '';
 
+  const podeVerServidor = USER_PROFILE.papel === 'coordenador' || USER_PROFILE.papel === 'admin';
+  const thServidor = document.getElementById('th-servidor');
+  if (thServidor) thServidor.style.display = podeVerServidor ? '' : 'none';
+
   const porDisc = {};
   DOCS.forEach(d => {
     if (!d.disciplina) return;
@@ -682,7 +686,7 @@ function renderResumo() {
     }
     tr.appendChild(tdUltima);
 
-    tr.appendChild(montarCelulaServidor(disc, info));
+    if (podeVerServidor) tr.appendChild(montarCelulaServidor(disc, info));
 
     tr.onclick = () => {
       S.discs = new Set([disc]);
