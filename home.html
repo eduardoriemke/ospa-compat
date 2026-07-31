@@ -51,12 +51,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .proj-hero-code{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:6px}
 .proj-hero-name{font-family:var(--serif);font-size:26px;font-weight:300;color:var(--text);margin-bottom:4px}
 .proj-hero-sub{font-family:var(--mono);font-size:11px;color:var(--text2)}
-
-.meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:24px}
-.meta-cell{background:var(--surface);padding:16px 18px}
-.meta-label{font-family:var(--sans);font-size:9px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
-.meta-value{font-family:var(--sans);font-size:14px;color:var(--text)}
-.meta-value.empty{color:var(--text3);font-style:italic}
+.proj-hero-endereco{font-family:var(--mono);font-size:11px;color:var(--text2);margin-top:2px}
+.proj-hero-responsavel{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:8px}
 
 .disc-chips{display:flex;flex-wrap:wrap;gap:6px}
 .disc-chip{font-family:var(--mono);font-size:10px;font-weight:500;padding:3px 9px;border:1px solid var(--border2);border-radius:2px;color:var(--text2);background:var(--surface2)}
@@ -129,37 +125,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
         <div class="proj-hero-code" id="hero-code">—</div>
         <div class="proj-hero-name" id="hero-name">—</div>
         <div class="proj-hero-sub" id="hero-sub"></div>
-      </div>
-
-      <div class="meta-grid">
-        <div class="meta-cell">
-          <div class="meta-label">Cliente</div>
-          <div class="meta-value" id="meta-cliente">—</div>
-        </div>
-        <div class="meta-cell">
-          <div class="meta-label">Endereço</div>
-          <div class="meta-value" id="meta-endereco">—</div>
-        </div>
-        <div class="meta-cell">
-          <div class="meta-label">Responsável</div>
-          <div class="meta-value" id="meta-responsavel">—</div>
-        </div>
-        <div class="meta-cell">
-          <div class="meta-label">Coordenador</div>
-          <div class="meta-value" id="meta-coordenador">—</div>
-        </div>
-        <div class="meta-cell">
-          <div class="meta-label">Revisão</div>
-          <div class="meta-value" id="meta-revisao">—</div>
-        </div>
-        <div class="meta-cell">
-          <div class="meta-label">Data</div>
-          <div class="meta-value" id="meta-data">—</div>
-        </div>
-        <div class="meta-cell">
-          <div class="meta-label">Disciplinas</div>
-          <div class="meta-value" id="meta-disciplinas">—</div>
-        </div>
+        <div class="proj-hero-endereco" id="hero-endereco"></div>
+        <div class="proj-hero-responsavel" id="hero-responsavel"></div>
       </div>
 
       <!-- Notas: só aparece se o projeto tiver notas preenchidas no editor -->
@@ -429,32 +396,8 @@ function renderPage() {
   document.getElementById('hero-code').textContent = PROJETO.id || '';
   document.getElementById('hero-name').textContent = PROJETO.nome || '';
   document.getElementById('hero-sub').textContent = PROJETO.cliente || '';
-
-  // Preenche uma célula da grade, marcando visualmente quando está vazia
-  function setMeta(id, valor, textoVazio) {
-    const el = document.getElementById(id);
-    const vazio = !valor;
-    el.textContent = vazio ? (textoVazio || 'Não informado') : valor;
-    el.classList.toggle('empty', vazio);
-  }
-
-  setMeta('meta-cliente',     PROJETO.cliente);
-  setMeta('meta-endereco',    PROJETO.endereco);
-  setMeta('meta-responsavel', PROJETO.responsavel);
-  setMeta('meta-coordenador', COORDENADOR_NOME, 'Não definido');
-  setMeta('meta-revisao',     PROJETO.revisao);
-  setMeta('meta-data',        PROJETO.data);
-
-  const discEl = document.getElementById('meta-disciplinas');
-  if (DISCIPLINAS.length) {
-    discEl.classList.remove('empty');
-    discEl.innerHTML = '<div class="disc-chips">' +
-      DISCIPLINAS.map(d => '<span class="disc-chip">'+esc(d)+'</span>').join('') +
-      '</div>';
-  } else {
-    discEl.textContent = 'Nenhuma configurada';
-    discEl.classList.add('empty');
-  }
+  document.getElementById('hero-endereco').textContent = PROJETO.endereco || '';
+  document.getElementById('hero-responsavel').textContent = PROJETO.responsavel ? 'Responsável técnico: ' + PROJETO.responsavel : '';
 
   // Notas — bloco só existe se houver conteúdo (evita caixa vazia na tela)
   const notas = (PROJETO.notas || '').trim();
