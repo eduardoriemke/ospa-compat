@@ -91,14 +91,18 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .main{padding:24px 40px 80px}
 .main-hdr{font-family:var(--sans);font-size:9px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--text3);margin-bottom:14px}
 
-/* ── RESUMO POR DISCIPLINA ── */
-.resumo-wrap{background:var(--surface);border:1px solid var(--border);margin-bottom:24px;max-width:680px}
-.resumo-table{width:100%;border-collapse:collapse}
-.resumo-table th{font-family:var(--sans);font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);text-align:left;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--surface2);white-space:nowrap}
-.resumo-table td{font-family:var(--sans);font-size:12px;color:var(--text);padding:7px 14px;border-bottom:1px solid var(--border)}
-.resumo-table tbody tr:last-child td{border-bottom:none}
-.resumo-table tbody tr{cursor:pointer;transition:background 0.1s}
-.resumo-table tbody tr:hover{background:var(--surface2)}
+/* ── CABEÇALHO DE GRUPO (disciplina) ── */
+.grupo-row{cursor:pointer;background:var(--surface2);border-top:1px solid var(--border2)}
+.grupo-row:hover{background:var(--surface3)}
+.grupo-td{padding:9px 14px!important}
+.grupo-linha{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.grupo-seta{font-family:var(--mono);font-size:9px;color:var(--text3);width:10px;flex-shrink:0}
+.grupo-qtd{font-family:var(--mono);font-size:11px;color:var(--text2)}
+.grupo-qtd b{color:var(--text);font-weight:600}
+.grupo-data{font-family:var(--mono);font-size:10px;color:var(--text3)}
+.grupo-data b{color:var(--text2);font-weight:600}
+.grupo-servidor{margin-left:auto;display:flex;align-items:center;gap:7px;white-space:nowrap}
+.grupo-servidor-lbl{font-family:var(--sans);font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3)}
 .novo-aviso{font-family:var(--mono);font-size:9px;color:var(--pend);border:1px solid var(--pend);background:#FBF3E0;padding:1px 6px;border-radius:2px;margin-left:8px;white-space:nowrap;vertical-align:middle}
 .conf-info{font-family:var(--mono);font-size:9px;color:var(--resol);margin-left:8px;white-space:nowrap;vertical-align:middle}
 
@@ -202,13 +206,6 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <div class="summary" id="summary"></div>
   <div class="filters" id="filters"></div>
   <div class="main">
-    <div class="main-hdr">Resumo por disciplina</div>
-    <div class="resumo-wrap">
-      <table class="resumo-table">
-        <thead><tr><th>Disciplina</th><th>Arquivos</th><th>Última postagem</th><th id="th-servidor">Servidor</th></tr></thead>
-        <tbody id="resumo-tbody"></tbody>
-      </table>
-    </div>
     <div class="main-hdr" id="main-hdr"></div>
     <div class="bulk-bar" id="bulk-bar">
       <span id="bulk-count"></span>
@@ -248,7 +245,8 @@ let PROJETO = null;
 let DOCS = [];
 let S = { discs: new Set(), tipos: new Set(), etapas: new Set(), visao: 'vigentes', busca: '', dataDe: '', dataAte: '', sortBy: 'data_upload', sortDir: 'desc', selecionados: new Set(), ultimoClicado: null };
 let CONFIG = { disciplines: [] };
-let CONFIRMACOES = {};  // disciplina → { confirmado_em, confirmado_por }
+let CONFIRMACOES = {};
+let GRUPOS_ABERTOS = new Set();  // disciplinas expandidas na lista  // disciplina → { confirmado_em, confirmado_por }
 
 // ── LOGO ──
 function setLogos(src) {
@@ -408,7 +406,6 @@ async function loadApp() {
 
     renderHeader();
     renderSummary();
-    renderResumo();
     renderFilters();
     renderTableHead();
     renderDocs();
@@ -576,70 +573,6 @@ function renderFilters() {
   el.appendChild(row5);
 }
 
-// ── RESUMO POR DISCIPLINA ──
-function renderResumo() {
-  const tbody = document.getElementById('resumo-tbody');
-  tbody.innerHTML = '';
-
-  const podeVerServidor = USER_PROFILE.papel === 'coordenador' || USER_PROFILE.papel === 'admin';
-  const thServidor = document.getElementById('th-servidor');
-  if (thServidor) thServidor.style.display = podeVerServidor ? '' : 'none';
-
-  const porDisc = {};
-  DOCS.forEach(d => {
-    if (!d.disciplina) return;
-    if (!porDisc[d.disciplina]) porDisc[d.disciplina] = { total: 0, ultima: '', atividade: 0 };
-    porDisc[d.disciplina].total++;
-    if ((d.data_upload || '') > porDisc[d.disciplina].ultima) {
-      porDisc[d.disciplina].ultima = d.data_upload;
-    }
-    const atv = atividadeDoc(d);
-    if (atv > porDisc[d.disciplina].atividade) porDisc[d.disciplina].atividade = atv;
-  });
-
-  // Ordenado pela última postagem (mais recente primeiro)
-  const ordenadas = Object.keys(porDisc).sort((a, b) => {
-    return (porDisc[b].ultima || '').localeCompare(porDisc[a].ultima || '');
-  });
-
-  ordenadas.forEach(disc => {
-    const info = porDisc[disc];
-    const tr = document.createElement('tr');
-    tr.title = 'Clique para filtrar por ' + disc;
-
-    const tdDisc = document.createElement('td');
-    const tag = document.createElement('span');
-    tag.className = 'd-tag d-' + disc;
-    tag.textContent = disc;
-    tdDisc.appendChild(tag);
-    tr.appendChild(tdDisc);
-
-    const tdTotal = document.createElement('td');
-    tdTotal.innerHTML = '<span class="doc-mono">' + info.total + '</span>';
-    tr.appendChild(tdTotal);
-
-    const tdUltima = document.createElement('td');
-    if (info.ultima) {
-      const dias = diasDesde(info.ultima);
-      const rel = dias === 0 ? 'hoje' : (dias === 1 ? 'há 1 dia' : 'há ' + dias + ' dias');
-      tdUltima.innerHTML = '<span class="doc-mono"><b>' + rel + '</b> · ' + fmtDate(info.ultima) + '</span>';
-    } else {
-      tdUltima.innerHTML = '<span class="doc-mono">—</span>';
-    }
-    tr.appendChild(tdUltima);
-
-    if (podeVerServidor) tr.appendChild(montarCelulaServidor(disc, info));
-
-    tr.onclick = () => {
-      S.discs = new Set([disc]);
-      renderFilters();
-      renderDocs();
-    };
-
-    tbody.appendChild(tr);
-  });
-}
-
 // Momento da última atividade de um documento: envio OU modificação,
 // o que for mais recente. Cobre arquivo novo E substituição/nova versão
 // de um arquivo existente com o mesmo nome.
@@ -649,13 +582,14 @@ function atividadeDoc(d) {
   return Math.max(up, mod);
 }
 
-function montarCelulaServidor(disc, info) {
-  const td = document.createElement('td');
-  td.onclick = (e) => e.stopPropagation(); // clique aqui não dispara o filtro da linha
+function montarControleServidor(disc, atividade) {
+  const td = document.createElement('div');
+  td.className = 'grupo-servidor';
+  td.onclick = (e) => e.stopPropagation(); // não expande/recolhe o grupo
 
   const conf = CONFIRMACOES[disc];
   const confMs = conf ? new Date(conf.confirmado_em).getTime() : 0;
-  const atualizado = conf && confMs >= info.atividade;
+  const atualizado = conf && confMs >= atividade;
 
   const chk = document.createElement('input');
   chk.type = 'checkbox';
@@ -686,12 +620,16 @@ function montarCelulaServidor(disc, info) {
           '&disciplina=eq.' + encodeURIComponent(disc));
         delete CONFIRMACOES[disc];
       }
-      renderResumo();
+      renderDocs();
     } catch (erro) {
       alert('Não foi possível salvar a confirmação: ' + erro.message);
-      renderResumo();
+      renderDocs();
     }
   };
+  const lbl = document.createElement('span');
+  lbl.className = 'grupo-servidor-lbl';
+  lbl.textContent = 'servidor';
+  td.appendChild(lbl);
   td.appendChild(chk);
 
   // Confirmado e em dia → mostra quem e quando, visível sem tooltip
@@ -739,9 +677,10 @@ function renderTableHead() {
   checkAll.className = 'doc-checkbox';
   checkAll.id = 'check-all';
   checkAll.onchange = () => {
-    const visiveis = sortDocs(getFiltered());
-    if (checkAll.checked) visiveis.forEach(d => S.selecionados.add(d.id_arquivo_drive));
-    else visiveis.forEach(d => S.selecionados.delete(d.id_arquivo_drive));
+    // Vale para todos os arquivos filtrados, mesmo os de grupos recolhidos
+    const filtrados = getFiltered();
+    if (checkAll.checked) filtrados.forEach(d => S.selecionados.add(d.id_arquivo_drive));
+    else filtrados.forEach(d => S.selecionados.delete(d.id_arquivo_drive));
     renderDocs();
   };
   thCheck.appendChild(checkAll);
@@ -826,8 +765,8 @@ function renderDocs() {
 
   const checkAll = document.getElementById('check-all');
   if (checkAll) {
-    const idsVisiveis = list.map(d => d.id_arquivo_drive);
-    checkAll.checked = idsVisiveis.length > 0 && idsVisiveis.every(id => S.selecionados.has(id));
+    const ids = list.map(d => d.id_arquivo_drive);
+    checkAll.checked = ids.length > 0 && ids.every(id => S.selecionados.has(id));
   }
 
   if (!list.length) {
@@ -841,7 +780,102 @@ function renderDocs() {
     return;
   }
 
-  list.forEach((d, i) => tbody.appendChild(renderDocRow(d, i, list)));
+  // Agrupa os resultados filtrados por disciplina
+  const grupos = {};
+  list.forEach(d => {
+    const disc = d.disciplina || '—';
+    if (!grupos[disc]) grupos[disc] = [];
+    grupos[disc].push(d);
+  });
+
+  // Ordem dos grupos = mesma dos chips de filtro (CPT primeiro, resto A–Z)
+  const ordem = CONFIG.disciplines.filter(d => grupos[d]);
+  Object.keys(grupos).forEach(d => { if (!ordem.includes(d)) ordem.push(d); });
+
+  // Uma busca por texto expande tudo: quem procura quer ver os arquivos
+  const expandirTudo = S.busca !== '';
+
+  // Índice contínuo entre grupos, pra o Shift+clique funcionar na lista toda
+  const visiveis = [];
+  ordem.forEach(disc => {
+    const docsGrupo = grupos[disc];
+    const aberto = expandirTudo || GRUPOS_ABERTOS.has(disc);
+
+    tbody.appendChild(montarCabecalhoGrupo(disc, docsGrupo, aberto));
+
+    if (aberto) {
+      docsGrupo.forEach(d => {
+        visiveis.push(d);
+        tbody.appendChild(renderDocRow(d, visiveis.length - 1, visiveis));
+      });
+    }
+  });
+}
+
+// O cabeçalho do grupo é também a linha de resumo da disciplina:
+// contagem, última postagem e o controle de "atualizado no servidor".
+function montarCabecalhoGrupo(disc, docsGrupo, aberto) {
+  const tr = document.createElement('tr');
+  tr.className = 'grupo-row';
+
+  const td = document.createElement('td');
+  td.className = 'grupo-td';
+  td.colSpan = 9;
+
+  const linha = document.createElement('div');
+  linha.className = 'grupo-linha';
+
+  const seta = document.createElement('span');
+  seta.className = 'grupo-seta';
+  seta.textContent = aberto ? '\u25be' : '\u25b8';
+  linha.appendChild(seta);
+
+  const tag = document.createElement('span');
+  tag.className = 'd-tag d-' + disc;
+  tag.textContent = disc;
+  linha.appendChild(tag);
+
+  // Total da disciplina no projeto (independe dos filtros ativos)
+  const totalDisc = DOCS.filter(d => d.disciplina === disc).length;
+  const qtd = document.createElement('span');
+  qtd.className = 'grupo-qtd';
+  qtd.innerHTML = docsGrupo.length === totalDisc
+    ? '<b>' + totalDisc + '</b> arquivos'
+    : '<b>' + docsGrupo.length + '</b> de ' + totalDisc + ' arquivos';
+  linha.appendChild(qtd);
+
+  // Última postagem e atividade: estado real da disciplina, sem filtro
+  let ultima = '', atividade = 0;
+  DOCS.forEach(d => {
+    if (d.disciplina !== disc) return;
+    if ((d.data_upload || '') > ultima) ultima = d.data_upload;
+    const atv = atividadeDoc(d);
+    if (atv > atividade) atividade = atv;
+  });
+
+  if (ultima) {
+    const dias = diasDesde(ultima);
+    const rel = dias === 0 ? 'hoje' : (dias === 1 ? 'há 1 dia' : 'há ' + dias + ' dias');
+    const dt = document.createElement('span');
+    dt.className = 'grupo-data';
+    dt.innerHTML = '<b>' + rel + '</b> · ' + fmtDate(ultima);
+    linha.appendChild(dt);
+  }
+
+  if (podeVerServidor()) {
+    linha.appendChild(montarControleServidor(disc, atividade));
+  }
+
+  td.appendChild(linha);
+  tr.appendChild(td);
+
+  tr.onclick = () => {
+    if (GRUPOS_ABERTOS.has(disc)) GRUPOS_ABERTOS.delete(disc);
+    else GRUPOS_ABERTOS.add(disc);
+    renderDocs();
+  };
+
+  return tr;
 }
 
 function updateBulkBar() {
