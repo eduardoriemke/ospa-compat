@@ -95,13 +95,15 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .grupo-row{cursor:pointer;background:var(--surface2);border-top:1px solid var(--border2)}
 .grupo-row:hover{background:var(--surface3)}
 .grupo-td{padding:9px 14px!important}
-.grupo-linha{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.grupo-seta{font-family:var(--mono);font-size:9px;color:var(--text3);width:10px;flex-shrink:0}
-.grupo-qtd{font-family:var(--mono);font-size:11px;color:var(--text2)}
+/* Grade de colunas fixas: alinha todos os cabeçalhos entre si */
+.grupo-linha{display:grid;grid-template-columns:14px 58px 150px 210px 1fr;align-items:center;gap:10px}
+.grupo-seta{font-family:var(--mono);font-size:9px;color:var(--text3)}
+.grupo-qtd{font-family:var(--mono);font-size:11px;color:var(--text2);white-space:nowrap}
 .grupo-qtd b{color:var(--text);font-weight:600}
-.grupo-data{font-family:var(--mono);font-size:10px;color:var(--text3)}
-.grupo-data b{color:var(--text2);font-weight:600}
-.grupo-servidor{margin-left:auto;display:flex;align-items:center;gap:7px;white-space:nowrap}
+.grupo-data{font-family:var(--mono);font-size:10px;color:var(--text3);white-space:nowrap}
+.grupo-dias{color:var(--text2)}
+/* Servidor: caixinha sempre na mesma posição, texto cresce à direita */
+.grupo-servidor{display:flex;align-items:center;gap:7px;white-space:nowrap}
 .grupo-servidor-lbl{font-family:var(--sans);font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3)}
 .rev-badge{font-family:var(--mono);font-size:9px;color:var(--text2);background:var(--surface2);border:1px solid var(--border2);padding:1px 6px;border-radius:2px;white-space:nowrap;cursor:pointer;margin-left:2px}
 .rev-badge:hover{border-color:var(--text2);color:var(--text)}
@@ -169,6 +171,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   .filter-row{padding:7px 16px;gap:4px}
   .f-lbl{width:auto;min-width:auto}
   .main{padding:14px 16px 60px}
+  .grupo-linha{display:flex;flex-wrap:wrap;gap:8px}
+  .grupo-servidor{margin-left:auto}
   .login-box{padding:28px 22px}
 }
 </style>
@@ -838,8 +842,18 @@ function renderDocs() {
     grupos[disc].push(p);
   });
 
-  const ordem = CONFIG.disciplines.filter(d => grupos[d]);
-  Object.keys(grupos).forEach(d => { if (!ordem.includes(d)) ordem.push(d); });
+  // Ordem dos grupos: disciplina que postou mais recentemente vem primeiro.
+  // Usa a data real de postagem (sem filtro), pra refletir movimentação
+  // do projeto e não o recorte atual da tela.
+  const ultimaPorDisc = {};
+  DOCS.forEach(d => {
+    if (!d.disciplina) return;
+    if ((d.data_upload || '') > (ultimaPorDisc[d.disciplina] || '')) {
+      ultimaPorDisc[d.disciplina] = d.data_upload;
+    }
+  });
+  const ordem = Object.keys(grupos).sort((a, b) =>
+    (ultimaPorDisc[b] || '').localeCompare(ultimaPorDisc[a] || ''));
 
   // Busca por texto expande tudo: quem procura quer ver os arquivos
   const expandirTudo = S.busca !== '';
@@ -925,17 +939,22 @@ function montarCabecalhoGrupo(disc, pilhasGrupo, aberto) {
     if (atv > atividade) atividade = atv;
   });
 
+  const dt = document.createElement('span');
+  dt.className = 'grupo-data';
   if (ultima) {
     const dias = diasDesde(ultima);
     const rel = dias === 0 ? 'hoje' : (dias === 1 ? 'há 1 dia' : 'há ' + dias + ' dias');
-    const dt = document.createElement('span');
-    dt.className = 'grupo-data';
-    dt.innerHTML = '<b>' + rel + '</b> · ' + fmtDate(ultima);
-    linha.appendChild(dt);
+    dt.innerHTML = fmtDate(ultima) + ' <span class="grupo-dias">(' + rel + ')</span>';
+  } else {
+    dt.textContent = '—';
   }
+  linha.appendChild(dt);
 
+  // A célula existe sempre (mesmo vazia) pra não desalinhar a grade
   if (podeVerServidor()) {
     linha.appendChild(montarControleServidor(disc, atividade));
+  } else {
+    linha.appendChild(document.createElement('span'));
   }
 
   td.appendChild(linha);
