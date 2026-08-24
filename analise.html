@@ -214,17 +214,16 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 <script src="sidebar.js?v=3"></script>
 <script src="editor-launcher.js?v=3"></script>
+<script src="auth.js?v=1"></script>
 <script>
-const SB_URL  = "https://jxezjuovrxajjleyjdcs.supabase.co";
+// Sessão (SB_URL, SB_KEY, SB_AUTH, SESSION, SESSION_KEY, saveSession,
+// loadSavedSession, clearSavedSession, refreshSession, tryRestoreSession
+// e sbFetch) vive em auth.js — compartilhado por todas as páginas.
 
 // Alimenta o sidebar com o código do projeto assim que possível — antes de
 // qualquer autenticação — pra ele já nascer certo na primeira renderização
 // (feita pelo próprio sidebar.js no DOMContentLoaded), sem esperar o login.
 document.body.dataset.projeto = new URLSearchParams(window.location.search).get('id') || '';
-const SB_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4ZXpqdW92cnhhampsZXlqZGNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MDcwNTksImV4cCI6MjA5NjA4MzA1OX0.vaHfGesmDhZVeDMl_GSQYyIhN7E0EvRvV1vMy2vRYZY";
-const SB_AUTH = SB_URL + "/auth/v1";
-
-let SESSION = null;
 let USER_PROFILE = null;
 let PROJETO = null;
 let PROJ_ID = null;
@@ -236,11 +235,6 @@ let CONFIG = { disciplines: [] };
 let ULTIMA_ANALISE = {}; // disciplina -> última linha concluída (qualquer rodada)
 
 // ── SUPABASE HELPERS (idêntico às demais páginas) ──
-async function sbFetch(path, opts={}) {
-  const headers = { 'Content-Type':'application/json', 'apikey':SB_KEY, ...opts.headers };
-  if (SESSION) headers['Authorization'] = 'Bearer ' + SESSION.access_token;
-  return fetch(SB_URL + path, {...opts, headers});
-}
 async function api(method, table, body, qs, customHeaders) {
   const url = '/rest/v1/' + table + (qs ? '?' + qs : '');
   const r = await sbFetch(url, {
@@ -277,30 +271,6 @@ function toast(msg) {
 }
 
 // ── SESSÃO (idêntico às demais páginas) ──
-const SESSION_KEY = 'ospa_session';
-function saveSession(s) { try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch(e) {} }
-function loadSavedSession() { try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch(e) { return null; } }
-function clearSavedSession() { try { localStorage.removeItem(SESSION_KEY); } catch(e) {} }
-
-async function refreshSession(refreshToken) {
-  const r = await fetch(SB_AUTH + '/token?grant_type=refresh_token', {
-    method: 'POST', headers: {'Content-Type':'application/json','apikey':SB_KEY},
-    body: JSON.stringify({refresh_token: refreshToken})
-  });
-  const data = await r.json();
-  if (!r.ok) throw new Error(data.error_description || data.msg || 'Sessão expirada');
-  return data;
-}
-async function tryRestoreSession() {
-  const saved = loadSavedSession();
-  if (!saved || !saved.refresh_token) return false;
-  // Se o access_token salvo ainda vale por pelo menos mais 60s, reaproveita
-  // direto — evita um round-trip de rede pro Supabase em toda troca de página.
-  const agora = Math.floor(Date.now() / 1000);
-  if (saved.access_token && saved.expires_at && saved.expires_at - agora > 60) { SESSION = saved; return true; }
-  try { SESSION = await refreshSession(saved.refresh_token); saveSession(SESSION); return true; }
-  catch(e) { clearSavedSession(); return false; }
-}
 async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pass  = document.getElementById('login-password').value;
