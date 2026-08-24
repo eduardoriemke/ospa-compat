@@ -15,6 +15,12 @@
      api(), doLogin(), doLogout(), showLoginErr()
    ============================================================ */
 
+// ── VERSÃO DO SISTEMA ──
+// Atualize esta linha a cada publicação. O selo aparece discretamente
+// no canto inferior de todas as páginas — serve pra saber, no suporte,
+// se a pessoa está mesmo na versão mais recente ("que versão aparece aí?").
+const OSPA_VERSAO = 'v2026.08.24';
+
 const SB_URL  = "https://jxezjuovrxajjleyjdcs.supabase.co";
 const SB_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4ZXpqdW92cnhhampsZXlqZGNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MDcwNTksImV4cCI6MjA5NjA4MzA1OX0.vaHfGesmDhZVeDMl_GSQYyIhN7E0EvRvV1vMy2vRYZY";
 const SB_AUTH = SB_URL + "/auth/v1";
@@ -106,3 +112,18 @@ async function sbFetch(path, opts={}, _jaTentou) {
   }
   return r;
 }
+
+
+// ── SELO DE VERSÃO ──
+// Injetado automaticamente em qualquer página que carregue o auth.js.
+// pointer-events:none garante que nunca atrapalhe um clique.
+
+document.addEventListener('DOMContentLoaded', function () {
+  const selo = document.createElement('div');
+  selo.textContent = OSPA_VERSAO;
+  selo.style.cssText =
+    'position:fixed;bottom:6px;right:10px;z-index:9998;' +
+    "font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.06em;" +
+    'color:#B5B5B5;opacity:0.65;pointer-events:none;user-select:none';
+  document.body.appendChild(selo);
+});

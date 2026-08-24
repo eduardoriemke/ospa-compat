@@ -74,6 +74,14 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .chip.on.d-PSG{border-color:#206420;color:#206420;background:#E8F4E8}
 .chip.on.d-IMP{border-color:#802840;color:#802840;background:#F6E8EE}
 .chip.on.d-MOD{border-color:#284088;color:#284088;background:#E8EEF8}
+.chip.on.d-ACU{border-color:#9A3520;color:#9A3520;background:#F8E6E0}
+.chip.on.d-CPT{border-color:var(--text);color:var(--surface);background:var(--text)}
+.chip.on.d-CVI{border-color:#B03060;color:#B03060;background:#FBE6EE}
+.chip.on.d-FUN{border-color:#4A3A28;color:#4A3A28;background:#EFEAE2}
+.chip.on.d-LUM{border-color:#8A6A10;color:#8A6A10;background:#F8F2DE}
+.chip.on.d-PIS{border-color:#0A7A8A;color:#0A7A8A;background:#E0F4F6}
+.chip.on.d-PPCI{border-color:#B5530D;color:#B5530D;background:#FBEEE2}
+.chip.on.d-TOP{border-color:#4A5560;color:#4A5560;background:#EDF0F1}
 .chip-toggle{font-family:var(--mono);font-size:10px;font-weight:500;padding:3px 10px;border-radius:2px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;transition:all 0.1s}
 .chip-toggle.on{border-color:var(--resol);color:var(--resol);background:#EAF6F0}
 .chip-toggle.on-alert{border-color:var(--alert);color:var(--alert);background:#FDF0F0}
@@ -112,6 +120,14 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .d-tag.d-PSG{background:#E8F4E8;color:#206420;border-color:#B0D4B0}
 .d-tag.d-IMP{background:#F6E8EE;color:#802840;border-color:#E4B4C4}
 .d-tag.d-MOD{background:#E8EEF8;color:#284088;border-color:#B8C8E8}
+.d-tag.d-ACU{background:#F8E6E0;color:#9A3520;border-color:#EAC0B0}
+.d-tag.d-CPT{background:var(--text);color:var(--surface);border-color:var(--text);font-weight:600}
+.d-tag.d-CVI{background:#FBE6EE;color:#B03060;border-color:#EEC0D4}
+.d-tag.d-FUN{background:#EFEAE2;color:#4A3A28;border-color:#D4C8B4}
+.d-tag.d-LUM{background:#F8F2DE;color:#8A6A10;border-color:#E0D0A0}
+.d-tag.d-PIS{background:#E0F4F6;color:#0A7A8A;border-color:#A8DCE2}
+.d-tag.d-PPCI{background:#FBEEE2;color:#B5530D;border-color:#ECD0B0}
+.d-tag.d-TOP{background:#EDF0F1;color:#4A5560;border-color:#CDD4D8}
 
 /* ── FIELDS ── */
 .field-wrap{display:flex;flex-direction:column;gap:3px}
@@ -318,7 +334,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 <script src="sidebar.js?v=3"></script>
 <script src="editor-launcher.js?v=3"></script>
-<script src="auth.js?v=1"></script>
+<script src="auth.js?v=2"></script>
 <script>
 // Sessão (SB_URL, SB_KEY, SB_AUTH, SESSION, SESSION_KEY, saveSession,
 // loadSavedSession, clearSavedSession, refreshSession, tryRestoreSession
@@ -465,7 +481,7 @@ async function loadApp() {
     ]);
 
     PROJETO = proj;
-    CONFIG.disciplines = cfg.disciplinas || ['ARQ','HID','EST','INT','CLI','ELE','GAS','PSG','IMP','MOD'];
+    CONFIG.disciplines = cfg.disciplinas || ['ACU','ARQ','CLI','CPT','CVI','ELE','EST','FUN','GAS','HID','IMP','INT','LUM','MOD','PIS','PPCI','PSG','TOP'];
     CONFIG.locations   = cfg.locais || [];
 
     // Build images DB
