@@ -190,8 +190,13 @@ function toast(msg){
 async function backupManual(pid,nome){
   if(!confirm("Criar um backup de \""+nome+"\"?\n\nInclui dados do projeto, conflitos e imagens.")) return;
   toast("Criando backup…");
-  var ok=await createBackup(pid,"manual","Backup manual de "+nome);
-  toast(ok ? "Backup criado." : "Falha ao criar backup.");
+  var r=await createBackup(pid,"manual","Backup manual de "+nome);
+  if(r.ok){
+    toast("Backup criado ("+r.tamanho+" MB · "+r.conflitos+" conflitos · "+r.imagens+" imagens).");
+  }else{
+    alert("Não foi possível criar o backup.\n\nMotivo: "+r.erro+
+          "\n\nSe a mensagem indicar tamanho ou limite, o projeto tem imagens demais para um único backup — me avise para ajustarmos o método.");
+  }
 }
 
 async function createBackup(pid,tipo,desc){
@@ -202,9 +207,11 @@ async function createBackup(pid,tipo,desc){
       api("GET","conflitos",null,"projeto_id=eq."+pid+"&order=ordem.asc"),
       api("GET","imagens",null,"projeto_id=eq."+pid+"&select=conflito_id,ordem,dados"),
     ]);
-    await api("POST","backups",{projeto_id:pid,tipo:tipo,descricao:desc||"",dados:{projeto:data[0],config:data[1],conflitos:data[2],imagens:data[3]}});
-    return true;
-  }catch(e){console.error("Backup error:",e);return false;}
+    var payload={projeto:data[0],config:data[1],conflitos:data[2],imagens:data[3]};
+    var tamMB=(JSON.stringify(payload).length/1048576).toFixed(1);
+    await api("POST","backups",{projeto_id:pid,tipo:tipo,descricao:desc||"",dados:payload});
+    return {ok:true,tamanho:tamMB,imagens:(data[3]||[]).length,conflitos:(data[2]||[]).length};
+  }catch(e){console.error("Backup error:",e);return {ok:false,erro:e.message};}
 }
 
 async function loadProjects(){
@@ -251,7 +258,8 @@ function renderProjects(projetos,todos){
 async function deleteProject(id,nome){
   if(!confirm("Excluir o projeto \""+nome+"\"?\n\nUm backup será criado automaticamente.")) return;
   toast("Criando backup…");
-  await createBackup(id,"exclusao_projeto","Antes de excluir "+nome);
+  var rb=await createBackup(id,"exclusao_projeto","Antes de excluir "+nome);
+  if(!rb.ok && !confirm("⚠️ O backup automático FALHOU.\n\nMotivo: "+rb.erro+"\n\nExcluir mesmo assim? Os dados não poderão ser recuperados.")) return;
   try{
     await api("DELETE","projetos",null,"id=eq."+id);
     toast("Projeto excluído. Backup salvo.");
