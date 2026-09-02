@@ -379,6 +379,22 @@ async function api(method, table, body, qs) {
   }
   return method === 'DELETE' ? null : r.json();
 }
+// Busca TODAS as linhas de uma consulta, em páginas de 1000.
+// O Supabase limita cada consulta a 1000 linhas — sem isso, projetos
+// grandes teriam conflitos, imagens ou comentários faltando na tela,
+// sem nenhum aviso.
+async function apiTodos(table, qs) {
+  const PAGINA = 1000;
+  let resultado = [], offset = 0;
+  while (true) {
+    const lote = await api('GET', table, null, qs + '&limit=' + PAGINA + '&offset=' + offset);
+    resultado = resultado.concat(lote);
+    if (lote.length < PAGINA) break;
+    offset += PAGINA;
+  }
+  return resultado;
+}
+
 
 // ── AUTH ──
 async function doLogin() {
@@ -471,28 +487,21 @@ async function loadApp() {
     setLoadingText('Carregando projeto…');
 
     // Load project data in parallel
-    const [proj, cfg, cfls, imgs, dsArr, comArr] = await Promise.all([
+    // As imagens NÃO entram aqui: são pesadas (base64) e fariam a tela
+    // inteira esperar por elas. Carregam depois, em segundo plano.
+    const [proj, cfg, cfls, dsArr, comArr] = await Promise.all([
       api('GET','projetos',null,'id=eq.'+projId).then(r=>r[0]),
       api('GET','config_projeto',null,'projeto_id=eq.'+projId).then(r=>r[0]||{}),
-      api('GET','conflitos',null,'projeto_id=eq.'+projId+'&order=ordem.asc,created_at.asc'),
-      api('GET','imagens',null,'projeto_id=eq.'+projId+'&order=conflito_id.asc,ordem.asc&select=conflito_id,ordem,dados'),
-      api('GET','disciplina_status',null,'projeto_id=eq.'+projId),
-      api('GET','comentarios',null,'projeto_id=eq.'+projId+'&order=created_at.asc'),
+      apiTodos('conflitos','projeto_id=eq.'+projId+'&order=ordem.asc,created_at.asc'),
+      apiTodos('disciplina_status','projeto_id=eq.'+projId),
+      apiTodos('comentarios','projeto_id=eq.'+projId+'&order=created_at.asc'),
     ]);
 
     PROJETO = proj;
     CONFIG.disciplines = cfg.disciplinas || ['ACU','ARQ','CLI','CPT','CVI','ELE','EST','FUN','GAS','HID','IMP','INT','LUM','MOD','PIS','PPCI','PSG','TOP'];
     CONFIG.locations   = cfg.locais || [];
 
-    // Build images DB
-    IMAGES_DB = {};
-    imgs.forEach(img => {
-      const c = cfls.find(x => x.id === img.conflito_id);
-      if (!c) return;
-      if (!IMAGES_DB[c.codigo]) IMAGES_DB[c.codigo] = [];
-      IMAGES_DB[c.codigo][img.ordem] = img.dados;
-    });
-    Object.keys(IMAGES_DB).forEach(k => { IMAGES_DB[k] = IMAGES_DB[k].filter(Boolean); });
+    IMAGES_DB = {};  // preenchido depois, por carregarImagens()
 
     // Build conflicts — only published ones are visible here
     CONFLICTS = cfls
@@ -527,6 +536,10 @@ async function loadApp() {
     renderFilters();
     renderCards();
     show('app');
+
+    // Imagens em segundo plano: a tela já está utilizável, os cartões
+    // vão recebendo suas imagens conforme cada lote chega.
+    carregarImagens(projId, cfls);
 
   } catch(e) {
     setLoadingText('Erro: ' + e.message);
@@ -668,6 +681,80 @@ function renderCards() {
   }
 
   list.forEach(c => grid.appendChild(renderCard(c)));
+}
+
+// ── IMAGENS EM SEGUNDO PLANO ──
+// Busca as imagens em lotes e insere nos cartões já desenhados, sem
+// redesenhar a lista (o que faria perder rolagem e seções abertas).
+async function carregarImagens(projId, cfls) {
+  const porId = {};
+  cfls.forEach(c => { porId[c.id] = c.codigo; });
+
+  const PAGINA = 200;
+  let offset = 0;
+  try {
+    while (true) {
+      const lote = await api('GET','imagens',null,
+        'projeto_id=eq.' + projId +
+        '&order=conflito_id.asc,ordem.asc&select=conflito_id,ordem,dados' +
+        '&limit=' + PAGINA + '&offset=' + offset);
+      if (!lote.length) break;
+
+      const tocados = new Set();
+      lote.forEach(img => {
+        const cod = porId[img.conflito_id];
+        if (!cod) return;
+        if (!IMAGES_DB[cod]) IMAGES_DB[cod] = [];
+        IMAGES_DB[cod][img.ordem] = img.dados;
+        tocados.add(cod);
+      });
+      tocados.forEach(cod => {
+        IMAGES_DB[cod] = IMAGES_DB[cod].filter(Boolean);
+        preencherImagens(cod);
+      });
+
+      if (lote.length < PAGINA) break;
+      offset += PAGINA;
+    }
+  } catch (e) {
+    console.error('Falha ao carregar imagens:', e);
+  }
+}
+
+// Insere (ou atualiza) a seção de imagens de um cartão já na tela
+function preencherImagens(codigo) {
+  const card = document.getElementById('card-' + codigo);
+  if (!card) return;                       // conflito não publicado, ou filtrado
+  const imgs = IMAGES_DB[codigo] || [];
+  if (!imgs.length) return;
+
+  const body = card.querySelector('.card-body') || card;
+  let sec = card.querySelector('.img-section');
+  if (sec) sec.remove();                   // lote novo do mesmo conflito
+
+  sec = document.createElement('div');
+  sec.className = 'img-section';
+  const hero = document.createElement('img');
+  hero.className = 'img-hero';
+  hero.src = imgs[0];
+  hero.onclick = () => lbOpen(imgs, 0);
+  sec.appendChild(hero);
+  if (imgs.length > 1) {
+    const thumbs = document.createElement('div');
+    thumbs.className = 'img-thumbs-row';
+    imgs.forEach((src,i) => {
+      const t = document.createElement('img');
+      t.className = 'thumb';
+      t.src = src;
+      t.onclick = () => lbOpen(imgs, i);
+      thumbs.appendChild(t);
+    });
+    sec.appendChild(thumbs);
+  }
+
+  // Insere na mesma posição em que renderCard colocaria
+  const proj = card.querySelector('.proj-section');
+  if (proj) body.insertBefore(sec, proj); else body.appendChild(sec);
 }
 
 function renderCard(c) {
