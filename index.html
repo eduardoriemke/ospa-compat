@@ -178,6 +178,21 @@ async function api(method,table,body,qs){
   if(!r.ok){var m;try{m=(await r.json()).message;}catch(_){m="HTTP "+r.status;}throw new Error(m);}
   return method==="DELETE"?null:r.json();
 }
+// Busca TODAS as linhas de uma consulta, em páginas de 1000.
+// O Supabase limita cada consulta a 1000 linhas; sem isso, o excedente
+// simplesmente não chega — sem erro e sem aviso.
+async function apiTodos(table, qs) {
+  const PAGINA = 1000;
+  let resultado = [], offset = 0;
+  while (true) {
+    const lote = await api('GET', table, null, qs + '&limit=' + PAGINA + '&offset=' + offset);
+    resultado = resultado.concat(lote);
+    if (lote.length < PAGINA) break;
+    offset += PAGINA;
+  }
+  return resultado;
+}
+
 
 function toast(msg){
   var el=document.getElementById("toast");
@@ -214,7 +229,7 @@ async function loadProjects(){
   var lt=document.querySelector(".loading-text");
   try{
     lt.textContent="Conectando…";
-    var proj=await api("GET","projetos",null,"order=created_at.asc");
+    var proj=await apiTodos('projetos','order=created_at.asc');
     PROJETOS = proj;
     if (MY_PROJECT_IDS !== null) {
       proj = proj.filter(p => MY_PROJECT_IDS.includes(p.id));

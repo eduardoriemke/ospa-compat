@@ -26,6 +26,21 @@ async function _carregarEditorApp() {
   return _editorHTML;
 }
 
+// Busca TODAS as linhas de uma consulta, em páginas de 1000.
+// Crítico aqui: um editor que abrisse com apenas parte dos conflitos
+// poderia gravar por cima de um estado incompleto.
+async function _apiTodos(table, qs) {
+  const PAGINA = 1000;
+  let resultado = [], offset = 0;
+  while (true) {
+    const lote = await api('GET', table, null, qs + '&limit=' + PAGINA + '&offset=' + offset);
+    resultado = resultado.concat(lote);
+    if (lote.length < PAGINA) break;
+    offset += PAGINA;
+  }
+  return resultado;
+}
+
 async function ospaOpenEditor(id, papel) {
   if (papel !== "admin" && papel !== "coordenador") {
     alert("Você não tem permissão de edição neste projeto.");
@@ -37,8 +52,8 @@ async function ospaOpenEditor(id, papel) {
       _carregarEditorApp(),
       api("GET","projetos",null,"id=eq."+id).then(function(r){return r[0];}),
       api("GET","config_projeto",null,"projeto_id=eq."+id).then(function(r){return r[0]||{};}),
-      api("GET","conflitos",null,"projeto_id=eq."+id+"&order=ordem.asc,created_at.asc"),
-      api("GET","imagens",null,"projeto_id=eq."+id+"&order=conflito_id.asc,ordem.asc&select=conflito_id,ordem,dados")
+      _apiTodos("conflitos","projeto_id=eq."+id+"&order=ordem.asc,created_at.asc"),
+      _apiTodos("imagens","projeto_id=eq."+id+"&order=conflito_id.asc,ordem.asc&select=conflito_id,ordem,dados")
     ]);
 
     if (!proj) throw new Error('Projeto não encontrado.');
