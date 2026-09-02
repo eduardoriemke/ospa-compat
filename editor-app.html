@@ -1342,15 +1342,28 @@ function downloadHTML(html, filename) {
 
 
 async function syncImages(c) {
-  if (!c._db) return;
+  if (!c._db) {
+    // Antes isto era um retorno silencioso: a alteração sumia sem aviso.
+    _serr('Conflito ainda não salvo no banco — a imagem não foi sincronizada.');
+    return;
+  }
+  _saving();
   try {
-    // Delete all existing images for this conflict
-    await sbDel('imagens','conflito_id',c._db);
-    // Re-insert current images
+    // As imagens são gravadas por uma função no banco (sync_imagens), que
+    // apaga e reinsere dentro de UMA transação. O método anterior apagava
+    // tudo e reinseria uma a uma pelo navegador: se falhasse no meio, as
+    // imagens já apagadas eram perdidas.
     const imgs = getImages(c.id);
-    for (let i = 0; i < imgs.length; i++) {
-      await sbPost('imagens', {conflito_id:c._db, projeto_id:META.code, ordem:i, dados:imgs[i]});
-    }
+    const r = await fetch(SB_URL + '/rest/v1/rpc/sync_imagens', {
+      method: 'POST',
+      headers: SB_H,
+      body: JSON.stringify({
+        p_conflito_id: c._db,
+        p_projeto_id:  META.code,
+        p_imagens:     imgs
+      })
+    });
+    if (!r.ok) throw new Error((await r.json()).message || r.status);
     _saved();
   } catch(e) { _serr(e.message); }
 }
