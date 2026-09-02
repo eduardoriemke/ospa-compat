@@ -31,6 +31,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .proj-action:hover{border-color:var(--text2);color:var(--text)}
 .proj-action-editor{border-color:var(--text);color:var(--text)}
 .proj-action-editor:hover{background:var(--text);color:var(--surface)}
+.proj-card-bkp{position:absolute;top:10px;right:36px;background:none;border:none;font-size:13px;color:var(--text3);cursor:pointer;opacity:0;transition:opacity 0.1s;padding:4px 6px}
+.proj-card:hover .proj-card-bkp{opacity:1}
+.proj-card-bkp:hover{color:var(--text)}
 .proj-card-del{position:absolute;top:10px;right:12px;background:none;border:none;font-size:15px;color:var(--text3);cursor:pointer;opacity:0;transition:opacity 0.1s;padding:4px 6px}
 .proj-card:hover .proj-card-del{opacity:1}
 .proj-card-del:hover{color:var(--alert)}
@@ -77,6 +80,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 body.restricted-coordinator .proj-new{display:none!important}
 body.restricted-coordinator .proj-card-del{display:none!important}
+body.restricted-coordinator .proj-card-bkp{display:none!important}
 body.restricted-coordinator .proj-header button{display:none!important}
 </style>
 </head>
@@ -181,6 +185,15 @@ function toast(msg){
   setTimeout(function(){el.classList.remove("show");},2500);
 }
 
+// Backup manual acionado pelo botão do card. Diferente do automático,
+// aqui o usuário precisa saber se deu certo ou não.
+async function backupManual(pid,nome){
+  if(!confirm("Criar um backup de \""+nome+"\"?\n\nInclui dados do projeto, conflitos e imagens.")) return;
+  toast("Criando backup…");
+  var ok=await createBackup(pid,"manual","Backup manual de "+nome);
+  toast(ok ? "Backup criado." : "Falha ao criar backup.");
+}
+
 async function createBackup(pid,tipo,desc){
   try{
     var data=await Promise.all([
@@ -190,7 +203,8 @@ async function createBackup(pid,tipo,desc){
       api("GET","imagens",null,"projeto_id=eq."+pid+"&select=conflito_id,ordem,dados"),
     ]);
     await api("POST","backups",{projeto_id:pid,tipo:tipo,descricao:desc||"",dados:{projeto:data[0],config:data[1],conflitos:data[2],imagens:data[3]}});
-  }catch(e){console.error("Backup error:",e);}
+    return true;
+  }catch(e){console.error("Backup error:",e);return false;}
 }
 
 async function loadProjects(){
@@ -198,6 +212,7 @@ async function loadProjects(){
   try{
     lt.textContent="Conectando…";
     var proj=await api("GET","projetos",null,"order=created_at.asc");
+    PROJETOS = proj;
     if (MY_PROJECT_IDS !== null) {
       proj = proj.filter(p => MY_PROJECT_IDS.includes(p.id));
     }
@@ -220,16 +235,17 @@ function renderProjects(projetos,todos){
       "<div class=\"proj-card-code\">"+p.id+"</div>"+
       "<div class=\"proj-card-name\">"+p.nome+"</div>"+
       "<div class=\"proj-card-sub\">"+(p.cliente||"")+"</div>"+
+      "<button class=\"proj-card-bkp\" title=\"Criar backup\">↺</button>"+
       "<button class=\"proj-card-del\" title=\"Excluir\">×</button>";
     (function(pid,pnome){
       card.onclick=function(){ window.location.href="home.html?id="+encodeURIComponent(pid); };
       card.querySelector(".proj-card-del").onclick=function(e){e.stopPropagation();deleteProject(pid,pnome);};
+      card.querySelector(".proj-card-bkp").onclick=function(e){e.stopPropagation();backupManual(pid,pnome);};
     })(p.id,p.nome);
     grid.appendChild(card);
   });
-  var nc=document.createElement("div");
-  nc.className="proj-new";nc.textContent="+ Novo projeto";
-  nc.onclick=openModal;grid.appendChild(nc);
+  // O botão "+ Novo projeto" do cabeçalho já cobre esta ação —
+  // o card duplicado foi removido para não repetir o mesmo comando.
 }
 
 async function deleteProject(id,nome){
@@ -248,7 +264,9 @@ async function openBackups(){
   var list=document.getElementById("backup-list");
   list.innerHTML="<div style=\"font-family:var(--mono);font-size:11px;color:var(--text3);padding:8px\">Carregando…</div>";
   try{
-    var bkps=await api("GET","backups",null,"order=created_at.desc&limit=20");
+    // select explícito: sem isso o navegador baixaria o conteúdo completo de
+    // cada backup (todas as imagens em base64) só para montar a lista.
+    var bkps=await api("GET","backups",null,"select=id,projeto_id,tipo,descricao,created_at&order=created_at.desc&limit=20");
     if(!bkps.length){list.innerHTML="<div style=\"font-family:var(--mono);font-size:11px;color:var(--text3);padding:8px\">Nenhum backup encontrado.</div>";return;}
     list.innerHTML="";
     bkps.forEach(function(b){
@@ -256,7 +274,11 @@ async function openBackups(){
       var ts=d.toLocaleDateString("pt-BR")+" "+d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
       var item=document.createElement("div");item.className="backup-item";
       var info=document.createElement("div");
-      info.innerHTML="<div class=\"backup-type\">"+b.tipo.replace(/_/g," ")+"</div><div class=\"backup-meta\">"+b.projeto_id+(b.descricao?" · "+b.descricao:"")+"</div><div class=\"backup-time\">"+ts+"</div>";
+      // Nome do projeto quando ele ainda existe; senão fica só o código
+      var pj=(PROJETOS||[]).find(function(p){return p.id===b.projeto_id;});
+      var titulo=(pj?pj.nome:b.projeto_id);
+      var sub=(pj?b.projeto_id:"projeto excluído")+(b.descricao?" · "+b.descricao:"");
+      info.innerHTML="<div class=\"backup-type\">"+titulo+"</div><div class=\"backup-meta\">"+sub+"</div><div class=\"backup-time\">"+b.tipo.replace(/_/g," ")+" · "+ts+"</div>";
       var btn=document.createElement("button");
       btn.className="btn btn-g";btn.style.cssText="font-size:10px;padding:5px 10px;flex-shrink:0";
       btn.textContent="Restaurar";
@@ -309,7 +331,8 @@ async function createProject(){
 // ── AUTH ──
 let ME = null;
 let MY_PROJECT_IDS = null; // null = admin (all projects), array = restricted list
-let PROJECT_ROLES = null;  // null = admin (Editor em tudo), objeto { projeto_id: 'coordenador'|'projetista' }
+let PROJECT_ROLES = null;
+let PROJETOS = [];  // lista carregada, usada também para nomear os backups  // null = admin (Editor em tudo), objeto { projeto_id: 'coordenador'|'projetista' }
 
 async function apiAuth(method, table, body, qs) {
   const url = '/rest/v1/' + table + (qs ? '?' + qs : '');
