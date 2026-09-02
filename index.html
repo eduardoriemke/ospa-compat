@@ -268,28 +268,51 @@ async function openBackups(){
   var list=document.getElementById("backup-list");
   list.innerHTML="<div style=\"font-family:var(--mono);font-size:11px;color:var(--text3);padding:8px\">Carregando…</div>";
   try{
-    // select explícito: sem isso o navegador baixaria o conteúdo completo de
-    // cada backup (todas as imagens em base64) só para montar a lista.
-    var bkps=await api("GET","backups",null,"select=id,projeto_id,tipo,descricao,created_at&order=created_at.desc&limit=20");
+    // Lista vem do banco já com o tamanho calculado — sem trazer o
+    // conteúdo dos backups (que inclui todas as imagens em base64).
+    var bkps=await api("POST","rpc/listar_backups",{});
     if(!bkps.length){list.innerHTML="<div style=\"font-family:var(--mono);font-size:11px;color:var(--text3);padding:8px\">Nenhum backup encontrado.</div>";return;}
     list.innerHTML="";
     bkps.forEach(function(b){
       var d=new Date(b.created_at);
       var ts=d.toLocaleDateString("pt-BR")+" "+d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
-      var item=document.createElement("div");item.className="backup-item";
-      var info=document.createElement("div");
-      // Nome do projeto quando ele ainda existe; senão fica só o código
       var pj=(PROJETOS||[]).find(function(p){return p.id===b.projeto_id;});
       var titulo=(pj?pj.nome:b.projeto_id);
       var sub=(pj?b.projeto_id:"projeto excluído")+(b.descricao?" · "+b.descricao:"");
-      info.innerHTML="<div class=\"backup-type\">"+titulo+"</div><div class=\"backup-meta\">"+sub+"</div><div class=\"backup-time\">"+b.tipo.replace(/_/g," ")+" · "+ts+"</div>";
+      var tam=(b.tamanho_mb!=null? " · "+b.tamanho_mb+" MB" : "");
+
+      var item=document.createElement("div");item.className="backup-item";
+      var info=document.createElement("div");
+      info.innerHTML="<div class=\"backup-type\">"+titulo+"</div>"+
+                     "<div class=\"backup-meta\">"+sub+"</div>"+
+                     "<div class=\"backup-time\">"+b.tipo.replace(/_/g," ")+" · "+ts+tam+"</div>";
+
+      var acoes=document.createElement("div");
+      acoes.style.cssText="display:flex;gap:6px;flex-shrink:0";
+
       var btn=document.createElement("button");
-      btn.className="btn btn-g";btn.style.cssText="font-size:10px;padding:5px 10px;flex-shrink:0";
+      btn.className="btn btn-g";btn.style.cssText="font-size:10px;padding:5px 10px";
       btn.textContent="Restaurar";
       (function(bid,pid){btn.onclick=function(){restoreBackup(bid,pid);};})(b.id,b.projeto_id);
-      item.appendChild(info);item.appendChild(btn);list.appendChild(item);
+
+      var del=document.createElement("button");
+      del.className="btn btn-g";del.style.cssText="font-size:10px;padding:5px 9px;color:var(--text3)";
+      del.textContent="×";del.title="Excluir este backup";
+      (function(bid,rot){del.onclick=function(){deleteBackup(bid,rot);};})(b.id,titulo+" · "+ts);
+
+      acoes.appendChild(btn);acoes.appendChild(del);
+      item.appendChild(info);item.appendChild(acoes);list.appendChild(item);
     });
   }catch(e){list.innerHTML="<div style=\"color:var(--alert);font-family:var(--mono);font-size:11px;padding:8px\">Erro: "+e.message+"</div>";}
+}
+
+async function deleteBackup(id,rotulo){
+  if(!confirm("Excluir este backup?\n\n"+rotulo+"\n\nEsta ação não pode ser desfeita.")) return;
+  try{
+    await api("DELETE","backups",null,"id=eq."+id);
+    toast("Backup excluído.");
+    openBackups();
+  }catch(e){alert("Erro ao excluir: "+e.message);}
 }
 
 async function restoreBackup(backupId,projetoId){
