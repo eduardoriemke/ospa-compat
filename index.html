@@ -192,7 +192,8 @@ async function backupManual(pid,nome){
   toast("Criando backup…");
   var r=await createBackup(pid,"manual","Backup manual de "+nome);
   if(r.ok){
-    toast("Backup criado ("+r.tamanho+" MB · "+r.conflitos+" conflitos · "+r.imagens+" imagens).");
+    toast("Backup criado.");
+    openBackups();
   }else{
     alert("Não foi possível criar o backup.\n\nMotivo: "+r.erro+
           "\n\nSe a mensagem indicar tamanho ou limite, o projeto tem imagens demais para um único backup — me avise para ajustarmos o método.");
@@ -201,16 +202,11 @@ async function backupManual(pid,nome){
 
 async function createBackup(pid,tipo,desc){
   try{
-    var data=await Promise.all([
-      api("GET","projetos",null,"id=eq."+pid).then(function(r){return r[0];}),
-      api("GET","config_projeto",null,"projeto_id=eq."+pid).then(function(r){return r[0]||{};}),
-      api("GET","conflitos",null,"projeto_id=eq."+pid+"&order=ordem.asc"),
-      api("GET","imagens",null,"projeto_id=eq."+pid+"&select=conflito_id,ordem,dados"),
-    ]);
-    var payload={projeto:data[0],config:data[1],conflitos:data[2],imagens:data[3]};
-    var tamMB=(JSON.stringify(payload).length/1048576).toFixed(1);
-    await api("POST","backups",{projeto_id:pid,tipo:tipo,descricao:desc||"",dados:payload});
-    return {ok:true,tamanho:tamMB,imagens:(data[3]||[]).length,conflitos:(data[2]||[]).length};
+    // O backup é montado DENTRO do banco (função backup_projeto no Supabase).
+    // Antes, o navegador baixava todas as imagens em base64 e reenviava tudo,
+    // o que estourava o tempo limite do Postgres em projetos grandes.
+    await api("POST","rpc/backup_projeto",{p_id:pid,p_tipo:tipo,p_desc:desc||""});
+    return {ok:true};
   }catch(e){console.error("Backup error:",e);return {ok:false,erro:e.message};}
 }
 
@@ -297,26 +293,20 @@ async function openBackups(){
 }
 
 async function restoreBackup(backupId,projetoId){
-  if(!confirm("Restaurar este backup?\n\nOs dados atuais serão substituídos. Um backup do estado atual será criado primeiro.")) return;
+  if(!confirm("Restaurar este backup?\n\nOs dados atuais do projeto serão substituídos.\nUm backup do estado atual é criado automaticamente antes.")) return;
   toast("Restaurando…");
   try{
-    await createBackup(projetoId,"restauracao","Antes de restaurar");
-    var b=await api("GET","backups",null,"id=eq."+backupId).then(function(r){return r[0];});
-    var d=b.dados;
-    await api("DELETE","conflitos",null,"projeto_id=eq."+projetoId);
-    await api("PATCH","projetos",{nome:d.projeto.nome,endereco:d.projeto.endereco,cliente:d.projeto.cliente,responsavel:d.projeto.responsavel,revisao:d.projeto.revisao,data:d.projeto.data,notas:d.projeto.notas},"id=eq."+projetoId);
-    for(var i=0;i<d.conflitos.length;i++){
-      var c=d.conflitos[i];
-      var nc=await api("POST","conflitos",{projeto_id:projetoId,codigo:c.codigo,alerta:c.alerta,status:c.status,local:c.local,disciplinas:c.disciplinas,descricao:c.descricao,proposta:c.proposta,observacao:c.observacao,ordem:i});
-      var cImgs=d.imagens.filter(function(img){return img.conflito_id===c.id;});
-      for(var j=0;j<cImgs.length;j++){
-        await api("POST","imagens",{conflito_id:nc[0].id,projeto_id:projetoId,ordem:cImgs[j].ordem,dados:cImgs[j].dados});
-      }
-    }
+    // Restauração feita DENTRO do banco, em transação única: ou tudo é
+    // restaurado, ou nada muda. O método anterior apagava os conflitos
+    // e reinseria um a um pelo navegador — se travasse no meio, o
+    // projeto ficava pela metade.
+    await api("POST","rpc/restaurar_backup",{p_backup_id:backupId});
     document.getElementById("modal-backups").classList.remove("open");
-    toast("Backup restaurado!");
+    toast("Backup restaurado.");
     loadProjects();
-  }catch(e){alert("Erro ao restaurar: "+e.message);}
+  }catch(e){
+    alert("Erro ao restaurar: "+e.message+"\n\nNenhuma alteração foi feita — o projeto continua como estava.");
+  }
 }
 
 
