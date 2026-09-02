@@ -668,28 +668,39 @@ document.addEventListener('keydown', e => {
 
 // HEADER
 function renderHeader() {
-  function wireInput(id, key, placeholder) {
+  function wireInput(id, key, placeholder, somenteLeitura) {
     var el = document.getElementById(id);
     if (!el) return;
     el.value = META[key] || '';
     el.placeholder = placeholder;
+    if (somenteLeitura) {
+      el.readOnly = true;
+      el.style.pointerEvents = 'none';
+      el.style.opacity = '0.6';
+      el.title = 'Editado na página inicial do projeto (Editar dados do projeto)';
+      return;
+    }
     if (IS_EDITOR) {
       el.onblur = function() {
         META[key] = el.value.trim(); updatePrintHeader();
-        sbPatch('projetos','id',META.code,{nome:META.project,cliente:META.client,responsavel:META.manager,revisao:META.rev,data:META.date||''});
+        sbPatch('projetos','id',META.code,{revisao:META.rev,data:META.date||''});
       };
     } else {
       el.readOnly = true;
       el.style.pointerEvents = 'none';
     }
   }
-  wireInput('hdr-project-input', 'project', 'NOME DO PROJETO');
+  // Nome e cliente migraram para a home (formulário "Editar dados do
+  // projeto"), junto com endereço, responsável técnico e notas — para não
+  // existirem dois lugares gravando o mesmo campo. Aqui ficam apenas
+  // visíveis, em modo de leitura.
+  wireInput('hdr-project-input', 'project', 'NOME DO PROJETO', true);
   wireInput('hdr-rev-input',     'rev',     'REVISÃO');
   // Code = project ID (readonly)
   var codeEl = document.getElementById('hdr-code-input');
   if (codeEl) { codeEl.value = META.code || ''; codeEl.readOnly = true; codeEl.style.opacity='0.6'; }
   wireInput('hdr-date-input',    'date',    'DATA');
-  wireInput('hdr-client-input',  'client',  'CLIENTE');
+  wireInput('hdr-client-input',  'client',  'CLIENTE', true);
   updatePrintHeader();
 }
 function updatePrintHeader() {
@@ -805,7 +816,11 @@ function renderNotes() {
     ta.className = 'notes-ta';
     ta.value = META.notes || '';
     ta.placeholder = 'Adicione considerações iniciais e observações gerais sobre este relatório…';
-    ta.onblur = () => { META.notes=ta.value.trim(); sbD('notes',()=>sbPatch('projetos','id',META.code,{notas:META.notes}),800); };
+    // As notas passaram a ser editadas na home ("Editar dados do projeto"),
+    // para não haver dois lugares gravando o mesmo campo.
+    ta.readOnly = true;
+    ta.style.opacity = '0.6';
+    ta.title = 'Editado na página inicial do projeto (Editar dados do projeto)';
     ta.oninput = () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
     setTimeout(() => { ta.style.height = 'auto'; ta.style.height = (ta.scrollHeight || 60) + 'px'; }, 0);
     wrap.appendChild(ta);
@@ -1305,7 +1320,7 @@ function makeFrow(label, key, val) {
 function saveMeta() {
   renderHeader();
   document.querySelectorAll('.drawer-body .btn-primary').forEach(b => { b.textContent='Salvo ✓'; setTimeout(()=>b.textContent='Salvar',1500); });
-  sbPatch('projetos','id',META.code,{nome:META.project,cliente:META.client,responsavel:META.manager,revisao:META.rev,data:META.date,notas:META.notes||''});
+  sbPatch('projetos','id',META.code,{revisao:META.rev,data:META.date||''});
 }
 
 function _snapImagesDB() {
