@@ -89,7 +89,10 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 /* ── MAIN ── */
 .main{padding:24px 40px 80px}
-.main-hdr{font-family:var(--sans);font-size:9px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--text3);margin-bottom:14px}
+.main-hdr{font-family:var(--sans);font-size:9px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--text3)}
+.main-topo{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.grupos-btn{font-family:var(--mono);font-size:10px;color:var(--text3);background:none;border:1px solid var(--border2);padding:4px 10px;border-radius:2px;cursor:pointer;white-space:nowrap}
+.grupos-btn:hover{border-color:var(--text2);color:var(--text)}
 
 /* ── CABEÇALHO DE GRUPO (disciplina) ── */
 .grupo-row{cursor:pointer;background:var(--surface2);border-top:1px solid var(--border2)}
@@ -154,7 +157,24 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .doc-tag-invalido{color:var(--text3);border:1px dashed var(--border2)}
 .doc-tag-naovigente{color:var(--text2);background:var(--surface3)}
 .doc-mono{font-family:var(--mono);font-size:11px;color:var(--text2)}
-.doc-tipo{font-family:var(--mono);font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:0.04em}
+.doc-tipo{font-family:var(--mono);font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;padding:2px 6px;border-radius:2px;border:1px solid var(--border2);color:var(--text3);white-space:nowrap}
+/* Formatos com identidade visual, para varrer a lista com o olho */
+.doc-tipo.f-dwg{background:#EAF2F8;color:#1A5A8A;border-color:#BBD5E8}
+.doc-tipo.f-dxf{background:#EAF2F8;color:#3A6E9A;border-color:#C6DCEC}
+.doc-tipo.f-dwl{background:#F2F4F6;color:#6A7A88;border-color:#D6DDE3}
+.doc-tipo.f-pdf{background:#FBEAEA;color:#A32B2B;border-color:#EEC2C2}
+.doc-tipo.f-ifc{background:#EAF6EF;color:#1A6B48;border-color:#BFE0CE}
+.doc-tipo.f-rvt{background:#F3EDFA;color:#5A3490;border-color:#D8C9EC}
+.doc-tipo.f-skp{background:#FDF0E4;color:#B5530D;border-color:#F0D5B8}
+.doc-tipo.f-xlsx,.doc-tipo.f-xls,.doc-tipo.f-csv{background:#EDF7EC;color:#2C6E2C;border-color:#C8E4C6}
+.doc-tipo.f-docx,.doc-tipo.f-doc{background:#EAF0FA;color:#26478D;border-color:#C3D2EC}
+.doc-tipo.f-jpg,.doc-tipo.f-jpeg,.doc-tipo.f-png{background:#FAF0F5;color:#8E3060;border-color:#EBC9DA}
+.doc-tamanho{font-family:var(--mono);font-size:10.5px;color:var(--text3);white-space:nowrap}
+.doc-pasta-link{font-family:var(--mono);font-size:11px;color:var(--text2);text-decoration:none;border-bottom:1px dotted var(--border2)}
+.doc-pasta-link:hover{color:var(--text);border-color:var(--text2)}
+.tag-novo{font-family:var(--mono);font-size:8.5px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--resol);background:#EAF6F0;border:1px solid #BFE0CE;padding:1px 5px;border-radius:2px;white-space:nowrap}
+/* Cabeçalho da disciplina acompanha a rolagem dentro do grupo */
+.grupo-row td{position:sticky;top:0;z-index:20;background:var(--surface2)}
 .doc-link{font-family:var(--mono);font-size:10.5px;color:var(--text2);text-decoration:none;border:1px solid var(--border2);padding:4px 10px;border-radius:2px;white-space:nowrap;display:inline-block}
 .doc-link:hover{border-color:var(--text2);color:var(--text)}
 .empty-state{padding:70px 20px;text-align:center;color:var(--text3);font-family:var(--mono);font-size:11px}
@@ -210,7 +230,10 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <div class="summary" id="summary"></div>
   <div class="filters" id="filters"></div>
   <div class="main">
-    <div class="main-hdr" id="main-hdr"></div>
+    <div class="main-topo">
+      <span class="main-hdr" id="main-hdr"></span>
+      <button class="grupos-btn" id="btn-grupos" onclick="alternarTodosGrupos()"></button>
+    </div>
     <div class="table-wrap">
       <table class="doc-table">
         <thead id="doc-thead"></thead>
@@ -490,6 +513,24 @@ function renderSummary() {
   el.appendChild(ctr);
 }
 
+// Quantos DOCUMENTOS (pilhas) existem por disciplina, formato e etapa.
+// Considera a visão atual (vigentes/arquivados/todos), mas ignora o
+// próprio filtro sendo contado — senão o número mudaria ao clicar nele.
+function contarPor(campo) {
+  const cont = {};
+  montarPilhas(DOCS).forEach(p => {
+    const d = p.topo;
+    const arquivado = p.arquivos.every(a => !a.vigente);
+    if (S.visao === 'vigentes' && arquivado) return;
+    if (S.visao === 'arquivados' && !arquivado) return;
+    let v = d[campo];
+    if (campo === 'tipo') v = (v || '').toUpperCase();
+    if (!v) return;
+    cont[v] = (cont[v] || 0) + 1;
+  });
+  return cont;
+}
+
 // ── RENDER FILTERS ──
 function renderFilters() {
   const el = document.getElementById('filters');
@@ -498,10 +539,12 @@ function renderFilters() {
   const row1 = document.createElement('div'); row1.className = 'filter-row';
   const lbl1 = document.createElement('span'); lbl1.className = 'f-lbl'; lbl1.textContent = 'Disciplina';
   row1.appendChild(lbl1);
+  const nDisc = contarPor('disciplina');
   CONFIG.disciplines.forEach(d => {
+    if (!nDisc[d]) return;                       // disciplina sem documentos na visão atual
     const ch = document.createElement('span');
     ch.className = 'chip d-'+d + (S.discs.has(d)?' on':'');
-    ch.textContent = d;
+    ch.textContent = d + ' (' + nDisc[d] + ')';
     ch.onclick = () => { S.discs.has(d)?S.discs.delete(d):S.discs.add(d); renderFilters(); renderDocs(); };
     row1.appendChild(ch);
   });
@@ -517,10 +560,12 @@ function renderFilters() {
   const row2 = document.createElement('div'); row2.className = 'filter-row';
   const lbl2 = document.createElement('span'); lbl2.className = 'f-lbl'; lbl2.textContent = 'Formato';
   row2.appendChild(lbl2);
+  const nTipo = contarPor('tipo');
   CONFIG.tipos.forEach(t => {
+    if (!nTipo[t]) return;
     const ch = document.createElement('span');
     ch.className = 'chip' + (S.tipos.has(t)?' on':'');
-    ch.textContent = t;
+    ch.textContent = t + ' (' + nTipo[t] + ')';
     ch.onclick = () => { S.tipos.has(t)?S.tipos.delete(t):S.tipos.add(t); renderFilters(); renderDocs(); };
     row2.appendChild(ch);
   });
@@ -529,10 +574,12 @@ function renderFilters() {
   const row3 = document.createElement('div'); row3.className = 'filter-row';
   const lbl3 = document.createElement('span'); lbl3.className = 'f-lbl'; lbl3.textContent = 'Etapa';
   row3.appendChild(lbl3);
+  const nEtapa = contarPor('etapa');
   CONFIG.etapas.forEach(et => {
+    if (!nEtapa[et]) return;
     const ch = document.createElement('span');
     ch.className = 'chip' + (S.etapas.has(et)?' on':'');
-    ch.textContent = et;
+    ch.textContent = et + ' (' + nEtapa[et] + ')';
     ch.onclick = () => { S.etapas.has(et)?S.etapas.delete(et):S.etapas.add(et); renderFilters(); renderDocs(); };
     row3.appendChild(ch);
   });
@@ -687,13 +734,15 @@ function montarControleServidor(disc, atividade) {
 }
 
 // ── RENDER TABLE HEAD (ordenável) ──
+// A disciplina saiu da tabela: as linhas já vêm agrupadas por ela,
+// então o badge se repetia em todas as linhas do grupo.
 const COLUMNS = [
-  { field: 'disciplina',       label: 'Disciplina' },
   { field: 'caminho',          label: 'Caminho' },
   { field: 'nome_arquivo',     label: 'Nome do arquivo' },
   { field: 'etapa',            label: 'Etapa' },
   { field: 'revisao',          label: 'Revisão' },
-  { field: 'tipo',             label: 'Tipo' },
+  { field: 'tipo',             label: 'Formato' },
+  { field: 'tamanho_mb',       label: 'Tamanho' },
   { field: 'data_upload',      label: 'Enviado em' },
   { field: 'data_modificacao', label: 'Modificado em' },
 ];
@@ -781,8 +830,27 @@ function updateClearBtn() {
   if (btn) btn.style.display = temFiltrosAtivos() ? 'inline-block' : 'none';
 }
 
+// Abre ou fecha todos os grupos de uma vez
+function alternarTodosGrupos() {
+  const discs = [...new Set(getFiltered().map(p => p.topo.disciplina).filter(Boolean))];
+  const todosAbertos = discs.length > 0 && discs.every(d => GRUPOS_ABERTOS.has(d));
+  GRUPOS_ABERTOS = new Set(todosAbertos ? [] : discs);
+  renderDocs();
+}
+
+function atualizarBotaoGrupos() {
+  const btn = document.getElementById('btn-grupos');
+  if (!btn) return;
+  const discs = [...new Set(getFiltered().map(p => p.topo.disciplina).filter(Boolean))];
+  if (!discs.length) { btn.style.display = 'none'; return; }
+  btn.style.display = 'inline-block';
+  const todosAbertos = discs.every(d => GRUPOS_ABERTOS.has(d));
+  btn.textContent = todosAbertos ? '\u25b4 Recolher todos' : '\u25be Expandir todos';
+}
+
 function renderDocs() {
   updateClearBtn();
+  atualizarBotaoGrupos();
   const tbody = document.getElementById('doc-tbody');
   tbody.innerHTML = '';
 
@@ -932,15 +1000,21 @@ function renderDocRow(d, pilha) {
   const tr = document.createElement('tr');
   tr.className = 'doc-row' + (!d.vigente ? ' nao-vigente' : '');
 
-  const tdDisc = document.createElement('td');
-  const discTag = document.createElement('span');
-  discTag.className = 'd-tag d-' + d.disciplina;
-  discTag.textContent = d.disciplina;
-  tdDisc.appendChild(discTag);
-  tr.appendChild(tdDisc);
-
+  // Caminho abre a PASTA no Drive (o nome do arquivo abre o arquivo).
+  // Útil quando se quer baixar tudo de uma pasta de uma vez.
   const tdCaminho = document.createElement('td');
-  tdCaminho.innerHTML = '<span class="doc-mono">' + esc(d.caminho || '—') + '</span>';
+  if (d.link_pasta) {
+    const a = document.createElement('a');
+    a.className = 'doc-pasta-link';
+    a.href = d.link_pasta;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.title = 'Abrir a pasta no Google Drive';
+    a.textContent = d.caminho || '(raiz)';
+    tdCaminho.appendChild(a);
+  } else {
+    tdCaminho.innerHTML = '<span class="doc-mono">' + esc(d.caminho || '—') + '</span>';
+  }
   tr.appendChild(tdCaminho);
 
   const tdNome = document.createElement('td');
@@ -968,6 +1042,13 @@ function renderDocRow(d, pilha) {
   }
   if (!d.vigente) {
     const tag = document.createElement('span'); tag.className = 'doc-tag doc-tag-naovigente'; tag.textContent = 'não vigente';
+    nomeRow.appendChild(tag);
+  }
+  if (d.vigente && ehRecente(d.data_upload)) {
+    const tag = document.createElement('span');
+    tag.className = 'tag-novo';
+    tag.textContent = 'novo';
+    tag.title = 'Enviado nos últimos ' + DIAS_RECENTE + ' dias';
     nomeRow.appendChild(tag);
   }
   tdNome.appendChild(nomeRow);
@@ -1001,8 +1082,15 @@ function renderDocRow(d, pilha) {
   tr.appendChild(tdRev);
 
   const tdTipo = document.createElement('td');
-  tdTipo.innerHTML = '<span class="doc-tipo">' + esc(d.tipo || '—') + '</span>';
+  const tipo = (d.tipo || '').toLowerCase();
+  tdTipo.innerHTML = tipo
+    ? '<span class="doc-tipo f-' + esc(tipo) + '">' + esc(tipo) + '</span>'
+    : '<span class="doc-mono">—</span>';
   tr.appendChild(tdTipo);
+
+  const tdTam = document.createElement('td');
+  tdTam.innerHTML = '<span class="doc-tamanho">' + fmtTamanho(d.tamanho_mb) + '</span>';
+  tr.appendChild(tdTam);
 
   const tdUpload = document.createElement('td');
   tdUpload.innerHTML = '<span class="doc-mono">' + fmtDate(d.data_upload) + '</span>';
@@ -1035,6 +1123,21 @@ function dataLocal(iso){
   const p = n => ('0'+n).slice(-2);
   return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate());
 }
+// Um arquivo é "novo" se chegou nos últimos dias — ajuda a identificar
+// rapidamente o que foi postado desde a última visita.
+const DIAS_RECENTE = 7;
+function ehRecente(iso){
+  if (!iso) return false;
+  return diasDesde(iso) <= DIAS_RECENTE;
+}
+
+function fmtTamanho(mb){
+  if (mb == null || isNaN(mb)) return '—';
+  const n = parseFloat(mb);
+  if (n < 0.1) return '<0,1 MB';
+  return n.toFixed(1).replace('.', ',') + ' MB';
+}
+
 function fmtDate(s){
   if(!s)return'';
   const d=new Date(s);
