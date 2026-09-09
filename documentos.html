@@ -104,7 +104,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .gfield input,.gfield select{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:7px 9px;font-family:var(--mono);font-size:12px;outline:none;text-transform:uppercase}
 .gfield input:focus,.gfield select:focus{border-color:var(--text2)}
 .gfield.desativado{opacity:0.4;pointer-events:none}
-.gfield-nota{font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-rev-wrap{display:flex;align-items:stretch;border:1px solid var(--border2);background:var(--bg)}
+.g-rev-pre{font-family:var(--mono);font-size:12px;color:var(--text3);padding:7px 0 7px 9px;display:flex;align-items:center}
+.g-rev-wrap input{border:none!important;padding-left:2px!important}
 .gresultado{margin-top:20px;padding:14px 16px;background:var(--surface2);border:1px solid var(--border)}
 .gresultado-lbl{font-family:var(--sans);font-size:8.5px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
 .gresultado-nome{font-family:var(--mono);font-size:14px;color:var(--text);word-break:break-all}
@@ -264,13 +266,13 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
       <div class="gmodal-sub">7 campos · código, disciplina, etapa, numeração, pavimento, desenho e revisão</div>
 
       <div class="grid-campos">
-        <div class="gfield"><label>01 · Código da obra</label><input id="g-codigo" maxlength="2" placeholder="10"><div class="gfield-nota" id="g-codigo-nota"></div></div>
+        <div class="gfield"><label id="g-codigo-lbl">01 · Código da obra</label><input id="g-codigo" maxlength="2" placeholder="10"></div>
         <div class="gfield"><label>02 · Disciplina</label><select id="g-disc"></select></div>
         <div class="gfield"><label>03 · Etapa</label><select id="g-etapa"></select></div>
         <div class="gfield"><label>04 · Numeração</label><input id="g-num" maxlength="3" placeholder="001"></div>
         <div class="gfield"><label>05 · Pavimento</label><input id="g-pav" maxlength="3" placeholder="TIP" list="lista-pav"><datalist id="lista-pav"></datalist></div>
-        <div class="gfield"><label>06 · Desenho</label><input id="g-des" maxlength="3" placeholder="PLA" list="lista-des"><datalist id="lista-des"></datalist></div>
-        <div class="gfield"><label>07 · Revisão</label><input id="g-rev" maxlength="3" value="R00"></div>
+        <div class="gfield"><label>06 · Desenho / conteúdo</label><input id="g-des" placeholder="PLA" list="lista-des"><datalist id="lista-des"></datalist></div>
+        <div class="gfield"><label>07 · Revisão</label><div class="g-rev-wrap"><span class="g-rev-pre">R</span><input id="g-rev" type="number" min="0" max="99" step="1" value="0"></div></div>
         <div class="gfield"><label>Formato</label><input id="g-ext" placeholder="dwg" list="lista-ext"><datalist id="lista-ext"></datalist></div>
       </div>
 
@@ -752,27 +754,29 @@ function montarGerador() {
   });
 
   // Sugestões: o "conteúdo" guarda NUMERAÇÃO-PAVIMENTO-DESENHO
-  const pavUso = new Set(), desUso = new Set(), ext = new Set();
+  const desUso = new Set(), ext = new Set();
   const codigos = {};
   DOCS.forEach(d => {
     if (d.codigo) codigos[d.codigo] = (codigos[d.codigo] || 0) + 1;
     if (d.tipo) ext.add(d.tipo.toLowerCase());
     const partes = (d.conteudo || '').split('-').filter(Boolean);
-    if (partes.length >= 2) pavUso.add(partes[1]);
     if (partes.length >= 3) desUso.add(partes[2]);
   });
 
   // Código da obra: o mais frequente nos arquivos, com o nome do projeto ao lado
   const maisComum = Object.keys(codigos).sort((a,b) => codigos[b] - codigos[a])[0];
   if (maisComum) document.getElementById('g-codigo').value = maisComum;
-  document.getElementById('g-codigo-nota').textContent = PROJETO ? (PROJETO.nome || '') : '';
+  if (PROJETO && PROJETO.nome) {
+    document.getElementById('g-codigo-lbl').textContent = '01 · Código da obra · ' + PROJETO.nome;
+  }
 
   // Pavimentos: os cadastrados no editor têm prioridade — é a mesma lista
   // usada nos conflitos, então o sistema fala uma língua só.
-  // Todos os pavimentos aparecem, mesmo se algum fugir dos 3 caracteres:
-  // esconder seria pior — a pessoa não entenderia a ausência. Quem não
-  // couber no padrão gera o aviso de validação ao ser escolhido.
-  const pavs = new Set([...(CONFIG.locais || []), ...pavUso, 'GER']);
+  // Apenas os pavimentos cadastrados no projeto (editor) mais GER.
+  // Não entram valores extraídos dos nomes de arquivo: ali o campo 05
+  // foi usado para muita coisa que não é pavimento (cortes, isométricos,
+  // quadros), e isso poluiria a lista.
+  const pavs = new Set([...(CONFIG.locais || []), 'GER']);
   preencherLista('lista-pav', [...pavs]);
 
   preencherLista('lista-des', [...new Set([...Object.keys(DESENHOS_BASE), ...desUso])]);
@@ -784,13 +788,6 @@ function montarGerador() {
       el.addEventListener('input', atualizarNome);
       el.addEventListener('change', atualizarNome);
     });
-
-  // A revisão é digitada como número e exibida como R00
-  document.getElementById('g-rev').addEventListener('blur', function() {
-    const n = parseInt((this.value || '').replace(/\D/g,''), 10);
-    this.value = 'R' + String(isNaN(n) ? 0 : Math.min(n, 99)).padStart(2, '0');
-    atualizarNome();
-  });
 }
 
 function preencherLista(id, valores) {
@@ -815,14 +812,13 @@ function atualizarNome() {
   const des    = v('g-des');
   const ext    = (document.getElementById('g-ext').value || '').trim().toLowerCase();
 
-  const nRev = parseInt(v('g-rev').replace(/\D/g,''), 10);
-  const rev  = 'R' + String(isNaN(nRev) ? 0 : Math.min(nRev, 99)).padStart(2, '0');
+  const nRev = parseInt(document.getElementById('g-rev').value, 10);
+  const rev  = 'R' + String(isNaN(nRev) ? 0 : Math.max(0, Math.min(nRev, 99))).padStart(2, '0');
 
   const avisos = [];
   if (codigo && !/^\d{2}$/.test(codigo)) avisos.push('código: 2 dígitos');
   if (num && !/^\d{3}$/.test(num))       avisos.push('numeração: 3 dígitos');
   if (pav && pav.length !== 3)            avisos.push('pavimento: 3 caracteres');
-  if (des && des.length !== 3)            avisos.push('desenho: 3 caracteres');
 
   const faltando = [];
   if (!codigo) faltando.push('código');
@@ -875,7 +871,7 @@ function cruzarComExistentes(codigo, disc, etapa, conteudo, num) {
     const btn = document.createElement('button');
     btn.className = 'gc-acao';
     btn.textContent = 'usar R' + String(maxRev + 1).padStart(2,'0');
-    btn.onclick = () => { document.getElementById('g-rev').value = 'R' + String(maxRev+1).padStart(2,'0'); atualizarNome(); };
+    btn.onclick = () => { document.getElementById('g-rev').value = maxRev + 1; atualizarNome(); };
     linha.appendChild(btn);
     el.appendChild(linha);
     return;
