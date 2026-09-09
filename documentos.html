@@ -93,6 +93,33 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .main-topo{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
 .grupos-btn{font-family:var(--mono);font-size:10px;color:var(--text3);background:none;border:1px solid var(--border2);padding:4px 10px;border-radius:2px;cursor:pointer;white-space:nowrap}
 .grupos-btn:hover{border-color:var(--text2);color:var(--text)}
+/* ── GERADOR DE NOMENCLATURA ── */
+.gmodal{display:none;position:fixed;inset:0;background:rgba(25,25,25,0.45);z-index:3000;align-items:center;justify-content:center;padding:20px}
+.gmodal.open{display:flex}
+.gmodal-box{background:var(--surface);border:1px solid var(--border);padding:26px 28px;width:min(620px,100%);max-height:92vh;overflow:auto}
+.gmodal-title{font-family:var(--serif);font-size:18px;font-weight:300}
+.gmodal-sub{font-family:var(--mono);font-size:10px;color:var(--text3);margin:4px 0 20px}
+.grid-campos{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.gfield label{display:block;font-family:var(--sans);font-size:8.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.gfield input,.gfield select{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:7px 9px;font-family:var(--mono);font-size:12px;outline:none;text-transform:uppercase}
+.gfield input:focus,.gfield select:focus{border-color:var(--text2)}
+.gfield.desativado{opacity:0.4;pointer-events:none}
+.gresultado{margin-top:20px;padding:14px 16px;background:var(--surface2);border:1px solid var(--border)}
+.gresultado-lbl{font-family:var(--sans);font-size:8.5px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
+.gresultado-nome{font-family:var(--mono);font-size:14px;color:var(--text);word-break:break-all}
+.gresultado-aviso{font-family:var(--mono);font-size:10px;color:var(--pend);margin-top:6px}
+.gcruzamento{font-family:var(--mono);font-size:10.5px;margin-top:10px;line-height:1.6}
+.gcruzamento .gc-existe{color:var(--pend)}
+.gcruzamento .gc-novo{color:var(--resol)}
+.gcruzamento .gc-conflito{color:var(--alert)}
+.gc-acao{font-family:var(--sans);font-size:10px;font-weight:600;margin-left:8px;padding:2px 8px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;border-radius:2px}
+.gc-acao:hover{border-color:var(--text2);color:var(--text)}
+.gmodal-acoes{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+.gbtn{font-family:var(--sans);font-size:11px;font-weight:600;padding:8px 16px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer}
+.gbtn:hover{border-color:var(--text2);color:var(--text)}
+.gbtn-primary{background:var(--text);color:var(--surface);border-color:var(--text)}
+.gbtn-primary:hover{opacity:0.85;color:var(--surface)}
+@media (max-width:720px){.grid-campos{grid-template-columns:repeat(2,1fr)}}
 
 /* ── CABEÇALHO DE GRUPO (disciplina) ── */
 .grupo-row{cursor:pointer;background:var(--surface2);border-top:1px solid var(--border2)}
@@ -229,10 +256,45 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 <div id="screen-app">
   <div class="summary" id="summary"></div>
   <div class="filters" id="filters"></div>
+  <!-- Gerador de nomenclatura — padrão Latitude -->
+  <div class="gmodal" id="modal-gerador">
+    <div class="gmodal-box">
+      <div class="gmodal-title">Gerar nome de arquivo</div>
+      <div class="gmodal-sub">Padrão Latitude · 7 campos (8 para estrutural e hidrossanitário) · opções conforme o projeto</div>
+
+      <div class="grid-campos">
+        <div class="gfield"><label>01 · Código da obra</label><input id="g-codigo" maxlength="2" placeholder="034"></div>
+        <div class="gfield"><label>02 · Disciplina</label><select id="g-disc"></select></div>
+        <div class="gfield"><label>03 · Etapa</label><select id="g-etapa"></select></div>
+        <div class="gfield"><label>04 · Numeração</label><input id="g-num" maxlength="3" placeholder="001"></div>
+        <div class="gfield"><label>05 · Pavimento</label><input id="g-pav" maxlength="3" placeholder="TIP" list="lista-pav"><datalist id="lista-pav"></datalist></div>
+        <div class="gfield" id="campo-detalhe"><label>06 · Detalhe</label><input id="g-det" maxlength="3" placeholder="FOR" list="lista-det"><datalist id="lista-det"></datalist></div>
+        <div class="gfield"><label>07 · Torre</label><input id="g-torre" maxlength="2" placeholder="T1" list="lista-torre"><datalist id="lista-torre"></datalist></div>
+        <div class="gfield"><label>08 · Revisão</label><input id="g-rev" type="number" min="0" max="99" value="0"></div>
+        <div class="gfield"><label>Formato</label><input id="g-ext" placeholder="dwg" list="lista-ext"><datalist id="lista-ext"></datalist></div>
+      </div>
+
+      <div class="gresultado">
+        <div class="gresultado-lbl">Nome gerado</div>
+        <div class="gresultado-nome" id="g-saida">—</div>
+        <div class="gresultado-aviso" id="g-aviso"></div>
+        <div class="gcruzamento" id="g-cruzamento"></div>
+      </div>
+
+      <div class="gmodal-acoes">
+        <button class="gbtn" onclick="fecharGerador()">Fechar</button>
+        <button class="gbtn gbtn-primary" id="g-copiar" onclick="copiarNome()">Copiar nome</button>
+      </div>
+    </div>
+  </div>
+
   <div class="main">
     <div class="main-topo">
       <span class="main-hdr" id="main-hdr"></span>
-      <button class="grupos-btn" id="btn-grupos" onclick="alternarTodosGrupos()"></button>
+      <span style="display:flex;gap:8px;align-items:center">
+        <button class="grupos-btn" onclick="abrirGerador()">✎ Gerar nome de arquivo</button>
+        <button class="grupos-btn" id="btn-grupos" onclick="alternarTodosGrupos()"></button>
+      </span>
     </div>
     <div class="table-wrap">
       <table class="doc-table">
@@ -620,6 +682,246 @@ function renderFilters() {
   input.oninput = () => { S.busca = input.value; renderDocs(); };
   row5.appendChild(input);
   el.appendChild(row5);
+}
+
+
+// ════════════════════════════════════════════════════════
+// GERADOR DE NOMENCLATURA — padrão Latitude (2022)
+// CÓDIGO-DISCIPLINA-ETAPA-NUMERAÇÃO-PAVIMENTO-[DETALHE]-TORRE-REVISÃO.ext
+// O campo DETALHE existe apenas para estrutural e hidrossanitário.
+// ════════════════════════════════════════════════════════
+
+const LAT_DISCIPLINAS = [
+  ['ACU','Acústica'], ['AMB','Ambiental'], ['ARQ','Arquitetura'], ['CLI','Climatização'],
+  ['COM','Comunicações'], ['COZ','Cozinhas'], ['DET','Detalhamento'], ['DRE','Drenagem'],
+  ['ELE','Elétrico'], ['EST','Estrutural'], ['EXA','Exaustão'], ['FUN','Fundações'],
+  ['FUR','Furações'], ['GAS','Instalação de gás'], ['HID','Hidrossanitário'], ['IMP','Impermeabilização'],
+  ['INT','Interiores'], ['IRR','Irrigação'], ['MODELE','Alvenaria modulação'], ['MODPLB','Alvenaria planta baixa'],
+  ['PAI','Paisagismo'], ['PPCI','PPCI'], ['SEG','Segurança'], ['SIN','Sinalética'],
+  ['SOM','Som'], ['SON','Sondagem']
+];
+
+const LAT_ETAPAS = [
+  ['EP','Estudo Preliminar'], ['AP','Anteprojeto'], ['PB','Projeto Básico'],
+  ['PE','Projeto Executivo'], ['PL','Projeto Legal'], ['AB','As Built']
+];
+
+// Só estas disciplinas usam o campo 06 (detalhe)
+const DISC_COM_DETALHE = ['EST','HID'];
+
+function abrirGerador() {
+  const sel = document.getElementById('g-disc');
+  if (!sel.options.length) montarGerador();
+  document.getElementById('modal-gerador').classList.add('open');
+  atualizarNome();
+}
+
+function fecharGerador() {
+  document.getElementById('modal-gerador').classList.remove('open');
+}
+
+function montarGerador() {
+  // As opções vêm do que o projeto usa hoje, não da lista do manual de 2022
+  // (que está defasado). O manual entra só como descrição e como reserva,
+  // caso o projeto ainda não tenha arquivos.
+  const nomeDisc = {}; LAT_DISCIPLINAS.forEach(p => { nomeDisc[p[0]] = p[1]; });
+  const nomeEtapa = {}; LAT_ETAPAS.forEach(p => { nomeEtapa[p[0]] = p[1]; });
+
+  const discsUso  = [...new Set(DOCS.map(d => d.disciplina).filter(Boolean))].sort();
+  const etapasUso = [...new Set(DOCS.map(d => d.etapa).filter(Boolean))].sort();
+
+  const listaDisc  = discsUso.length  ? discsUso  : LAT_DISCIPLINAS.map(p => p[0]);
+  const listaEtapa = etapasUso.length ? etapasUso : LAT_ETAPAS.map(p => p[0]);
+
+  const sel = document.getElementById('g-disc');
+  listaDisc.forEach(cod => {
+    const o = document.createElement('option');
+    o.value = cod;
+    o.textContent = nomeDisc[cod] ? cod + ' — ' + nomeDisc[cod] : cod;
+    sel.appendChild(o);
+  });
+
+  const selEt = document.getElementById('g-etapa');
+  listaEtapa.forEach(cod => {
+    const o = document.createElement('option');
+    o.value = cod;
+    o.textContent = nomeEtapa[cod] ? cod + ' — ' + nomeEtapa[cod] : cod;
+    selEt.appendChild(o);
+  });
+
+  // Sugestões a partir dos arquivos já existentes: o campo "conteúdo"
+  // guarda NUMERAÇÃO-PAVIMENTO-[DETALHE]-TORRE
+  const pav = new Set(), det = new Set(), torre = new Set(), ext = new Set();
+  const codigos = {};
+  DOCS.forEach(d => {
+    if (d.codigo) codigos[d.codigo] = (codigos[d.codigo] || 0) + 1;
+    if (d.tipo) ext.add(d.tipo.toLowerCase());
+    const partes = (d.conteudo || '').split('-').filter(Boolean);
+    if (partes.length >= 2) {
+      pav.add(partes[1]);
+      torre.add(partes[partes.length - 1]);
+      if (partes.length >= 4) det.add(partes[2]);
+    }
+  });
+
+  const maisComum = Object.keys(codigos).sort((a,b) => codigos[b] - codigos[a])[0];
+  if (maisComum) document.getElementById('g-codigo').value = maisComum;
+
+  preencherLista('lista-pav', Array.from(pav));
+  preencherLista('lista-det', Array.from(det));
+  preencherLista('lista-torre', Array.from(new Set(Array.from(torre).concat(['TU','T1','T2','T3']))));
+  preencherLista('lista-ext', Array.from(new Set(Array.from(ext).concat(['dwg','pdf','ifc','rvt']))));
+
+  ['g-codigo','g-disc','g-etapa','g-num','g-pav','g-det','g-torre','g-rev','g-ext']
+    .forEach(id => {
+      const el = document.getElementById(id);
+      el.addEventListener('input', atualizarNome);
+      el.addEventListener('change', atualizarNome);
+    });
+}
+
+function preencherLista(id, valores) {
+  const dl = document.getElementById(id);
+  dl.innerHTML = '';
+  valores.filter(Boolean).sort().forEach(v => {
+    const o = document.createElement('option');
+    o.value = v;
+    dl.appendChild(o);
+  });
+}
+
+function atualizarNome() {
+  const v = id => (document.getElementById(id).value || '').trim().toUpperCase();
+  const disc = v('g-disc');
+  const usaDetalhe = DISC_COM_DETALHE.indexOf(disc) >= 0;
+
+  document.getElementById('campo-detalhe').classList.toggle('desativado', !usaDetalhe);
+
+  const codigo = v('g-codigo');
+  const etapa  = v('g-etapa');
+  const num    = v('g-num');
+  const pav    = v('g-pav');
+  const det    = usaDetalhe ? v('g-det') : '';
+  const torre  = v('g-torre');
+  const rev    = document.getElementById('g-rev').value;
+  const ext    = (document.getElementById('g-ext').value || '').trim().toLowerCase();
+
+  const avisos = [];
+  if (codigo && codigo.length !== 2) avisos.push('código da obra deve ter 2 dígitos');
+  if (num && num.length !== 3)       avisos.push('numeração deve ter 3 dígitos');
+  if (pav && pav.length !== 3)       avisos.push('pavimento deve ter 3 caracteres');
+  if (det && det.length !== 3)       avisos.push('detalhe deve ter 3 caracteres');
+  if (torre && torre.length !== 2)   avisos.push('torre deve ter 2 caracteres');
+
+  const faltando = [];
+  if (!codigo) faltando.push('código');
+  if (!num)    faltando.push('numeração');
+  if (!pav)    faltando.push('pavimento');
+  if (!torre)  faltando.push('torre');
+  if (!ext)    faltando.push('formato');
+
+  const campos = [codigo, disc, etapa, num, pav];
+  if (usaDetalhe && det) campos.push(det);
+  campos.push(torre, 'R' + String(rev).padStart(2, '0'));
+
+  const nome = campos.filter(Boolean).join('-') + (ext ? '.' + ext : '');
+  document.getElementById('g-saida').textContent = nome;
+
+  const aviso = document.getElementById('g-aviso');
+  if (faltando.length)    aviso.textContent = 'Falta preencher: ' + faltando.join(', ');
+  else if (avisos.length) aviso.textContent = 'Atenção: ' + avisos.join('; ');
+  else                    aviso.textContent = '';
+
+  document.getElementById('g-copiar').disabled = faltando.length > 0;
+
+  // O "conteúdo" é o miolo do nome: numeração-pavimento-[detalhe]-torre
+  const miolo = [num, pav];
+  if (usaDetalhe && det) miolo.push(det);
+  miolo.push(torre);
+  cruzarComExistentes(codigo, disc, etapa, miolo.filter(Boolean).join('-'), num);
+}
+
+// Cruza o que está sendo montado com os documentos que já existem:
+// avisa se o documento já existe (e qual a próxima revisão), se a
+// numeração está ocupada, e qual o próximo número livre da etapa.
+function cruzarComExistentes(codigo, disc, etapa, conteudo, num) {
+  const el = document.getElementById('g-cruzamento');
+  el.innerHTML = '';
+  if (!codigo || !disc || !etapa) return;
+
+  const mesmaEtapa = DOCS.filter(d =>
+    d.codigo === codigo && d.disciplina === disc && d.etapa === etapa && d.nome_valido);
+
+  // Próxima numeração livre nesta disciplina + etapa
+  const usados = new Set();
+  mesmaEtapa.forEach(d => {
+    const n = (d.conteudo || '').split('-')[0];
+    if (/^\d{3}$/.test(n)) usados.add(parseInt(n, 10));
+  });
+  let livre = 1;
+  while (usados.has(livre)) livre++;
+  const proxLivre = String(livre).padStart(3, '0');
+
+  // O documento exato (mesmo conteúdo) já existe?
+  const iguais = mesmaEtapa.filter(d => (d.conteudo || '') === conteudo);
+  if (iguais.length) {
+    const maxRev = Math.max(...iguais.map(d => parseInt((d.revisao || '').replace(/\D/g,'')) || 0));
+    const prox = String(maxRev + 1).padStart(2, '0');
+    const linha = document.createElement('div');
+    linha.className = 'gc-existe';
+    linha.innerHTML = '<i class="ti ti-history" style="vertical-align:-2px"></i> Documento já existe · revisão atual R' +
+                      String(maxRev).padStart(2,'0') + ' · próxima seria R' + prox;
+    const btn = document.createElement('button');
+    btn.className = 'gc-acao';
+    btn.textContent = 'usar R' + prox;
+    btn.onclick = () => { document.getElementById('g-rev').value = maxRev + 1; atualizarNome(); };
+    linha.appendChild(btn);
+    el.appendChild(linha);
+    return;
+  }
+
+  // Numeração já usada por OUTRO documento da mesma etapa?
+  if (/^\d{3}$/.test(num)) {
+    const ocupada = mesmaEtapa.filter(d => (d.conteudo || '').split('-')[0] === num);
+    if (ocupada.length) {
+      const linha = document.createElement('div');
+      linha.className = 'gc-conflito';
+      linha.innerHTML = '<i class="ti ti-alert-triangle" style="vertical-align:-2px"></i> Numeração ' + num +
+                        ' já usada por: ' + esc(ocupada[0].nome_arquivo);
+      const btn = document.createElement('button');
+      btn.className = 'gc-acao';
+      btn.textContent = 'usar ' + proxLivre;
+      btn.onclick = () => { document.getElementById('g-num').value = proxLivre; atualizarNome(); };
+      linha.appendChild(btn);
+      el.appendChild(linha);
+      return;
+    }
+  }
+
+  const linha = document.createElement('div');
+  linha.className = 'gc-novo';
+  linha.innerHTML = '<i class="ti ti-file-plus" style="vertical-align:-2px"></i> Documento novo · próxima numeração livre em ' +
+                    disc + '/' + etapa + ': ' + proxLivre;
+  if (num !== proxLivre) {
+    const btn = document.createElement('button');
+    btn.className = 'gc-acao';
+    btn.textContent = 'usar ' + proxLivre;
+    btn.onclick = () => { document.getElementById('g-num').value = proxLivre; atualizarNome(); };
+    linha.appendChild(btn);
+  }
+  el.appendChild(linha);
+}
+
+async function copiarNome() {
+  const nome = document.getElementById('g-saida').textContent;
+  const btn = document.getElementById('g-copiar');
+  try {
+    await navigator.clipboard.writeText(nome);
+    btn.textContent = 'Copiado \u2713';
+    setTimeout(function(){ btn.textContent = 'Copiar nome'; }, 1600);
+  } catch (e) {
+    alert('Copie manualmente:\n\n' + nome);
+  }
 }
 
 // ── EMPILHAMENTO DE REVISÕES ──
