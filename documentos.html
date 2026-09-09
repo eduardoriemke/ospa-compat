@@ -104,6 +104,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .gfield input,.gfield select{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:7px 9px;font-family:var(--mono);font-size:12px;outline:none;text-transform:uppercase}
 .gfield input:focus,.gfield select:focus{border-color:var(--text2)}
 .gfield.desativado{opacity:0.4;pointer-events:none}
+.gfield-nota{font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gresultado{margin-top:20px;padding:14px 16px;background:var(--surface2);border:1px solid var(--border)}
 .gresultado-lbl{font-family:var(--sans);font-size:8.5px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
 .gresultado-nome{font-family:var(--mono);font-size:14px;color:var(--text);word-break:break-all}
@@ -260,17 +261,16 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <div class="gmodal" id="modal-gerador">
     <div class="gmodal-box">
       <div class="gmodal-title">Gerar nome de arquivo</div>
-      <div class="gmodal-sub">Padrão Latitude · 7 campos (8 para estrutural e hidrossanitário) · opções conforme o projeto</div>
+      <div class="gmodal-sub">7 campos · código, disciplina, etapa, numeração, pavimento, desenho e revisão</div>
 
       <div class="grid-campos">
-        <div class="gfield"><label>01 · Código da obra</label><input id="g-codigo" maxlength="2" placeholder="034"></div>
+        <div class="gfield"><label>01 · Código da obra</label><input id="g-codigo" maxlength="2" placeholder="10"><div class="gfield-nota" id="g-codigo-nota"></div></div>
         <div class="gfield"><label>02 · Disciplina</label><select id="g-disc"></select></div>
         <div class="gfield"><label>03 · Etapa</label><select id="g-etapa"></select></div>
         <div class="gfield"><label>04 · Numeração</label><input id="g-num" maxlength="3" placeholder="001"></div>
         <div class="gfield"><label>05 · Pavimento</label><input id="g-pav" maxlength="3" placeholder="TIP" list="lista-pav"><datalist id="lista-pav"></datalist></div>
-        <div class="gfield" id="campo-detalhe"><label>06 · Detalhe</label><input id="g-det" maxlength="3" placeholder="FOR" list="lista-det"><datalist id="lista-det"></datalist></div>
-        <div class="gfield"><label>07 · Torre</label><input id="g-torre" maxlength="2" placeholder="T1" list="lista-torre"><datalist id="lista-torre"></datalist></div>
-        <div class="gfield"><label>08 · Revisão</label><input id="g-rev" type="number" min="0" max="99" value="0"></div>
+        <div class="gfield"><label>06 · Desenho</label><input id="g-des" maxlength="3" placeholder="PLA" list="lista-des"><datalist id="lista-des"></datalist></div>
+        <div class="gfield"><label>07 · Revisão</label><input id="g-rev" maxlength="3" value="R00"></div>
         <div class="gfield"><label>Formato</label><input id="g-ext" placeholder="dwg" list="lista-ext"><datalist id="lista-ext"></datalist></div>
       </div>
 
@@ -457,14 +457,16 @@ async function loadApp() {
 
     setLoadingText('Carregando documentos…');
 
-    const [proj, docs] = await Promise.all([
+    const [proj, cfg, docs] = await Promise.all([
       api('GET','projetos',null,'id=eq.'+projId).then(r=>r[0]),
+      api('GET','config_projeto',null,'projeto_id=eq.'+projId).then(r=>r[0]||{}),
       apiTodos('documentos_projeto',
         'projeto_id=eq.'+projId+'&removido_em=is.null&order=disciplina.asc,nome_arquivo.asc'),
     ]);
 
     PROJETO = proj;
     DOCS = docs;
+    CONFIG.locais = cfg.locais || [];   // pavimentos cadastrados no editor
 
     // Confirmações de "atualizado no servidor" por disciplina
     // (estado compartilhado do projeto — todos veem o mesmo)
@@ -686,28 +688,36 @@ function renderFilters() {
 
 
 // ════════════════════════════════════════════════════════
-// GERADOR DE NOMENCLATURA — padrão Latitude (2022)
-// CÓDIGO-DISCIPLINA-ETAPA-NUMERAÇÃO-PAVIMENTO-[DETALHE]-TORRE-REVISÃO.ext
-// O campo DETALHE existe apenas para estrutural e hidrossanitário.
+// GERADOR DE NOMENCLATURA — padrão OSPA/Latitude
+// CÓDIGO(2)-DISCIPLINA-ETAPA-NUM(3)-PAVIMENTO(3)-DESENHO(3)-REVISÃO
+// Sete campos fixos, todos com 3 caracteres. Sem campo de torre.
+// Use GER no pavimento quando não se aplica (cortes, memoriais, quadros).
 // ════════════════════════════════════════════════════════
 
-const LAT_DISCIPLINAS = [
-  ['ACU','Acústica'], ['AMB','Ambiental'], ['ARQ','Arquitetura'], ['CLI','Climatização'],
-  ['COM','Comunicações'], ['COZ','Cozinhas'], ['DET','Detalhamento'], ['DRE','Drenagem'],
-  ['ELE','Elétrico'], ['EST','Estrutural'], ['EXA','Exaustão'], ['FUN','Fundações'],
-  ['FUR','Furações'], ['GAS','Instalação de gás'], ['HID','Hidrossanitário'], ['IMP','Impermeabilização'],
-  ['INT','Interiores'], ['IRR','Irrigação'], ['MODELE','Alvenaria modulação'], ['MODPLB','Alvenaria planta baixa'],
-  ['PAI','Paisagismo'], ['PPCI','PPCI'], ['SEG','Segurança'], ['SIN','Sinalética'],
-  ['SOM','Som'], ['SON','Sondagem']
-];
+const NOMES_DISCIPLINA = {
+  ACU:'Acústica', AMB:'Ambiental', ARQ:'Arquitetura', CLI:'Climatização',
+  COM:'Comunicações', CPT:'Compatibilização', CVI:'Comunicação visual',
+  DRE:'Drenagem', ELE:'Elétrico', EST:'Estrutural', FUN:'Fundações',
+  GAS:'Gás', HID:'Hidrossanitário', IMP:'Impermeabilização', INT:'Interiores',
+  LUM:'Luminotécnico', MOD:'Modulação', PAI:'Paisagismo', PIS:'Piscina',
+  PPCI:'PPCI', PSG:'Paisagismo', SIN:'Sinalética', TOP:'Topografia'
+};
 
-const LAT_ETAPAS = [
-  ['EP','Estudo Preliminar'], ['AP','Anteprojeto'], ['PB','Projeto Básico'],
-  ['PE','Projeto Executivo'], ['PL','Projeto Legal'], ['AB','As Built']
-];
+const NOMES_ETAPA = {
+  EP:'Estudo preliminar', AP:'Anteprojeto', PB:'Projeto básico',
+  PE:'Projeto executivo', PL:'Projeto legal', AB:'As built',
+  PC:'Projeto complementar', RI:'Relatório', TH:'Técnico'
+};
 
-// Só estas disciplinas usam o campo 06 (detalhe)
-const DISC_COM_DETALHE = ['EST','HID'];
+// Tipos de desenho observados nos arquivos do projeto, mais os básicos
+const DESENHOS_BASE = {
+  PLA:'Planta baixa', FOR:'Forro / formas', CRT:'Corte', DET:'Detalhe',
+  ELN:'Elevação norte', ELS:'Elevação sul', ELL:'Elevação leste', ELO:'Elevação oeste',
+  ISO:'Isométrico', MOD:'Modelo BIM', MEM:'Memorial', QUA:'Quadro',
+  SIT:'Situação', ESG:'Esgoto', HID:'Hidráulica', ELE:'Elétrico', CLI:'Climatização',
+  ILU:'Iluminação', PIS:'Piso', TEC:'Tecnologia', OBJ:'Objetos', FIX:'Fixos',
+  POR:'Portas', FLU:'Fluxograma', QTV:'Quantitativo', GER:'Geral'
+};
 
 function abrirGerador() {
   const sel = document.getElementById('g-disc');
@@ -721,63 +731,66 @@ function fecharGerador() {
 }
 
 function montarGerador() {
-  // As opções vêm do que o projeto usa hoje, não da lista do manual de 2022
-  // (que está defasado). O manual entra só como descrição e como reserva,
-  // caso o projeto ainda não tenha arquivos.
-  const nomeDisc = {}; LAT_DISCIPLINAS.forEach(p => { nomeDisc[p[0]] = p[1]; });
-  const nomeEtapa = {}; LAT_ETAPAS.forEach(p => { nomeEtapa[p[0]] = p[1]; });
-
+  // Disciplinas e etapas: as que o projeto usa de fato
   const discsUso  = [...new Set(DOCS.map(d => d.disciplina).filter(Boolean))].sort();
   const etapasUso = [...new Set(DOCS.map(d => d.etapa).filter(Boolean))].sort();
 
-  const listaDisc  = discsUso.length  ? discsUso  : LAT_DISCIPLINAS.map(p => p[0]);
-  const listaEtapa = etapasUso.length ? etapasUso : LAT_ETAPAS.map(p => p[0]);
-
   const sel = document.getElementById('g-disc');
-  listaDisc.forEach(cod => {
+  discsUso.forEach(cod => {
     const o = document.createElement('option');
     o.value = cod;
-    o.textContent = nomeDisc[cod] ? cod + ' — ' + nomeDisc[cod] : cod;
+    o.textContent = NOMES_DISCIPLINA[cod] ? cod + ' — ' + NOMES_DISCIPLINA[cod] : cod;
     sel.appendChild(o);
   });
 
   const selEt = document.getElementById('g-etapa');
-  listaEtapa.forEach(cod => {
+  etapasUso.forEach(cod => {
     const o = document.createElement('option');
     o.value = cod;
-    o.textContent = nomeEtapa[cod] ? cod + ' — ' + nomeEtapa[cod] : cod;
+    o.textContent = NOMES_ETAPA[cod] ? cod + ' — ' + NOMES_ETAPA[cod] : cod;
     selEt.appendChild(o);
   });
 
-  // Sugestões a partir dos arquivos já existentes: o campo "conteúdo"
-  // guarda NUMERAÇÃO-PAVIMENTO-[DETALHE]-TORRE
-  const pav = new Set(), det = new Set(), torre = new Set(), ext = new Set();
+  // Sugestões: o "conteúdo" guarda NUMERAÇÃO-PAVIMENTO-DESENHO
+  const pavUso = new Set(), desUso = new Set(), ext = new Set();
   const codigos = {};
   DOCS.forEach(d => {
     if (d.codigo) codigos[d.codigo] = (codigos[d.codigo] || 0) + 1;
     if (d.tipo) ext.add(d.tipo.toLowerCase());
     const partes = (d.conteudo || '').split('-').filter(Boolean);
-    if (partes.length >= 2) {
-      pav.add(partes[1]);
-      torre.add(partes[partes.length - 1]);
-      if (partes.length >= 4) det.add(partes[2]);
-    }
+    if (partes.length >= 2) pavUso.add(partes[1]);
+    if (partes.length >= 3) desUso.add(partes[2]);
   });
 
+  // Código da obra: o mais frequente nos arquivos, com o nome do projeto ao lado
   const maisComum = Object.keys(codigos).sort((a,b) => codigos[b] - codigos[a])[0];
   if (maisComum) document.getElementById('g-codigo').value = maisComum;
+  document.getElementById('g-codigo-nota').textContent = PROJETO ? (PROJETO.nome || '') : '';
 
-  preencherLista('lista-pav', Array.from(pav));
-  preencherLista('lista-det', Array.from(det));
-  preencherLista('lista-torre', Array.from(new Set(Array.from(torre).concat(['TU','T1','T2','T3']))));
-  preencherLista('lista-ext', Array.from(new Set(Array.from(ext).concat(['dwg','pdf','ifc','rvt']))));
+  // Pavimentos: os cadastrados no editor têm prioridade — é a mesma lista
+  // usada nos conflitos, então o sistema fala uma língua só.
+  // Todos os pavimentos aparecem, mesmo se algum fugir dos 3 caracteres:
+  // esconder seria pior — a pessoa não entenderia a ausência. Quem não
+  // couber no padrão gera o aviso de validação ao ser escolhido.
+  const pavs = new Set([...(CONFIG.locais || []), ...pavUso, 'GER']);
+  preencherLista('lista-pav', [...pavs]);
 
-  ['g-codigo','g-disc','g-etapa','g-num','g-pav','g-det','g-torre','g-rev','g-ext']
+  preencherLista('lista-des', [...new Set([...Object.keys(DESENHOS_BASE), ...desUso])]);
+  preencherLista('lista-ext', [...new Set([...ext, 'dwg','pdf','ifc','rvt'])]);
+
+  ['g-codigo','g-disc','g-etapa','g-num','g-pav','g-des','g-rev','g-ext']
     .forEach(id => {
       const el = document.getElementById(id);
       el.addEventListener('input', atualizarNome);
       el.addEventListener('change', atualizarNome);
     });
+
+  // A revisão é digitada como número e exibida como R00
+  document.getElementById('g-rev').addEventListener('blur', function() {
+    const n = parseInt((this.value || '').replace(/\D/g,''), 10);
+    this.value = 'R' + String(isNaN(n) ? 0 : Math.min(n, 99)).padStart(2, '0');
+    atualizarNome();
+  });
 }
 
 function preencherLista(id, valores) {
@@ -786,64 +799,55 @@ function preencherLista(id, valores) {
   valores.filter(Boolean).sort().forEach(v => {
     const o = document.createElement('option');
     o.value = v;
+    if (DESENHOS_BASE[v] && id === 'lista-des') o.label = DESENHOS_BASE[v];
     dl.appendChild(o);
   });
 }
 
 function atualizarNome() {
   const v = id => (document.getElementById(id).value || '').trim().toUpperCase();
-  const disc = v('g-disc');
-  const usaDetalhe = DISC_COM_DETALHE.indexOf(disc) >= 0;
-
-  document.getElementById('campo-detalhe').classList.toggle('desativado', !usaDetalhe);
 
   const codigo = v('g-codigo');
+  const disc   = v('g-disc');
   const etapa  = v('g-etapa');
   const num    = v('g-num');
   const pav    = v('g-pav');
-  const det    = usaDetalhe ? v('g-det') : '';
-  const torre  = v('g-torre');
-  const rev    = document.getElementById('g-rev').value;
+  const des    = v('g-des');
   const ext    = (document.getElementById('g-ext').value || '').trim().toLowerCase();
 
+  const nRev = parseInt(v('g-rev').replace(/\D/g,''), 10);
+  const rev  = 'R' + String(isNaN(nRev) ? 0 : Math.min(nRev, 99)).padStart(2, '0');
+
   const avisos = [];
-  if (codigo && codigo.length !== 2) avisos.push('código da obra deve ter 2 dígitos');
-  if (num && num.length !== 3)       avisos.push('numeração deve ter 3 dígitos');
-  if (pav && pav.length !== 3)       avisos.push('pavimento deve ter 3 caracteres');
-  if (det && det.length !== 3)       avisos.push('detalhe deve ter 3 caracteres');
-  if (torre && torre.length !== 2)   avisos.push('torre deve ter 2 caracteres');
+  if (codigo && !/^\d{2}$/.test(codigo)) avisos.push('código: 2 dígitos');
+  if (num && !/^\d{3}$/.test(num))       avisos.push('numeração: 3 dígitos');
+  if (pav && pav.length !== 3)            avisos.push('pavimento: 3 caracteres');
+  if (des && des.length !== 3)            avisos.push('desenho: 3 caracteres');
 
   const faltando = [];
   if (!codigo) faltando.push('código');
   if (!num)    faltando.push('numeração');
   if (!pav)    faltando.push('pavimento');
-  if (!torre)  faltando.push('torre');
+  if (!des)    faltando.push('desenho');
   if (!ext)    faltando.push('formato');
 
-  const campos = [codigo, disc, etapa, num, pav];
-  if (usaDetalhe && det) campos.push(det);
-  campos.push(torre, 'R' + String(rev).padStart(2, '0'));
-
-  const nome = campos.filter(Boolean).join('-') + (ext ? '.' + ext : '');
+  const nome = [codigo, disc, etapa, num, pav, des, rev].filter(Boolean).join('-') +
+               (ext ? '.' + ext : '');
   document.getElementById('g-saida').textContent = nome;
 
   const aviso = document.getElementById('g-aviso');
   if (faltando.length)    aviso.textContent = 'Falta preencher: ' + faltando.join(', ');
-  else if (avisos.length) aviso.textContent = 'Atenção: ' + avisos.join('; ');
+  else if (avisos.length) aviso.textContent = 'Corrigir — ' + avisos.join('; ');
   else                    aviso.textContent = '';
 
-  document.getElementById('g-copiar').disabled = faltando.length > 0;
+  document.getElementById('g-copiar').disabled = faltando.length > 0 || avisos.length > 0;
 
-  // O "conteúdo" é o miolo do nome: numeração-pavimento-[detalhe]-torre
-  const miolo = [num, pav];
-  if (usaDetalhe && det) miolo.push(det);
-  miolo.push(torre);
-  cruzarComExistentes(codigo, disc, etapa, miolo.filter(Boolean).join('-'), num);
+  cruzarComExistentes(codigo, disc, etapa, [num, pav, des].filter(Boolean).join('-'), num);
 }
 
-// Cruza o que está sendo montado com os documentos que já existem:
-// avisa se o documento já existe (e qual a próxima revisão), se a
-// numeração está ocupada, e qual o próximo número livre da etapa.
+// Cruza com os documentos existentes: avisa se o documento já existe (e
+// qual a próxima revisão), se a numeração está ocupada, e qual o próximo
+// número livre da disciplina/etapa.
 function cruzarComExistentes(codigo, disc, etapa, conteudo, num) {
   const el = document.getElementById('g-cruzamento');
   el.innerHTML = '';
@@ -852,7 +856,6 @@ function cruzarComExistentes(codigo, disc, etapa, conteudo, num) {
   const mesmaEtapa = DOCS.filter(d =>
     d.codigo === codigo && d.disciplina === disc && d.etapa === etapa && d.nome_valido);
 
-  // Próxima numeração livre nesta disciplina + etapa
   const usados = new Set();
   mesmaEtapa.forEach(d => {
     const n = (d.conteudo || '').split('-')[0];
@@ -862,25 +865,22 @@ function cruzarComExistentes(codigo, disc, etapa, conteudo, num) {
   while (usados.has(livre)) livre++;
   const proxLivre = String(livre).padStart(3, '0');
 
-  // O documento exato (mesmo conteúdo) já existe?
   const iguais = mesmaEtapa.filter(d => (d.conteudo || '') === conteudo);
   if (iguais.length) {
     const maxRev = Math.max(...iguais.map(d => parseInt((d.revisao || '').replace(/\D/g,'')) || 0));
-    const prox = String(maxRev + 1).padStart(2, '0');
     const linha = document.createElement('div');
     linha.className = 'gc-existe';
     linha.innerHTML = '<i class="ti ti-history" style="vertical-align:-2px"></i> Documento já existe · revisão atual R' +
-                      String(maxRev).padStart(2,'0') + ' · próxima seria R' + prox;
+                      String(maxRev).padStart(2,'0');
     const btn = document.createElement('button');
     btn.className = 'gc-acao';
-    btn.textContent = 'usar R' + prox;
-    btn.onclick = () => { document.getElementById('g-rev').value = maxRev + 1; atualizarNome(); };
+    btn.textContent = 'usar R' + String(maxRev + 1).padStart(2,'0');
+    btn.onclick = () => { document.getElementById('g-rev').value = 'R' + String(maxRev+1).padStart(2,'0'); atualizarNome(); };
     linha.appendChild(btn);
     el.appendChild(linha);
     return;
   }
 
-  // Numeração já usada por OUTRO documento da mesma etapa?
   if (/^\d{3}$/.test(num)) {
     const ocupada = mesmaEtapa.filter(d => (d.conteudo || '').split('-')[0] === num);
     if (ocupada.length) {
