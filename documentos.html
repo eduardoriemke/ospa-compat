@@ -296,6 +296,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     <div class="main-topo">
       <span class="main-hdr" id="main-hdr"></span>
       <span style="display:flex;gap:8px;align-items:center">
+        <a class="grupos-btn" id="link-drive" href="#" target="_blank" rel="noopener" style="display:none;text-decoration:none">📁 Pasta do projeto</a>
         <button class="grupos-btn" onclick="abrirGerador()">✎ Gerar nome de arquivo</button>
         <button class="grupos-btn" id="btn-grupos" onclick="alternarTodosGrupos()"></button>
       </span>
@@ -497,6 +498,14 @@ async function loadApp() {
     S.discs = new Set();
 
     renderHeader();
+
+    // Atalho para a pasta raiz no Drive, quando o Apps Script já a registrou
+    const elDrive = document.getElementById('link-drive');
+    if (PROJETO.link_drive) {
+      elDrive.href = PROJETO.link_drive;
+      elDrive.style.display = 'inline-block';
+    }
+
     renderSummary();
     renderFilters();
     renderTableHead();
@@ -1266,7 +1275,20 @@ function montarCabecalhoGrupo(disc, pilhasGrupo, aberto) {
   seta.textContent = aberto ? '\u25be' : '\u25b8';
   linha.appendChild(seta);
 
-  const tag = document.createElement('span');
+  // O badge da disciplina abre a pasta dela no Drive
+  const linkDisc = (DOCS.find(d => d.disciplina === disc && d.link_pasta_disciplina) || {}).link_pasta_disciplina;
+  let tag;
+  if (linkDisc) {
+    tag = document.createElement('a');
+    tag.href = linkDisc;
+    tag.target = '_blank';
+    tag.rel = 'noopener';
+    tag.title = 'Abrir a pasta de ' + disc + ' no Drive';
+    tag.style.textDecoration = 'none';
+    tag.onclick = (e) => e.stopPropagation();   // não recolhe o grupo
+  } else {
+    tag = document.createElement('span');
+  }
   tag.className = 'd-tag d-' + disc;
   tag.textContent = disc;
   linha.appendChild(tag);
