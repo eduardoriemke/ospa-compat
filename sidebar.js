@@ -155,6 +155,7 @@ function ospaRenderSidebar() {
   }
 
   ospaIniciarOndas();   // o canvas é recriado a cada redesenho
+  ospaIndicarNovos(projeto);
 }
 
 
@@ -171,6 +172,56 @@ function ospaRenderSidebar() {
    • respeita a preferência de movimento reduzido do sistema
    • 30 quadros por segundo (metade do custo, diferença imperceptível)
    ============================================================ */
+
+/* ============================================================
+   NOVOS ARQUIVOS
+   Um ponto no ícone de Documentos quando há arquivos postados
+   depois da última vez que a notificação foi fechada.
+
+   A marca fica no navegador: fechar a notificação na aba
+   Documentos atualiza a marca e o ponto some. Como é local ao
+   navegador, abrir em outro dispositivo pode mostrá-la de novo.
+   ============================================================ */
+
+function ospaChaveVisto(projeto) { return 'ospa_docs_visto_' + projeto; }
+
+function ospaLerVisto(projeto) {
+  try { return localStorage.getItem(ospaChaveVisto(projeto)); } catch (e) { return null; }
+}
+
+function ospaMarcarVisto(projeto) {
+  try { localStorage.setItem(ospaChaveVisto(projeto), new Date().toISOString()); } catch (e) {}
+  const ponto = document.querySelector('.nav-ponto');
+  if (ponto) ponto.remove();
+}
+
+async function ospaIndicarNovos(projeto) {
+  if (!projeto || typeof api !== 'function') return;
+
+  let visto = ospaLerVisto(projeto);
+  if (!visto) {
+    // Primeira visita: nada é "novo" — evita marcar o acervo inteiro
+    try { localStorage.setItem(ospaChaveVisto(projeto), new Date().toISOString()); } catch (e) {}
+    return;
+  }
+
+  try {
+    const novos = await api('GET', 'documentos_projeto', null,
+      'projeto_id=eq.' + encodeURIComponent(projeto) +
+      '&removido_em=is.null&data_upload=gt.' + encodeURIComponent(visto) +
+      '&select=id&limit=100');
+    if (!novos || !novos.length) return;
+
+    const link = document.querySelector('.nav-link[href^="documentos.html"]');
+    if (!link || link.querySelector('.nav-ponto')) return;
+    const ponto = document.createElement('span');
+    ponto.className = 'nav-ponto';
+    ponto.title = novos.length >= 100 ? '100+ arquivos novos' : novos.length + ' arquivo(s) novo(s)';
+    link.appendChild(ponto);
+  } catch (e) {
+    // sem conexão ou tabela indisponível: apenas não mostra o indicador
+  }
+}
 
 let _ondasAtivas = null;   // laço em execução, para encerrar o anterior
 

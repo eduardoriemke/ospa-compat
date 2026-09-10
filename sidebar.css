@@ -57,3 +57,11 @@
 .nav-link i{font-size:16px;width:16px;flex-shrink:0;text-align:center}
 
 .sidebar-footer{margin-top:auto;border-top:1px solid var(--border);padding:10px 0 16px}
+
+/* Ponto de "há arquivos novos" no ícone de Documentos */
+.nav-link{position:relative}
+.nav-ponto{
+  position:absolute;left:22px;top:7px;
+  width:7px;height:7px;border-radius:50%;
+  background:var(--acento);border:1.5px solid var(--surface);
+}
