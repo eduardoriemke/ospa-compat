@@ -26,14 +26,36 @@ const OSPA_NAV_ITEMS = [
 
 
 // Ícone da seção ativa usa a variante preenchida do Tabler (sufixo
-// "-filled"). Se alguma não existir na versão da biblioteca, o ícone
-// aparece vazio — nesse caso, acrescente a chave aqui para manter o
-// traçado normal naquele item.
-const SEM_PREENCHIDO = [];
+// "-filled"). Nem todo ícone tem essa variante — e quando não tem, o
+// glifo simplesmente não existe e o ícone some da tela. Em vez de
+// manter uma lista de exceções (que envelhece a cada atualização da
+// biblioteca), medimos: um glifo inexistente tem largura diferente.
+const _iconeCache = {};
+
+function ospaTemPreenchido(nome) {
+  if (nome in _iconeCache) return _iconeCache[nome];
+
+  function largura(classe) {
+    const s = document.createElement('i');
+    s.className = 'ti ' + classe;
+    s.style.cssText = 'position:absolute;visibility:hidden;font-size:32px';
+    document.body.appendChild(s);
+    const w = s.getBoundingClientRect().width;
+    s.remove();
+    return w;
+  }
+
+  // Referência: uma classe que garantidamente não existe
+  const inexistente = largura('ti-glifo-que-nao-existe-xyz');
+  const candidato   = largura(nome);
+  _iconeCache[nome] = Math.abs(candidato - inexistente) > 0.5;
+  return _iconeCache[nome];
+}
 
 function ospaIcone(item, ativo) {
-  if (!ativo || SEM_PREENCHIDO.indexOf(item.key) >= 0) return item.icon;
-  return item.icon + '-filled';
+  if (!ativo) return item.icon;
+  const preenchido = item.icon + '-filled';
+  return ospaTemPreenchido(preenchido) ? preenchido : item.icon;
 }
 
 function ospaRenderSidebar() {
@@ -131,6 +153,8 @@ function ospaRenderSidebar() {
       }
     });
   }
+
+  ospaIniciarOndas();   // o canvas é recriado a cada redesenho
 }
 
 
@@ -148,7 +172,14 @@ function ospaRenderSidebar() {
    • 30 quadros por segundo (metade do custo, diferença imperceptível)
    ============================================================ */
 
+let _ondasAtivas = null;   // laço em execução, para encerrar o anterior
+
 function ospaIniciarOndas() {
+  // A sidebar é redesenhada depois do login (para preencher nome e
+  // projeto), o que substitui o canvas. Sem encerrar o laço antigo,
+  // ele seguiria desenhando num elemento que já saiu da tela.
+  if (_ondasAtivas) _ondasAtivas.parar();
+
   const cv = document.querySelector('.sidebar-ondas');
   if (!cv) return;
 
@@ -178,6 +209,9 @@ function ospaIniciarOndas() {
   const VIDA = 4200, INTERVALO = 900, RAIO = 130;
   let gotas = [], t = 0, ultima = -INTERVALO, rodando = true;
 
+  const controle = { parar() { rodando = false; } };
+  _ondasAtivas = controle;
+
   function nova() {
     gotas.push({ x: Math.random() * L, y: Math.random() * A,
                  nasc: t, r: RAIO * (0.8 + Math.random() * 0.4) });
@@ -196,7 +230,8 @@ function ospaIniciarOndas() {
   }
 
   function quadro() {
-    if (!rodando) return;
+    if (!rodando || _ondasAtivas !== controle) return;   // laço substituído
+    if (!cv.isConnected) { rodando = false; return; }    // canvas saiu da tela
     t += 33;
     if (t - ultima > INTERVALO) { nova(); ultima = t; }
     gotas = gotas.filter(g => t - g.nasc < VIDA);
@@ -233,6 +268,7 @@ function ospaIniciarOndas() {
 
   // Aba escondida não precisa de animação
   document.addEventListener('visibilitychange', () => {
+    if (_ondasAtivas !== controle) return;
     rodando = !document.hidden;
     if (rodando) quadro();
   });
@@ -241,7 +277,4 @@ function ospaIniciarOndas() {
   quadro();
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  ospaRenderSidebar();
-  ospaIniciarOndas();
-});
+document.addEventListener('DOMContentLoaded', ospaRenderSidebar);
