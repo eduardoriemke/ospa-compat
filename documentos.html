@@ -146,22 +146,22 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .grupo-row:hover{background:var(--surface3)}
 .grupo-td{padding:9px 14px!important}
 /* Grade de colunas fixas: alinha todos os cabeçalhos entre si */
-.grupo-linha{display:grid;grid-template-columns:14px 58px 150px 210px 1fr;align-items:center;gap:10px}
+.grupo-linha{display:grid;grid-template-columns:14px 58px 150px 1fr;align-items:center;gap:10px}
 .grupo-seta{font-family:var(--mono);font-size:9px;color:var(--text3)}
 .grupo-qtd{font-family:var(--mono);font-size:11px;color:var(--text2);white-space:nowrap}
 .grupo-qtd b{color:var(--text);font-weight:600}
 .grupo-data{font-family:var(--mono);font-size:10px;color:var(--text3);white-space:nowrap}
 .grupo-dias{color:var(--text2)}
 /* Servidor: caixinha sempre na mesma posição, texto cresce à direita */
-.grupo-servidor{display:flex;align-items:center;gap:7px;white-space:nowrap}
-.grupo-servidor-lbl{font-family:var(--sans);font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3)}
+
+
 .rev-badge{font-family:var(--mono);font-size:9px;color:var(--text2);background:var(--surface2);border:1px solid var(--border2);padding:1px 6px;border-radius:2px;white-space:nowrap;cursor:pointer;margin-left:2px}
 .rev-badge:hover{border-color:var(--text2);color:var(--text)}
 .rev-row td{background:var(--surface2);border-bottom:1px dashed var(--border)!important}
 .rev-row .doc-name{font-size:10.5px;color:var(--text2)}
 .rev-indent{display:inline-block;width:16px;color:var(--text3);font-family:var(--mono);font-size:9px}
-.novo-aviso{font-family:var(--mono);font-size:9px;color:var(--pend);border:1px solid var(--pend);background:#FBF3E0;padding:1px 6px;border-radius:2px;margin-left:8px;white-space:nowrap;vertical-align:middle}
-.conf-info{font-family:var(--mono);font-size:9px;color:var(--resol);margin-left:8px;white-space:nowrap;vertical-align:middle}
+
+
 
 /* ── DISC TAGS (badges de disciplina) ── */
 .d-tag{font-family:var(--mono);font-size:9px;font-weight:500;padding:2px 7px;border-radius:2px;background:var(--surface2);color:var(--text2);border:1px solid var(--border2);white-space:nowrap}
@@ -234,7 +234,6 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   .f-lbl{width:auto;min-width:auto}
   .main{padding:14px 16px 60px}
   .grupo-linha{display:flex;flex-wrap:wrap;gap:8px}
-  .grupo-servidor{margin-left:auto}
   .login-box{padding:28px 22px}
 }
 </style>
@@ -394,7 +393,6 @@ let PROJETO = null;
 let DOCS = [];
 let S = { discs: new Set(), tipos: new Set(), etapas: new Set(), visao: 'vigentes', busca: '', dataDe: '', dataAte: '', sortBy: 'data_upload', sortDir: 'desc' };
 let CONFIG = { disciplines: [] };
-let CONFIRMACOES = {};
 let GRUPOS_ABERTOS = new Set();  // disciplinas expandidas na lista
 let PILHAS_ABERTAS = new Set();  // documentos com o histórico de revisões aberto  // disciplina → { confirmado_em, confirmado_por }
 
@@ -531,17 +529,6 @@ async function loadApp() {
     PROJETO = proj;
     DOCS = docs;
     CONFIG.locais = cfg.locais || [];   // pavimentos cadastrados no editor
-
-    // Confirmações de "atualizado no servidor" por disciplina
-    // (estado compartilhado do projeto — todos veem o mesmo)
-    try {
-      const confs = await api('GET','disciplina_confirmacoes',null,'projeto_id=eq.'+projId);
-      CONFIRMACOES = {};
-      confs.forEach(c => { CONFIRMACOES[c.disciplina] = c; });
-    } catch (erro) {
-      console.error('Não foi possível carregar confirmações de servidor:', erro);
-      CONFIRMACOES = {};
-    }
 
     CONFIG.disciplines = [...new Set(DOCS.map(d => d.disciplina))].filter(Boolean).sort();
     // Compatibilização (CPT) não é uma disciplina técnica como as outras —
@@ -1248,84 +1235,6 @@ function montarPilhas(docs) {
 
 // Momento da última atividade de um documento: envio OU modificação,
 // o que for mais recente. Cobre arquivo novo E substituição/nova versão
-// de um arquivo existente com o mesmo nome.
-function atividadeDoc(d) {
-  const up  = d.data_upload      ? new Date(d.data_upload).getTime()      : 0;
-  const mod = d.data_modificacao ? new Date(d.data_modificacao).getTime() : 0;
-  return Math.max(up, mod);
-}
-
-function montarControleServidor(disc, atividade) {
-  const td = document.createElement('div');
-  td.className = 'grupo-servidor';
-  td.onclick = (e) => e.stopPropagation(); // não expande/recolhe o grupo
-
-  const conf = CONFIRMACOES[disc];
-  const confMs = conf ? new Date(conf.confirmado_em).getTime() : 0;
-  const atualizado = conf && confMs >= atividade;
-
-  const chk = document.createElement('input');
-  chk.type = 'checkbox';
-  chk.className = 'doc-checkbox';
-  chk.checked = !!atualizado;
-  if (conf) {
-    chk.title = 'Confirmado por ' + (conf.confirmado_por || '?') + ' em ' + fmtDate(conf.confirmado_em);
-  } else {
-    chk.title = 'Marcar como atualizado no servidor';
-  }
-
-  chk.onchange = async () => {
-    try {
-      if (chk.checked) {
-        const registro = {
-          projeto_id: PROJETO.id,
-          disciplina: disc,
-          confirmado_em: new Date().toISOString(),
-          confirmado_por: USER_PROFILE.nome
-        };
-        await api('POST', 'disciplina_confirmacoes', [registro],
-          'on_conflict=projeto_id,disciplina',
-          {'Prefer': 'resolution=merge-duplicates,return=minimal'});
-        CONFIRMACOES[disc] = registro;
-      } else {
-        await api('DELETE', 'disciplina_confirmacoes', null,
-          'projeto_id=eq.' + encodeURIComponent(PROJETO.id) +
-          '&disciplina=eq.' + encodeURIComponent(disc));
-        delete CONFIRMACOES[disc];
-      }
-      renderDocs();
-    } catch (erro) {
-      alert('Não foi possível salvar a confirmação: ' + erro.message);
-      renderDocs();
-    }
-  };
-  const lbl = document.createElement('span');
-  lbl.className = 'grupo-servidor-lbl';
-  lbl.textContent = 'servidor';
-  td.appendChild(lbl);
-  td.appendChild(chk);
-
-  // Confirmado e em dia → mostra quem e quando, visível sem tooltip
-  if (atualizado) {
-    const okInfo = document.createElement('span');
-    okInfo.className = 'conf-info';
-    okInfo.textContent = (conf.confirmado_por ? conf.confirmado_por + ' · ' : '') + fmtDate(conf.confirmado_em);
-    td.appendChild(okInfo);
-  }
-
-  // Confirmação existe mas chegou coisa nova depois dela → aviso
-  if (conf && !atualizado) {
-    const novos = DOCS.filter(d => d.disciplina === disc && atividadeDoc(d) > confMs).length;
-    const aviso = document.createElement('span');
-    aviso.className = 'novo-aviso';
-    aviso.textContent = novos + (novos === 1 ? ' novo' : ' novos');
-    aviso.title = 'Arquivos novos ou alterados desde a última confirmação (' + fmtDate(conf.confirmado_em) + ')';
-    td.appendChild(aviso);
-  }
-
-  return td;
-}
-
 // ── RENDER TABLE HEAD (ordenável) ──
 // A disciplina saiu da tabela: as linhas já vêm agrupadas por ela,
 // então o badge se repetia em todas as linhas do grupo.
@@ -1564,12 +1473,10 @@ function montarCabecalhoGrupo(disc, pilhasGrupo, aberto) {
   linha.appendChild(qtd);
 
   // Última postagem e atividade: estado real da disciplina, sem filtro
-  let ultima = '', atividade = 0;
+  let ultima = '';
   DOCS.forEach(d => {
     if (d.disciplina !== disc) return;
     if ((d.data_upload || '') > ultima) ultima = d.data_upload;
-    const atv = atividadeDoc(d);
-    if (atv > atividade) atividade = atv;
   });
 
   const dt = document.createElement('span');
@@ -1583,12 +1490,8 @@ function montarCabecalhoGrupo(disc, pilhasGrupo, aberto) {
   }
   linha.appendChild(dt);
 
-  // A célula existe sempre (mesmo vazia) pra não desalinhar a grade
-  if (podeVerServidor()) {
-    linha.appendChild(montarControleServidor(disc, atividade));
-  } else {
-    linha.appendChild(document.createElement('span'));
-  }
+  // (a coluna do servidor foi removida: a verificação real é feita
+  //  pela comparação com a pasta local)
 
   td.appendChild(linha);
   tr.appendChild(td);
