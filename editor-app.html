@@ -574,7 +574,7 @@ const ALL_STATUS   = ['PENDENTE','RESOLVIDO'];
 const customImages  = {};
 const deletedImages = {};
 
-const S = { discs: new Set(), locs: new Set(), hideResolved: false, onlyCritical: false, overrides: {} };
+const S = { modoDisc: 'qualquer', discs: new Set(), locs: new Set(), hideResolved: false, onlyCritical: false, overrides: {} };
 
 const IS_EDITOR = !!document.getElementById('ed-panel');
 
@@ -624,6 +624,10 @@ function publishAll() {
 }
 
 function toggleDisc(d)        { S.discs.has(d) ? S.discs.delete(d) : S.discs.add(d); renderAll(); }
+// Modo do filtro de disciplinas:
+//   'qualquer' → conflitos que envolvam ALGUMA das marcadas (padrão)
+//   'todas'    → conflitos que envolvam TODAS as marcadas (cruzamento)
+function alternarModoDisc() { S.modoDisc = (S.modoDisc === 'todas') ? 'qualquer' : 'todas'; renderAll(); }
 function toggleLoc(l)         { S.locs.has(l)  ? S.locs.delete(l)  : S.locs.add(l);  renderAll(); }
 function clearDiscs()         { S.discs.clear(); renderAll(); }
 function clearLocs()          { S.locs.clear();  renderAll(); }
@@ -632,7 +636,13 @@ function toggleOnlyCritical() { S.onlyCritical  = !S.onlyCritical;  renderAll();
 
 function filtered() {
   return CONFLICTS.filter(c => {
-    if (S.discs.size && !c.disc.some(d => S.discs.has(d))) return false;
+    if (S.discs.size) {
+      const marcadas = [...S.discs];
+      const ok = (S.modoDisc === 'todas')
+        ? marcadas.every(d => c.disc.includes(d))     // envolve todas
+        : c.disc.some(d => S.discs.has(d));           // envolve alguma
+      if (!ok) return false;
+    }
     if (S.locs.size  && !Array.from(S.locs).some(l => c.loc.includes(l))) return false;
     if (S.hideResolved && getStatus(c) === 'RESOLVIDO') return false;
     if (S.onlyCritical && !isAlert(c)) return false;
@@ -765,6 +775,17 @@ function renderFilters() {
     ch.textContent = d; ch.onclick = () => toggleDisc(d);
     row1.appendChild(ch);
   });
+  if (S.discs.size > 1) {
+    const modo = document.createElement('span');
+    modo.className = 'chip' + (S.modoDisc === 'todas' ? ' on' : '');
+    modo.style.marginLeft = '6px';
+    modo.textContent = S.modoDisc === 'todas' ? 'todas juntas' : 'qualquer uma';
+    modo.title = S.modoDisc === 'todas'
+      ? 'Mostrando conflitos que envolvem TODAS as disciplinas marcadas'
+      : 'Mostrando conflitos que envolvem QUALQUER uma das marcadas';
+    modo.onclick = alternarModoDisc;
+    row1.appendChild(modo);
+  }
   if (S.discs.size > 0) {
     const clr = document.createElement('button');
     clr.className = 'btn-sm no-print'; clr.style.marginLeft = '4px';

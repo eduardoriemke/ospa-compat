@@ -354,7 +354,9 @@ let CONFLICTS = [];
 let IMAGES_DB = {};
 let DISC_STATUS = {}; // {conflito_id: [{disciplina, status, usuario_nome, updated_at}]}
 let COMMENTS = {};    // {conflito_id: [{id, usuario_nome, disciplina, texto, created_at}]}
-let S = { discs: new Set(), locs: new Set(), hideResolved: true, onlyAlert: false };
+// modoDisc: 'qualquer' → conflitos que envolvam ALGUMA das disciplinas
+//           marcadas (padrão); 'todas' → apenas os que envolvam TODAS.
+let S = { discs: new Set(), locs: new Set(), hideResolved: true, onlyAlert: false, modoDisc: 'qualquer' };
 let CONFIG = { disciplines: [], locations: [] };
 
 // ── LOGO ──
@@ -626,6 +628,20 @@ function renderFilters() {
     ch.onclick = () => { S.discs.has(d)?S.discs.delete(d):S.discs.add(d); renderFilters(); renderCards(); };
     row1.appendChild(ch);
   });
+  if (S.discs.size > 1) {
+    const modo = document.createElement('span');
+    modo.className = 'chip-toggle' + (S.modoDisc === 'todas' ? ' on' : '');
+    modo.style.marginLeft = '6px';
+    modo.textContent = S.modoDisc === 'todas' ? 'todas juntas' : 'qualquer uma';
+    modo.title = S.modoDisc === 'todas'
+      ? 'Mostrando conflitos que envolvem TODAS as disciplinas marcadas'
+      : 'Mostrando conflitos que envolvem QUALQUER uma das marcadas';
+    modo.onclick = () => {
+      S.modoDisc = (S.modoDisc === 'todas') ? 'qualquer' : 'todas';
+      renderFilters(); renderCards();
+    };
+    row1.appendChild(modo);
+  }
   const sep = document.createElement('span'); sep.style.cssText='width:1px;height:14px;background:var(--border2);margin:0 6px;flex-shrink:0;align-self:center';
   row1.appendChild(sep);
   const tog = document.createElement('span');
@@ -641,7 +657,7 @@ function renderFilters() {
   const clearBtn = document.createElement('span');
   clearBtn.className = 'chip-toggle';
   clearBtn.textContent = '\u00d7 Limpar filtros';
-  clearBtn.onclick = () => { S.discs = new Set(); S.locs = new Set(); S.hideResolved = false; S.onlyAlert = false; renderFilters(); renderCards(); };
+  clearBtn.onclick = () => { S.discs = new Set(); S.locs = new Set(); S.hideResolved = false; S.onlyAlert = false; S.modoDisc = 'qualquer'; renderFilters(); renderCards(); };
   row1.appendChild(clearBtn);
   el.appendChild(row1);
 
@@ -666,7 +682,12 @@ function renderCards() {
   const list = CONFLICTS.filter(c => {
     if (S.hideResolved && c.status === 'RESOLVIDO') return false;
     if (S.onlyAlert && !c.alert) return false;
-    if (S.discs.size && c.disc.length && !c.disc.some(d => S.discs.has(d))) return false;
+    if (S.discs.size && c.disc.length) {
+      const ok = (S.modoDisc === 'todas')
+        ? [...S.discs].every(d => c.disc.includes(d))   // envolve todas
+        : c.disc.some(d => S.discs.has(d));             // envolve alguma
+      if (!ok) return false;
+    }
     if (S.locs.size && c.loc && !S.locs.has(c.loc)) return false;
     return true;
   });
