@@ -290,6 +290,16 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
           A comparação é feita pelos nomes dos arquivos, então a organização
           interna das pastas não precisa ser igual à do Drive.
         </p>
+        <div style="margin-bottom:16px">
+          <div style="font-family:var(--sans);font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">
+            Disciplinas a comparar
+          </div>
+          <div id="cmp-discs" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+          <div style="font-family:var(--mono);font-size:9.5px;color:var(--text3);margin-top:7px">
+            Desmarque as que ficam em outra pasta. A escolha é lembrada.
+          </div>
+        </div>
+
         <label class="gbtn gbtn-primary" style="display:inline-block">
           Selecionar pasta
           <input type="file" id="cmp-input" webkitdirectory directory multiple style="display:none">
@@ -303,6 +313,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
       <div id="cmp-resultado" style="display:none"></div>
 
       <div class="gmodal-acoes">
+        <button class="gbtn" id="cmp-exportar" onclick="exportarComparacao()" style="display:none">Exportar (.csv)</button>
         <button class="gbtn" onclick="fecharComparador()">Fechar</button>
       </div>
     </div>
@@ -759,7 +770,47 @@ function renderFilters() {
 // porque a organização de pastas do servidor é diferente da do Drive.
 // ════════════════════════════════════════════════════════
 
+// Disciplinas escolhidas para comparar — lembradas por projeto
+function chaveCmpDiscs() { return 'ospa_cmp_discs_' + (PROJETO ? PROJETO.id : ''); }
+
+function lerCmpDiscs() {
+  try {
+    const s = localStorage.getItem(chaveCmpDiscs());
+    return s ? new Set(JSON.parse(s)) : null;
+  } catch(e) { return null; }
+}
+
+function salvarCmpDiscs(set) {
+  try { localStorage.setItem(chaveCmpDiscs(), JSON.stringify([...set])); } catch(e) {}
+}
+
+function montarChipsCmp() {
+  const el = document.getElementById('cmp-discs');
+  el.innerHTML = '';
+  const todas = CONFIG.disciplines || [];
+  let escolhidas = lerCmpDiscs();
+  if (!escolhidas) escolhidas = new Set(todas);      // 1ª vez: todas marcadas
+
+  todas.forEach(d => {
+    const ch = document.createElement('span');
+    ch.className = 'chip d-' + d + (escolhidas.has(d) ? ' on' : '');
+    ch.textContent = d;
+    ch.onclick = () => {
+      const atual = lerCmpDiscs() || new Set(todas);
+      if (atual.has(d)) atual.delete(d); else atual.add(d);
+      salvarCmpDiscs(atual);
+      montarChipsCmp();
+    };
+    el.appendChild(ch);
+  });
+  salvarCmpDiscs(escolhidas);
+}
+
+let ULTIMA_COMPARACAO = null;
+
 function abrirComparador() {
+  montarChipsCmp();
+  document.getElementById('cmp-exportar').style.display = 'none';
   document.getElementById('cmp-inicio').style.display = 'block';
   document.getElementById('cmp-processando').style.display = 'none';
   document.getElementById('cmp-resultado').style.display = 'none';
@@ -780,6 +831,8 @@ function compararComServidor(arquivos) {
   // Todos os nomes que existem no Drive, para identificar o que sobra
   const nomesDrive = new Set(DOCS.map(d => (d.nome_arquivo || '').toUpperCase()));
 
+  const escolhidas = lerCmpDiscs() || new Set(CONFIG.disciplines || []);
+
   const porDisc = {};
   let emDia = 0, desatualizados = 0, faltando = 0;
 
@@ -790,6 +843,7 @@ function compararComServidor(arquivos) {
     if (arquivado) return;                       // documentos arquivados não contam
 
     const disc = p.topo.disciplina || '—';
+    if (!escolhidas.has(disc)) return;            // disciplina fora da comparação
     if (!porDisc[disc]) porDisc[disc] = [];
 
     const nomeTopo = (p.topo.nome_arquivo || '').toUpperCase();
@@ -813,7 +867,8 @@ function compararComServidor(arquivos) {
   let extras = 0;
   for (const nome of locais.keys()) if (!nomesDrive.has(nome)) extras++;
 
-  renderComparacao({ emDia, desatualizados, faltando, extras, porDisc, total: locais.size });
+  ULTIMA_COMPARACAO = { emDia, desatualizados, faltando, extras, porDisc, total: locais.size };
+  renderComparacao(ULTIMA_COMPARACAO);
 }
 
 function renderComparacao(r) {
@@ -869,7 +924,41 @@ function renderComparacao(r) {
 
   document.getElementById('cmp-inicio').style.display = 'none';
   document.getElementById('cmp-processando').style.display = 'none';
+  document.getElementById('cmp-exportar').style.display = 'inline-block';
   el.style.display = 'block';
+}
+
+// Exporta as pendências em CSV — separador ponto e vírgula e BOM,
+// que é o que o Excel em português abre sem pedir configuração.
+function exportarComparacao() {
+  if (!ULTIMA_COMPARACAO) return;
+  const linhas = [['Disciplina','Arquivo','Situação','Detalhe']];
+  Object.keys(ULTIMA_COMPARACAO.porDisc).sort().forEach(disc => {
+    ULTIMA_COMPARACAO.porDisc[disc].forEach(item => {
+      linhas.push([
+        disc,
+        item.nome,
+        item.tipo === 'desat' ? 'Desatualizado' : 'Faltando',
+        item.detalhe || ''
+      ]);
+    });
+  });
+
+  if (linhas.length === 1) { alert('Nenhuma pendência para exportar.'); return; }
+
+  const csv = '\uFEFF' + linhas
+    .map(l => l.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(';'))
+    .join('\r\n');
+
+  const hoje = new Date().toISOString().slice(0,10);
+  const nome = 'pendencias_servidor_' + (PROJETO ? PROJETO.id : 'projeto') + '_' + hoje + '.csv';
+
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = nome;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
 
 // ════════════════════════════════════════════════════════
