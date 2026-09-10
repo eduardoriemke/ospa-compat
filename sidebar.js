@@ -24,6 +24,18 @@ const OSPA_NAV_ITEMS = [
   { key: 'admin',      label: 'Admin',       href: 'admin.html',     icon: 'ti-settings',    roles: ['admin'] },
 ];
 
+
+// Ícone da seção ativa usa a variante preenchida do Tabler (sufixo
+// "-filled"). Se alguma não existir na versão da biblioteca, o ícone
+// aparece vazio — nesse caso, acrescente a chave aqui para manter o
+// traçado normal naquele item.
+const SEM_PREENCHIDO = [];
+
+function ospaIcone(item, ativo) {
+  if (!ativo || SEM_PREENCHIDO.indexOf(item.key) >= 0) return item.icon;
+  return item.icon + '-filled';
+}
+
 function ospaRenderSidebar() {
   const mount = document.getElementById('ospa-sidebar');
   if (!mount) return;
@@ -49,18 +61,19 @@ function ospaRenderSidebar() {
     if (!item.roles.includes(userRole)) return '';
     const active = item.key === currentPage ? ' active' : '';
     if (item.action) {
-      return `<a href="#" class="nav-link${active}" data-action="${item.action}"><i class="ti ${item.icon}" aria-hidden="true"></i>${item.label}</a>`;
+      return `<a href="#" class="nav-link${active}" data-action="${item.action}"><i class="ti ${ospaIcone(item, !!active)}" aria-hidden="true"></i>${item.label}</a>`;
     }
     const target = item.target ? ` target="${item.target}" rel="noopener"` : '';
     const queryParts = [];
     if (item.extraQuery) queryParts.push(item.extraQuery);
     if (item.needsId && projeto && projeto !== '—') queryParts.push('id=' + encodeURIComponent(projeto));
     const href = queryParts.length ? `${item.href}?${queryParts.join('&')}` : item.href;
-    return `<a href="${href}" class="nav-link${active}"${target}><i class="ti ${item.icon}" aria-hidden="true"></i>${item.label}</a>`;
+    return `<a href="${href}" class="nav-link${active}"${target}><i class="ti ${ospaIcone(item, !!active)}" aria-hidden="true"></i>${item.label}</a>`;
   }).join('');
 
   mount.innerHTML = `
     <div class="sidebar-logo">
+      <canvas class="sidebar-ondas" aria-hidden="true"></canvas>
       <img src="${OSPA_LOGO}" alt="OSPA">
     </div>
     <div class="sidebar-body">
@@ -120,4 +133,115 @@ function ospaRenderSidebar() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', ospaRenderSidebar);
+
+
+/* ============================================================
+   ONDAS DO TOPO
+   Gotas nascem em pontos aleatórios e se expandem. Onde duas
+   ondas se cruzam, o ponto de encontro é marcado — a mesma ideia
+   de compatibilização de que o sistema trata.
+
+   Cuidados por ser uma animação permanente:
+   • usa a cor de acento do sistema (tokens.css), não uma cor fixa
+   • pausa quando a aba não está visível
+   • respeita a preferência de movimento reduzido do sistema
+   • 30 quadros por segundo (metade do custo, diferença imperceptível)
+   ============================================================ */
+
+function ospaIniciarOndas() {
+  const cv = document.querySelector('.sidebar-ondas');
+  if (!cv) return;
+
+  // Quem pediu menos movimento no sistema operacional não recebe animação
+  const menosMovimento = window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (menosMovimento) return;
+
+  const ctx = cv.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  let L = 0, A = 0;
+
+  // Cor vem do tokens.css: trocar lá muda aqui também
+  const acento = (getComputedStyle(document.documentElement)
+                    .getPropertyValue('--acento-rgb') || '95, 118, 132').trim();
+
+  function medir() {
+    const r = cv.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    L = r.width; A = r.height;
+    cv.width = L * dpr; cv.height = A * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  medir();
+  window.addEventListener('resize', medir);
+
+  const VIDA = 4200, INTERVALO = 900, RAIO = 130;
+  let gotas = [], t = 0, ultima = -INTERVALO, rodando = true;
+
+  function nova() {
+    gotas.push({ x: Math.random() * L, y: Math.random() * A,
+                 nasc: t, r: RAIO * (0.8 + Math.random() * 0.4) });
+  }
+
+  // Pontos onde dois círculos se cruzam (geometria, não aproximação)
+  function cruzamentos(a, b, ra, rb) {
+    const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
+    if (d > ra + rb || d < Math.abs(ra - rb) || d === 0) return [];
+    const t1 = (ra*ra - rb*rb + d*d) / (2*d);
+    const h2 = ra*ra - t1*t1;
+    if (h2 < 0) return [];
+    const h = Math.sqrt(h2), xm = a.x + t1*dx/d, ym = a.y + t1*dy/d;
+    return [{ x: xm + h*dy/d, y: ym - h*dx/d },
+            { x: xm - h*dy/d, y: ym + h*dx/d }];
+  }
+
+  function quadro() {
+    if (!rodando) return;
+    t += 33;
+    if (t - ultima > INTERVALO) { nova(); ultima = t; }
+    gotas = gotas.filter(g => t - g.nasc < VIDA);
+
+    ctx.clearRect(0, 0, L, A);
+    const raios = gotas.map(g => ((t - g.nasc) / VIDA) * g.r);
+
+    gotas.forEach((g, i) => {
+      const op = Math.max(0, 1 - (t - g.nasc) / VIDA) * 0.17;
+      ctx.beginPath();
+      ctx.arc(g.x, g.y, raios[i], 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(' + acento + ',' + op.toFixed(3) + ')';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    });
+
+    for (let i = 0; i < gotas.length; i++) {
+      for (let j = i + 1; j < gotas.length; j++) {
+        cruzamentos(gotas[i], gotas[j], raios[i], raios[j]).forEach(p => {
+          if (p.x < 0 || p.x > L || p.y < 0 || p.y > A) return;
+          const op = Math.min(1 - (t - gotas[i].nasc) / VIDA,
+                              1 - (t - gotas[j].nasc) / VIDA) * 0.30;
+          if (op <= 0) return;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 1.6, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(' + acento + ',' + op.toFixed(3) + ')';
+          ctx.fill();
+        });
+      }
+    }
+
+    setTimeout(() => requestAnimationFrame(quadro), 33);
+  }
+
+  // Aba escondida não precisa de animação
+  document.addEventListener('visibilitychange', () => {
+    rodando = !document.hidden;
+    if (rodando) quadro();
+  });
+
+  nova();
+  quadro();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  ospaRenderSidebar();
+  ospaIniciarOndas();
+});

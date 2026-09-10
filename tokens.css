@@ -1,0 +1,27 @@
+/* ============================================================
+   OSPA Compat — tokens.css
+   Cores de acento do sistema, num lugar só.
+
+   Para trocar a cor do sistema inteiro, basta alterar --acento
+   e as duas variações abaixo. Nenhum outro arquivo precisa ser
+   tocado — todos apontam para estas variáveis.
+
+   Carregar em TODAS as páginas, antes do <style> da própria página:
+     <link rel="stylesheet" href="tokens.css?v=1">
+
+   Cuidado ao escolher outra cor: verdes, vermelhos e amarelos
+   competem com os indicadores que já têm significado no sistema
+   (pendente, resolvido, alerta). Por isso o acento é uma cor fria.
+   ============================================================ */
+
+:root {
+  /* Ardósia — cor de acento do sistema */
+  --acento:        #5F7684;   /* traços, ícones, estados ativos */
+  --acento-forte:  #4A5E6B;   /* hover e pressionado */
+  --acento-fundo:  #EDF1F3;   /* fundos suaves (linha ativa, realces) */
+  --acento-borda:  #C8D4DA;   /* bordas de elementos em destaque */
+  --acento-tinta:  #FFFFFF;   /* texto sobre o acento cheio */
+
+  /* Versão translúcida, para sobrepor a fundos variáveis */
+  --acento-rgb:    95, 118, 132;
+}
