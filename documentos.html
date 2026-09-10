@@ -119,6 +119,21 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .gcruzamento .gc-conflito{color:var(--alert)}
 .gc-acao{font-family:var(--sans);font-size:10px;font-weight:600;margin-left:8px;padding:2px 8px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;border-radius:2px}
 .gc-acao:hover{border-color:var(--text2);color:var(--text)}
+/* ── COMPARAÇÃO COM O SERVIDOR ── */
+.cmp-resumo{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.cmp-card{flex:1;min-width:120px;padding:12px 14px;border:1px solid var(--border);background:var(--surface2)}
+.cmp-card b{display:block;font-family:var(--mono);font-size:19px;line-height:1.2}
+.cmp-card span{font-family:var(--sans);font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3)}
+.cmp-card.ok b{color:var(--resol)}
+.cmp-card.desat b{color:var(--pend)}
+.cmp-card.falta b{color:var(--alert)}
+.cmp-grupo{margin-bottom:16px}
+.cmp-grupo-tit{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--text2);padding:6px 0;border-bottom:1px solid var(--border)}
+.cmp-item{font-family:var(--mono);font-size:10.5px;padding:4px 0 4px 22px;color:var(--text2);border-bottom:1px dashed var(--border)}
+.cmp-item .cmp-marca{font-size:9px;padding:1px 5px;border-radius:2px;margin-left:6px}
+.cmp-marca.desat{color:var(--pend);background:#FBF3E0;border:1px solid var(--pend)}
+.cmp-marca.falta{color:var(--alert);background:#FBEAEA;border:1px solid var(--alert)}
+.cmp-vazio{font-family:var(--mono);font-size:11px;color:var(--resol);padding:12px 0}
 .gmodal-acoes{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
 .gbtn{font-family:var(--sans);font-size:11px;font-weight:600;padding:8px 16px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer}
 .gbtn:hover{border-color:var(--text2);color:var(--text)}
@@ -297,6 +312,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
       <span class="main-hdr" id="main-hdr"></span>
       <span style="display:flex;gap:8px;align-items:center">
         <a class="grupos-btn" id="link-drive" href="#" target="_blank" rel="noopener" style="display:none;text-decoration:none">📁 Pasta do projeto</a>
+        <button class="grupos-btn" id="btn-comparar" onclick="abrirComparador()" style="display:none">⇄ Comparar com o servidor</button>
         <button class="grupos-btn" onclick="abrirGerador()">✎ Gerar nome de arquivo</button>
         <button class="grupos-btn" id="btn-grupos" onclick="alternarTodosGrupos()"></button>
       </span>
@@ -500,6 +516,9 @@ async function loadApp() {
     renderHeader();
 
     // Atalho para a pasta raiz no Drive, quando o Apps Script já a registrou
+    // A comparação é controle interno da coordenação
+    if (podeVerServidor()) document.getElementById('btn-comparar').style.display = 'inline-block';
+
     const elDrive = document.getElementById('link-drive');
     if (PROJETO.link_drive) {
       elDrive.href = PROJETO.link_drive;
@@ -699,6 +718,126 @@ function renderFilters() {
   el.appendChild(row5);
 }
 
+
+// ════════════════════════════════════════════════════════
+// COMPARAÇÃO COM O SERVIDOR DO ESCRITÓRIO
+// O navegador lê apenas a LISTAGEM da pasta escolhida (nomes e
+// tamanhos), sem enviar nada. A comparação é por nome de arquivo,
+// porque a organização de pastas do servidor é diferente da do Drive.
+// ════════════════════════════════════════════════════════
+
+function abrirComparador() {
+  document.getElementById('cmp-inicio').style.display = 'block';
+  document.getElementById('cmp-processando').style.display = 'none';
+  document.getElementById('cmp-resultado').style.display = 'none';
+  document.getElementById('cmp-resultado').innerHTML = '';
+  document.getElementById('cmp-input').value = '';
+  document.getElementById('modal-comparar').classList.add('open');
+}
+
+function fecharComparador() {
+  document.getElementById('modal-comparar').classList.remove('open');
+}
+
+function compararComServidor(arquivos) {
+  // Nomes locais em maiúsculas: o Drive mistura .DWG e .dwg
+  const locais = new Map();
+  for (const f of arquivos) locais.set(f.name.toUpperCase(), f);
+
+  // Todos os nomes que existem no Drive, para identificar o que sobra
+  const nomesDrive = new Set(DOCS.map(d => (d.nome_arquivo || '').toUpperCase()));
+
+  const porDisc = {};
+  let emDia = 0, desatualizados = 0, faltando = 0;
+
+  // Compara documento a documento (pilha), não arquivo a arquivo:
+  // o que importa é se a revisão mais recente chegou ao servidor.
+  montarPilhas(DOCS).forEach(p => {
+    const arquivado = p.arquivos.every(a => !a.vigente);
+    if (arquivado) return;                       // documentos arquivados não contam
+
+    const disc = p.topo.disciplina || '—';
+    if (!porDisc[disc]) porDisc[disc] = [];
+
+    const nomeTopo = (p.topo.nome_arquivo || '').toUpperCase();
+    if (locais.has(nomeTopo)) {
+      emDia++;
+      return;
+    }
+
+    // A revisão atual não está lá — alguma anterior está?
+    const anterior = p.revisoes.find(r => locais.has((r.nome_arquivo || '').toUpperCase()));
+    if (anterior) {
+      desatualizados++;
+      porDisc[disc].push({ tipo: 'desat', nome: p.topo.nome_arquivo, detalhe: 'servidor tem ' + (anterior.revisao || '—') });
+    } else {
+      faltando++;
+      porDisc[disc].push({ tipo: 'falta', nome: p.topo.nome_arquivo, detalhe: '' });
+    }
+  });
+
+  // Arquivos que existem só no servidor (revisões antigas, outros projetos…)
+  let extras = 0;
+  for (const nome of locais.keys()) if (!nomesDrive.has(nome)) extras++;
+
+  renderComparacao({ emDia, desatualizados, faltando, extras, porDisc, total: locais.size });
+}
+
+function renderComparacao(r) {
+  const el = document.getElementById('cmp-resultado');
+  el.innerHTML = '';
+
+  const resumo = document.createElement('div');
+  resumo.className = 'cmp-resumo';
+  resumo.innerHTML =
+    '<div class="cmp-card ok"><b>' + r.emDia + '</b><span>em dia</span></div>' +
+    '<div class="cmp-card desat"><b>' + r.desatualizados + '</b><span>desatualizados</span></div>' +
+    '<div class="cmp-card falta"><b>' + r.faltando + '</b><span>faltando</span></div>' +
+    '<div class="cmp-card"><b>' + r.total + '</b><span>arquivos lidos</span></div>';
+  el.appendChild(resumo);
+
+  const discs = Object.keys(r.porDisc).filter(d => r.porDisc[d].length).sort();
+  if (!discs.length) {
+    const ok = document.createElement('div');
+    ok.className = 'cmp-vazio';
+    ok.textContent = '✓ Nenhuma pendência: todos os documentos vigentes estão no servidor.';
+    el.appendChild(ok);
+  } else {
+    discs.forEach(disc => {
+      const bloco = document.createElement('div');
+      bloco.className = 'cmp-grupo';
+
+      const tit = document.createElement('div');
+      tit.className = 'cmp-grupo-tit';
+      tit.innerHTML = '<span class="d-tag d-' + disc + '">' + disc + '</span> ' +
+                      r.porDisc[disc].length + ' pendência(s)';
+      bloco.appendChild(tit);
+
+      r.porDisc[disc].forEach(item => {
+        const linha = document.createElement('div');
+        linha.className = 'cmp-item';
+        linha.innerHTML = esc(item.nome) +
+          '<span class="cmp-marca ' + item.tipo + '">' +
+          (item.tipo === 'desat' ? 'desatualizado' : 'faltando') + '</span>' +
+          (item.detalhe ? ' <span style="color:var(--text3)">· ' + esc(item.detalhe) + '</span>' : '');
+        bloco.appendChild(linha);
+      });
+
+      el.appendChild(bloco);
+    });
+  }
+
+  if (r.extras) {
+    const nota = document.createElement('div');
+    nota.style.cssText = 'font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:14px;padding-top:12px;border-top:1px solid var(--border)';
+    nota.textContent = r.extras + ' arquivo(s) no servidor não constam no Drive — podem ser revisões antigas, material de outros projetos ou arquivos internos.';
+    el.appendChild(nota);
+  }
+
+  document.getElementById('cmp-inicio').style.display = 'none';
+  document.getElementById('cmp-processando').style.display = 'none';
+  el.style.display = 'block';
+}
 
 // ════════════════════════════════════════════════════════
 // GERADOR DE NOMENCLATURA — padrão OSPA/Latitude
@@ -1488,6 +1627,15 @@ function fmtDate(s){
   const d=new Date(s);
   return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
 }
+
+document.getElementById('cmp-input').addEventListener('change', function(e) {
+  const arquivos = e.target.files;
+  if (!arquivos || !arquivos.length) return;
+  document.getElementById('cmp-inicio').style.display = 'none';
+  document.getElementById('cmp-processando').style.display = 'block';
+  // deixa a tela pintar o "Lendo a pasta…" antes de processar
+  setTimeout(() => compararComServidor(arquivos), 30);
+});
 
 // ── INIT ──
 document.getElementById('login-form').addEventListener('submit', e => { e.preventDefault(); doLogin(); });
