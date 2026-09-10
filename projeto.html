@@ -250,7 +250,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     <img id="login-logo" class="login-logo" alt="OSPA">
     <div class="login-title">Relatório de Compatibilização</div>
     <div class="login-sub">Acesso restrito</div>
-    <form id="login-form" autocomplete="on">
+    <!-- onsubmit inline: garante que um erro de script NUNCA envie o
+     formulário pela URL, expondo email e senha no endereço. -->
+    <form id="login-form" autocomplete="on" onsubmit="return false" action="javascript:void(0)" method="post">
       <div class="login-field">
         <label>Email</label>
         <input type="email" id="login-email" name="email" placeholder="seu@email.com" autocomplete="username">

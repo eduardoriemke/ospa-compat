@@ -251,7 +251,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     <img id="login-logo" class="login-logo" alt="OSPA">
     <div class="login-title">Controle de Documentos</div>
     <div class="login-sub">Acesso restrito</div>
-    <form id="login-form" autocomplete="on">
+    <!-- onsubmit inline: garante que um erro de script NUNCA envie o
+     formulário pela URL, expondo email e senha no endereço. -->
+    <form id="login-form" autocomplete="on" onsubmit="return false" action="javascript:void(0)" method="post">
       <div class="login-field">
         <label>Email</label>
         <input type="email" id="login-email" name="email" placeholder="seu@email.com" autocomplete="username">
@@ -276,6 +278,36 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 <div id="screen-app">
   <div class="summary" id="summary"></div>
   <div class="filters" id="filters"></div>
+  <!-- Comparação com a cópia local (servidor do escritório) -->
+  <div class="gmodal" id="modal-comparar">
+    <div class="gmodal-box" style="max-width:760px">
+      <div class="gmodal-title">Comparar com o servidor</div>
+      <div class="gmodal-sub">A leitura acontece no seu computador — nenhum arquivo é enviado</div>
+
+      <div id="cmp-inicio">
+        <p style="font-family:var(--sans);font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:16px">
+          Selecione a pasta do servidor onde ficam os arquivos deste projeto.
+          A comparação é feita pelos nomes dos arquivos, então a organização
+          interna das pastas não precisa ser igual à do Drive.
+        </p>
+        <label class="gbtn gbtn-primary" style="display:inline-block">
+          Selecionar pasta
+          <input type="file" id="cmp-input" webkitdirectory directory multiple style="display:none">
+        </label>
+      </div>
+
+      <div id="cmp-processando" style="display:none;font-family:var(--mono);font-size:11px;color:var(--text3);padding:20px 0">
+        Lendo a pasta…
+      </div>
+
+      <div id="cmp-resultado" style="display:none"></div>
+
+      <div class="gmodal-acoes">
+        <button class="gbtn" onclick="fecharComparador()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Gerador de nomenclatura — padrão Latitude -->
   <div class="gmodal" id="modal-gerador">
     <div class="gmodal-box">
@@ -517,10 +549,11 @@ async function loadApp() {
 
     // Atalho para a pasta raiz no Drive, quando o Apps Script já a registrou
     // A comparação é controle interno da coordenação
-    if (podeVerServidor()) document.getElementById('btn-comparar').style.display = 'inline-block';
+    const btnCmp = document.getElementById('btn-comparar');
+    if (btnCmp && podeVerServidor()) btnCmp.style.display = 'inline-block';
 
     const elDrive = document.getElementById('link-drive');
-    if (PROJETO.link_drive) {
+    if (elDrive && PROJETO.link_drive) {
       elDrive.href = PROJETO.link_drive;
       elDrive.style.display = 'inline-block';
     }
@@ -1628,7 +1661,10 @@ function fmtDate(s){
   return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
 }
 
-document.getElementById('cmp-input').addEventListener('change', function(e) {
+// Defensivo: se por qualquer motivo o modal não estiver na página, isto
+// não pode derrubar o script — era o que impedia o login de funcionar.
+const _cmpInput = document.getElementById('cmp-input');
+if (_cmpInput) _cmpInput.addEventListener('change', function(e) {
   const arquivos = e.target.files;
   if (!arquivos || !arquivos.length) return;
   document.getElementById('cmp-inicio').style.display = 'none';
