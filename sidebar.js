@@ -225,27 +225,42 @@ async function ospaIndicarNovos(projeto) {
 
 let _ondasAtivas = null;   // laço em execução, para encerrar o anterior
 
+/* ------------------------------------------------------------
+   Ondas concêntricas a partir de um ponto fixo, deformadas por
+   obstáculos que derivam lentamente. A leitura é de respiração
+   contínua, não de eventos isolados.
+
+   Cuidados por ser uma animação permanente:
+   • usa a cor de acento do sistema (tokens.css), bem esmaecida
+   • pausa quando a aba não está visível
+   • respeita a preferência de movimento reduzido do sistema
+   • 30 quadros por segundo
+   ------------------------------------------------------------ */
+
 function ospaIniciarOndas() {
-  // A sidebar é redesenhada depois do login (para preencher nome e
-  // projeto), o que substitui o canvas. Sem encerrar o laço antigo,
-  // ele seguiria desenhando num elemento que já saiu da tela.
+  // A sidebar é redesenhada depois do login, o que substitui o canvas.
+  // Sem encerrar o laço antigo, ele seguiria desenhando num elemento
+  // que já saiu da tela.
   if (_ondasAtivas) _ondasAtivas.parar();
 
   const cv = document.querySelector('.sidebar-ondas');
   if (!cv) return;
 
-  // Quem pediu menos movimento no sistema operacional não recebe animação
   const menosMovimento = window.matchMedia &&
         window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (menosMovimento) return;
 
   const ctx = cv.getContext('2d');
   const dpr = window.devicePixelRatio || 1;
-  let L = 0, A = 0;
+  let L = 0, A = 0, cx = 0, cy = 0, raioMax = 1;
 
-  // Cor vem do tokens.css: trocar lá muda aqui também
   const acento = (getComputedStyle(document.documentElement)
                     .getPropertyValue('--acento-rgb') || '95, 118, 132').trim();
+
+  const ONDAS = 7;          // anéis simultâneos
+  const PONTOS = 46;        // pontos por anel — suficiente na escala da faixa
+  const OBSTACULOS = 5;
+  let obst = [];
 
   function medir() {
     const r = cv.getBoundingClientRect();
@@ -253,78 +268,87 @@ function ospaIniciarOndas() {
     L = r.width; A = r.height;
     cv.width = L * dpr; cv.height = A * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // Origem à esquerda, atrás do logo, para as ondas cruzarem a faixa
+    cx = L * 0.18; cy = A * 0.5;
+    raioMax = Math.hypot(L - cx, A) * 1.05;
+
+    obst = [];
+    for (let i = 0; i < OBSTACULOS; i++) {
+      obst.push({
+        x: L * (0.25 + Math.random() * 0.7),
+        y: A * (0.15 + Math.random() * 0.7),
+        r: 6 + Math.random() * 5,
+        forca: 0.6 + Math.random() * 0.4,
+        fase: Math.random() * Math.PI * 2
+      });
+    }
   }
   medir();
   window.addEventListener('resize', medir);
 
-  const VIDA = 4200, INTERVALO = 900, RAIO = 130;
-  let gotas = [], t = 0, ultima = -INTERVALO, rodando = true;
-
+  let t = 0, rodando = true;
   const controle = { parar() { rodando = false; } };
   _ondasAtivas = controle;
 
-  function nova() {
-    gotas.push({ x: Math.random() * L, y: Math.random() * A,
-                 nasc: t, r: RAIO * (0.8 + Math.random() * 0.4) });
-  }
-
-  // Pontos onde dois círculos se cruzam (geometria, não aproximação)
-  function cruzamentos(a, b, ra, rb) {
-    const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
-    if (d > ra + rb || d < Math.abs(ra - rb) || d === 0) return [];
-    const t1 = (ra*ra - rb*rb + d*d) / (2*d);
-    const h2 = ra*ra - t1*t1;
-    if (h2 < 0) return [];
-    const h = Math.sqrt(h2), xm = a.x + t1*dx/d, ym = a.y + t1*dy/d;
-    return [{ x: xm + h*dy/d, y: ym - h*dx/d },
-            { x: xm - h*dy/d, y: ym + h*dx/d }];
-  }
-
   function quadro() {
-    if (!rodando || _ondasAtivas !== controle) return;   // laço substituído
-    if (!cv.isConnected) { rodando = false; return; }    // canvas saiu da tela
-    t += 33;
-    if (t - ultima > INTERVALO) { nova(); ultima = t; }
-    gotas = gotas.filter(g => t - g.nasc < VIDA);
+    if (!rodando || _ondasAtivas !== controle) return;
+    if (!cv.isConnected) { rodando = false; return; }
+    if (!L) { medir(); }
 
+    t += 0.02;
     ctx.clearRect(0, 0, L, A);
-    const raios = gotas.map(g => ((t - g.nasc) / VIDA) * g.r);
 
-    gotas.forEach((g, i) => {
-      const op = Math.max(0, 1 - (t - g.nasc) / VIDA) * 0.17;
+    for (let n = 0; n < ONDAS; n++) {
+      // cada anel percorre 0→1 defasado dos demais
+      const avanco = ((t * 0.10) + n / ONDAS) % 1;
+      const raio = avanco * raioMax;
+      if (raio < 2) continue;
+
+      const opacidade = Math.max(0, 1 - avanco) * 0.078;
+      if (opacidade <= 0.004) continue;
+
       ctx.beginPath();
-      ctx.arc(g.x, g.y, raios[i], 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(' + acento + ',' + op.toFixed(3) + ')';
+      for (let i = 0; i <= PONTOS; i++) {
+        const ang = (i / PONTOS) * Math.PI * 2;
+        let x = cx + Math.cos(ang) * raio;
+        let y = cy + Math.sin(ang) * raio;
+
+        // obstáculos empurram levemente a frente de onda
+        let desvio = 0;
+        for (let o = 0; o < obst.length; o++) {
+          const ob = obst[o];
+          const ox = ob.x + Math.sin(t * 0.5 + ob.fase) * 6;
+          const oy = ob.y + Math.cos(t * 0.5 + ob.fase) * 6;
+          const dist = Math.hypot(x - ox, y - oy);
+          const alcance = ob.r * 3.5;
+          if (dist < alcance) {
+            const inf = 1 - dist / alcance;
+            desvio += Math.sin(t * 1.2 + dist * 0.35) * inf * ob.forca * 2.2;
+          }
+        }
+
+        const dir = Math.atan2(y - cy, x - cx);
+        x = cx + Math.cos(dir) * (raio + desvio);
+        y = cy + Math.sin(dir) * (raio + desvio);
+
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.strokeStyle = 'rgba(' + acento + ',' + opacidade.toFixed(3) + ')';
       ctx.lineWidth = 1;
       ctx.stroke();
-    });
-
-    for (let i = 0; i < gotas.length; i++) {
-      for (let j = i + 1; j < gotas.length; j++) {
-        cruzamentos(gotas[i], gotas[j], raios[i], raios[j]).forEach(p => {
-          if (p.x < 0 || p.x > L || p.y < 0 || p.y > A) return;
-          const op = Math.min(1 - (t - gotas[i].nasc) / VIDA,
-                              1 - (t - gotas[j].nasc) / VIDA) * 0.30;
-          if (op <= 0) return;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, 1.6, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(' + acento + ',' + op.toFixed(3) + ')';
-          ctx.fill();
-        });
-      }
     }
 
     setTimeout(() => requestAnimationFrame(quadro), 33);
   }
 
-  // Aba escondida não precisa de animação
   document.addEventListener('visibilitychange', () => {
     if (_ondasAtivas !== controle) return;
     rodando = !document.hidden;
     if (rodando) quadro();
   });
 
-  nova();
   quadro();
 }
 
