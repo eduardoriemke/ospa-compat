@@ -189,7 +189,45 @@ let ME = null;
 let USERS = [];
 let ACCESS = [];   // all projeto_usuarios_v2 rows
 let PROJECTS = [];
-const DISCIPLINES = ['ACU','ARQ','CLI','CPT','CVI','ELE','EST','FUN','GAS','HID','IMP','INT','LUM','MOD','PIS','PPCI','PSG','TOP'];
+// Lista de reserva: usada se a consulta falhar ou se o projeto não
+// tiver disciplinas cadastradas nem pastas no Drive.
+const DISCIPLINES_PADRAO = ['ACU','ARQ','CLI','CPT','CVI','ELE','EST','FUN','GAS','HID','IMP','INT','LUM','MOD','PIS','PPCI','PSG','TOP'];
+
+// projeto_id → disciplinas (cadastradas no editor + com pasta no Drive)
+let DISC_POR_PROJETO = {};
+
+async function carregarDisciplinas() {
+  try {
+    const [cfgs, docs] = await Promise.all([
+      apiTodos('config_projeto','select=projeto_id,disciplinas'),
+      api('POST','rpc/disciplinas_todos',{}).catch(() => [])
+    ]);
+
+    const mapa = {};
+    (cfgs || []).forEach(r => {
+      mapa[r.projeto_id] = new Set(r.disciplinas || []);
+    });
+    (docs || []).forEach(r => {
+      if (!r.projeto_id || !r.disciplina) return;
+      if (!mapa[r.projeto_id]) mapa[r.projeto_id] = new Set();
+      mapa[r.projeto_id].add(r.disciplina);
+    });
+
+    DISC_POR_PROJETO = {};
+    Object.keys(mapa).forEach(p => {
+      DISC_POR_PROJETO[p] = [...mapa[p]].filter(Boolean).sort();
+    });
+  } catch (e) {
+    // segue com a lista de reserva
+  }
+}
+
+// Disciplinas oferecidas para um projeto específico
+function disciplinasDo(projId) {
+  const l = DISC_POR_PROJETO[projId];
+  return (l && l.length) ? l : DISCIPLINES_PADRAO;
+}
+
 
 function setLogos(src) {
   ['login-logo','loading-logo','denied-logo','app-logo'].forEach(id => {
@@ -282,6 +320,9 @@ async function loadApp() {
     ]);
     USERS = users; ACCESS = access; PROJECTS = projects;
 
+    // Disciplinas reais de cada projeto, antes de desenhar os quadros
+    await carregarDisciplinas();
+
     document.getElementById('user-name-badge').textContent = ME.nome;
     renderUsersTab();
     renderNewUserTab();
@@ -365,7 +406,7 @@ function editAccessInline(u, a, rowEl) {
     papelSel.appendChild(o);
   });
   const discPicker = document.createElement('div'); discPicker.className = 'disc-mini-picker';
-  DISCIPLINES.forEach(d => {
+  disciplinasDo(a.projeto_id).forEach(d => {
     const chip = document.createElement('span');
     chip.className = 'disc-mini-chip' + ((a.disciplinas||[]).includes(d) ? ' on' : '');
     chip.textContent = d; chip.dataset.disc = d;
@@ -411,11 +452,18 @@ function renderAddAccessForm(u) {
     papelSel.appendChild(o);
   });
   const discPicker = document.createElement('div'); discPicker.className = 'disc-mini-picker';
-  DISCIPLINES.forEach(d => {
-    const chip = document.createElement('span'); chip.className = 'disc-mini-chip'; chip.textContent = d; chip.dataset.disc = d;
-    chip.onclick = () => chip.classList.toggle('on');
-    discPicker.appendChild(chip);
-  });
+  // As disciplinas dependem do projeto escolhido, então o quadro
+  // é redesenhado quando a seleção muda.
+  function montarChipsDisc() {
+    discPicker.innerHTML = '';
+    disciplinasDo(projSel.value).forEach(d => {
+      const chip = document.createElement('span'); chip.className = 'disc-mini-chip'; chip.textContent = d; chip.dataset.disc = d;
+      chip.onclick = () => chip.classList.toggle('on');
+      discPicker.appendChild(chip);
+    });
+  }
+  montarChipsDisc();
+  projSel.addEventListener('change', montarChipsDisc);
   const addBtn = document.createElement('button'); addBtn.className = 'add-access-btn'; addBtn.textContent = '+ Adicionar';
   addBtn.onclick = async () => {
     const discs = Array.from(discPicker.querySelectorAll('.on')).map(c => c.dataset.disc);
