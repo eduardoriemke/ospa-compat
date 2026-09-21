@@ -21,6 +21,7 @@ const OSPA_NAV_ITEMS = [
   // outros itens, não navega — dispara window.ospaOpenEditor() diretamente,
   // então a página precisa incluir <script src="editor-launcher.js"></script>.
   { key: 'editor',     label: 'Editor',      icon: 'ti-edit',        roles: ['coordenador','admin'], action: 'editor' },
+  { key: 'configuracoes', label: 'Configurações', href: 'configuracoes.html', icon: 'ti-adjustments-horizontal', roles: ['coordenador','admin'], needsId: true },
   { key: 'admin',      label: 'Admin',       href: 'admin.html',     icon: 'ti-settings',    roles: ['admin'] },
 ];
 

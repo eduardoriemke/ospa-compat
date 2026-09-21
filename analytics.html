@@ -184,7 +184,7 @@ svg text{font-family:var(--mono);fill:var(--text3);font-size:10px}
   </div>
 </div>
 
-<script src="sidebar.js?v=4"></script>
+<script src="sidebar.js?v=5"></script>
 <script src="editor-launcher.js?v=3"></script>
 <script src="auth.js?v=2"></script>
 <script>
@@ -289,14 +289,9 @@ async function loadApp(){
     ]);
 
     PROJETO = proj;
-    // União: disciplinas cadastradas no editor + as que têm pasta no Drive.
-    // Uma disciplina nova passa a existir nas fichas sem cadastro manual.
-    const _discDocs = await api('POST','rpc/disciplinas_projeto',{p_id:PROJ_ID})
-                            .catch(() => []);
-    CONFIG.disciplines = [...new Set([
-      ...(cfg.disciplinas || []),
-      ...(_discDocs || []).map(r => r.disciplina).filter(Boolean)
-    ])].sort();
+    // Só disciplinas cadastradas — mantidas na tela de Configurações.
+    // Pastas do Drive sem disciplina não viram opção nas fichas.
+    CONFIG.disciplines = (cfg.disciplinas || []).slice();
     if (!CONFIG.disciplines.length) {
       CONFIG.disciplines = ['ACU','ARQ','CLI','CPT','CVI','ELE','EST','FUN','GAS',
                             'HID','IMP','INT','LUM','MOD','PIS','PPCI','PSG','TOP'];

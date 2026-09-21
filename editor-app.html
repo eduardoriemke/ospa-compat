@@ -1279,35 +1279,28 @@ function renderEditorPanel() {
     pubAllBtn.textContent = '\u25cf Publicar todas as fichas';
     pubAllBtn.onclick = () => { publishAll(); renderEditorPanel(); };
     db.appendChild(pubAllBtn);
+    // Disciplinas e pavimentos passaram a ser configurados na tela
+    // "Configurações do projeto". Aqui ficam só para consulta — editar
+    // em dois lugares faria um sobrescrever o outro.
     db.insertAdjacentHTML('beforeend','<div class="sec-lbl">Disciplinas</div>');
     const dt = document.createElement('div'); dt.className = 'tag-list';
-    CONFIG.disciplines.forEach((d,i) => {
+    CONFIG.disciplines.forEach(d => {
       const item = document.createElement('div'); item.className = 'tag-item'; item.textContent = d;
-      const x = document.createElement('button'); x.className = 'tag-x'; x.textContent = '×';
-      x.onclick = () => { CONFIG.disciplines.splice(i,1); sbPatch('config_projeto','projeto_id',META.code,{disciplinas:CONFIG.disciplines,locais:CONFIG.locations}); renderEditorPanel(); render(); };
-      item.appendChild(x); dt.appendChild(item);
+      dt.appendChild(item);
     });
     db.appendChild(dt);
-    const da = document.createElement('div'); da.className = 'tag-add-row';
-    da.innerHTML = '<input type="text" id="new-disc" placeholder="Nova sigla" maxlength="6">';
-    const dab = document.createElement('button'); dab.className = 'btn btn-ghost'; dab.textContent = '+';
-    dab.onclick = () => { const v=document.getElementById('new-disc').value.trim().toUpperCase(); if(v&&!CONFIG.disciplines.includes(v)) CONFIG.disciplines.push(v); sbPatch('config_projeto','projeto_id',META.code,{disciplinas:CONFIG.disciplines,locais:CONFIG.locations}); renderEditorPanel(); render(); };
-    da.appendChild(dab); db.appendChild(da);
 
     db.insertAdjacentHTML('beforeend','<div class="sec-lbl">Pavimentos</div>');
     const lt = document.createElement('div'); lt.className = 'tag-list';
-    CONFIG.locations.forEach((l,i) => {
+    CONFIG.locations.forEach(l => {
       const item = document.createElement('div'); item.className = 'tag-item'; item.textContent = l;
-      const x = document.createElement('button'); x.className = 'tag-x'; x.textContent = '×';
-      x.onclick = () => { CONFIG.locations.splice(i,1); sbPatch('config_projeto','projeto_id',META.code,{disciplinas:CONFIG.disciplines,locais:CONFIG.locations}); renderEditorPanel(); render(); };
-      item.appendChild(x); lt.appendChild(item);
+      lt.appendChild(item);
     });
     db.appendChild(lt);
-    const la = document.createElement('div'); la.className = 'tag-add-row';
-    la.innerHTML = '<input type="text" id="new-loc" placeholder="Novo local">';
-    const lab = document.createElement('button'); lab.className = 'btn btn-ghost'; lab.textContent = '+';
-    lab.onclick = () => { const v=document.getElementById('new-loc').value.trim().toUpperCase(); if(v&&!CONFIG.locations.includes(v)) CONFIG.locations.push(v); sbPatch('config_projeto','projeto_id',META.code,{disciplinas:CONFIG.disciplines,locais:CONFIG.locations}); renderEditorPanel(); render(); };
-    la.appendChild(lab); db.appendChild(la);
+
+    db.insertAdjacentHTML('beforeend',
+      '<div style="font-family:var(--mono);font-size:10px;color:var(--text3);line-height:1.5;margin-top:10px">' +
+      'Para incluir, remover ou reordenar, use <b>Configurações</b> na barra lateral do projeto.</div>');
 
   } else if (edTab === 'exportar') {
     const optRow = document.createElement('div'); optRow.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:14px';

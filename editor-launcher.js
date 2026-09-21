@@ -48,15 +48,12 @@ async function ospaOpenEditor(id, papel) {
   }
   try {
     // Busca o editor e os dados do projeto em paralelo
-    const [modelo, proj, cfg, cfls, imgs, discDocs] = await Promise.all([
+    const [modelo, proj, cfg, cfls, imgs] = await Promise.all([
       _carregarEditorApp(),
       api("GET","projetos",null,"id=eq."+id).then(function(r){return r[0];}),
       api("GET","config_projeto",null,"projeto_id=eq."+id).then(function(r){return r[0]||{};}),
       _apiTodos("conflitos","projeto_id=eq."+id+"&order=ordem.asc,created_at.asc"),
-      _apiTodos("imagens","projeto_id=eq."+id+"&order=conflito_id.asc,ordem.asc&select=conflito_id,ordem,dados"),
-      // Disciplinas que têm pasta no Drive — unidas às cadastradas,
-      // para que uma disciplina nova apareça sem cadastro manual
-      api("POST","rpc/disciplinas_projeto",{p_id:id}).catch(function(){ return []; })
+      _apiTodos("imagens","projeto_id=eq."+id+"&order=conflito_id.asc,ordem.asc&select=conflito_id,ordem,dados")
     ]);
 
     if (!proj) throw new Error('Projeto não encontrado.');
@@ -97,9 +94,9 @@ async function ospaOpenEditor(id, papel) {
                         "notes:   /*__NOTES__*/'" + esc(proj.notas||"") + "'");
 
     // Disciplinas e locais vindos de config_projeto
-    // União: o que está cadastrado + o que tem pasta no Drive
-    const doDrive = (discDocs || []).map(function(r){ return r.disciplina; }).filter(Boolean);
-    const disciplinas = Array.from(new Set((cfg.disciplinas || []).concat(doDrive))).sort();
+    // Só disciplinas cadastradas (a tela de Configurações mantém esta lista).
+    // Pastas do Drive sem disciplina não viram opção nas fichas.
+    const disciplinas = (cfg.disciplinas || []).slice();
     if (disciplinas.length) {
       html = html.replace(/disciplines:\s*\[[^\]]*\]/, 'disciplines: ' + JSON.stringify(disciplinas));
     }

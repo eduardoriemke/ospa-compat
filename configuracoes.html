@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSPA — Configurações do projeto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=IBM+Plex+Serif:wght@300;400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="sidebar.css?v=4">
+<link rel="stylesheet" href="tokens.css?v=1">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F8F8F8;--surface:#FFF;--surface2:#F6F5F3;--surface3:#E5E4E1;
+  --border:#E5E4E1;--border2:#CCC8C4;
+  --text:#191919;--text2:#727272;--text3:#B5B5B5;
+  --pend:#7A5200;--resol:#1A6B48;--alert:#C42828;
+  --sans:'Manrope',sans-serif;--serif:'IBM Plex Serif',serif;--mono:'IBM Plex Mono',monospace;
+}
+
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ── LOGIN (idêntico às outras páginas — mesma sessão compartilhada) ── */
+#screen-login{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.login-box{background:var(--surface);border:1px solid var(--border);padding:40px;width:min(380px,100%)}
+.login-logo{height:32px;margin-bottom:28px;display:block}
+.login-title{font-family:var(--serif);font-size:18px;font-weight:300;color:var(--text);margin-bottom:6px}
+.login-sub{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:28px}
+.login-field{margin-bottom:14px}
+.login-field label{display:block;font-family:var(--sans);font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:5px}
+.login-field input{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 12px;font-family:var(--sans);font-size:13px;outline:none;transition:border-color 0.12s}
+.login-field input:focus{border-color:var(--text2)}
+.login-btn{width:100%;background:var(--text);color:var(--surface);border:none;padding:11px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;margin-top:6px;transition:opacity 0.1s;letter-spacing:0.04em}
+.login-btn:hover{opacity:0.85}
+.login-err{font-family:var(--mono);font-size:11px;color:var(--alert);margin-top:10px;display:none}
+
+/* ── LOADING ── */
+#screen-loading{display:none;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:12px}
+.loading-logo{height:36px;opacity:0.6}
+.loading-text{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:0.12em}
+
+/* ── LAYOUT (sidebar sempre presente — "casca" fixa da página; só o
+   conteúdo à direita troca entre login/loading/app) ── */
+.app-shell{display:flex;min-height:100vh}
+.shell-content{flex:1;min-width:0;display:flex;flex-direction:column}
+#screen-app{display:none} /* controlado via JS (show()) */
+.page-body{padding:32px 40px 60px;max-width:820px}
+
+/* ── RESUMO DO PROJETO ── */
+.proj-hero{margin-bottom:28px}
+.proj-hero-code{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:6px}
+.proj-hero-name{font-family:var(--serif);font-size:26px;font-weight:300;color:var(--text);margin-bottom:4px}
+.proj-hero-sub{font-family:var(--mono);font-size:11px;color:var(--text2)}
+.proj-hero-endereco{font-family:var(--mono);font-size:11px;color:var(--text2);margin-top:2px}
+.proj-hero-editar{margin-top:14px;font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:0.06em;padding:6px 13px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;display:none}
+.proj-hero-editar:hover{border-color:var(--text2);color:var(--text)}
+.pmodal{display:none;position:fixed;inset:0;background:rgba(25,25,25,0.45);z-index:2000;align-items:center;justify-content:center;padding:20px}
+.pmodal.open{display:flex}
+.pmodal-box{background:var(--surface);border:1px solid var(--border);padding:26px 28px;width:min(460px,100%);max-height:90vh;overflow:auto}
+.pmodal-title{font-family:var(--serif);font-size:17px;font-weight:300;margin-bottom:18px}
+.pfield{margin-bottom:13px}
+.pfield label{display:block;font-family:var(--sans);font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:5px}
+.pfield input,.pfield textarea{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:8px 11px;font-family:var(--sans);font-size:13px;outline:none}
+.pfield input:focus,.pfield textarea:focus{border-color:var(--text2)}
+.pfield textarea{min-height:90px;resize:vertical;line-height:1.5}
+.pfield-ro{opacity:0.55;pointer-events:none}
+.pmodal-acoes{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+.pbtn{font-family:var(--sans);font-size:11px;font-weight:600;padding:8px 16px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer}
+.pbtn:hover{border-color:var(--text2);color:var(--text)}
+.pbtn-primary{background:var(--text);color:var(--surface);border-color:var(--text)}
+.pbtn-primary:hover{opacity:0.85;color:var(--surface)}
+.proj-hero-responsavel{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:8px}
+
+.disc-chips{display:flex;flex-wrap:wrap;gap:6px}
+.disc-chip{font-family:var(--mono);font-size:10px;font-weight:500;padding:3px 9px;border:1px solid var(--border2);border-radius:2px;color:var(--text2);background:var(--surface2)}
+
+/* ── BLOCOS (notas, equipe) ── */
+.bloco{margin-bottom:24px}
+.bloco-label{font-family:var(--sans);font-size:9px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:var(--text3);margin-bottom:10px}
+.notas-texto{background:var(--surface);border:1px solid var(--border);padding:16px 18px;font-family:var(--sans);font-size:13px;line-height:1.6;color:var(--text2);white-space:pre-wrap}
+
+/* ── EQUIPE ── */
+.equipe-table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border)}
+.equipe-table td{padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:top}
+.equipe-table tr:last-child td{border-bottom:none}
+.equipe-nome{font-weight:600;display:flex;align-items:center;gap:8px}
+.equipe-email{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:2px}
+.papel-badge.p-coordenador{font-family:var(--mono);font-size:9px;font-weight:600;padding:2px 7px;border-radius:2px;letter-spacing:0.06em;text-transform:uppercase;white-space:nowrap;background:#E4F2EE;color:var(--resol)}
+.equipe-vazio{background:var(--surface);border:1px solid var(--border);padding:16px 18px;font-family:var(--mono);font-size:11px;color:var(--text3)}
+
+/* ── MOBILE ── */
+@media (max-width: 720px) {
+  .page-body{padding:20px 16px 40px}
+  .proj-hero-name{font-size:20px}
+}
+</style>
+<style>
+/* ── CONFIGURAÇÕES DO PROJETO ── */
+.cfg-cab{padding:28px 40px 0;border-bottom:1px solid var(--border)}
+.cfg-cod{font-family:var(--mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text3)}
+.cfg-tit{font-family:var(--serif);font-size:22px;font-weight:300;color:var(--text);margin:4px 0 16px}
+.cfg-abas{display:flex;gap:2px;flex-wrap:wrap}
+.cfg-aba{font-family:var(--sans);font-size:12.5px;padding:9px 14px;border:none;background:transparent;border-bottom:2px solid transparent;color:var(--text2);cursor:pointer}
+.cfg-aba.on{color:var(--text);border-bottom-color:var(--acento);font-weight:600}
+.cfg-aba.off{color:var(--text3);cursor:default}
+.cfg-aba.off span{font-size:9.5px}
+.cfg-corpo{padding:22px 40px 60px;max-width:980px}
+.cfg-aviso{display:flex;gap:10px;align-items:center;padding:11px 14px;background:var(--acento-fundo);border:1px solid var(--acento-borda);margin-bottom:10px;flex-wrap:wrap}
+.cfg-aviso-txt{flex:1;min-width:220px;font-family:var(--sans);font-size:12.5px;color:var(--acento-forte)}
+.cfg-barra{display:flex;justify-content:space-between;align-items:center;margin:18px 0 10px;gap:10px;flex-wrap:wrap}
+.cfg-conta{font-family:var(--mono);font-size:10.5px;color:var(--text3)}
+.cfg-btn{font-family:var(--sans);font-size:11.5px;font-weight:600;padding:6px 12px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);cursor:pointer;white-space:nowrap}
+.cfg-btn:hover{border-color:var(--text2);color:var(--text)}
+.cfg-btn.pri{background:var(--acento);border-color:var(--acento);color:var(--acento-tinta)}
+.cfg-btn.pri:hover{background:var(--acento-forte);color:var(--acento-tinta)}
+.cfg-btn.leve{border-color:transparent;background:transparent}
+.cfg-btn:disabled{opacity:0.45;cursor:default}
+.cfg-tab{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border)}
+.cfg-tab th{font-family:var(--sans);font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);text-align:left;padding:9px 12px;border-bottom:1px solid var(--border)}
+.cfg-tab td{padding:9px 12px;border-bottom:1px solid var(--border);font-family:var(--sans);font-size:12.5px;color:var(--text);vertical-align:middle}
+.cfg-tab tr:last-child td{border-bottom:none}
+.cfg-badge{font-family:var(--mono);font-size:11px;font-weight:600;padding:2px 7px;border:1px solid;white-space:nowrap}
+.cfg-pasta{font-family:var(--sans);font-size:12px;color:var(--text2)}
+.cfg-pasta.sem{color:var(--text3)}
+.cfg-uso{font-family:var(--mono);font-size:10.5px;color:var(--text3);white-space:nowrap}
+.cfg-mais{border:none;background:none;cursor:pointer;color:var(--text3);font-size:17px;line-height:1;padding:2px 8px}
+.cfg-mais:hover{color:var(--text)}
+.cfg-menu{position:fixed;z-index:3000;background:var(--surface);border:1px solid var(--border2);box-shadow:0 6px 18px rgba(0,0,0,0.08);padding:4px;min-width:200px}
+.cfg-menu-it{font-family:var(--sans);font-size:12.5px;padding:8px 11px;cursor:pointer;color:var(--text)}
+.cfg-menu-it:hover{background:var(--surface2)}
+.cfg-menu-it.perigo{color:var(--alert)}
+.cfg-menu-it.off{color:var(--text3);cursor:default}
+.cfg-menu-it.off:hover{background:none}
+.cfg-menu-nota{font-family:var(--mono);font-size:9.5px;color:var(--text3);padding:0 11px 7px;line-height:1.4}
+.cfg-sec{margin-top:26px;padding-top:14px;border-top:1px solid var(--border)}
+.cfg-sec-tit{font-family:var(--sans);font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;cursor:pointer;user-select:none}
+.cfg-linha-sec{display:flex;align-items:center;gap:10px;padding:7px 0;font-family:var(--sans);font-size:12.5px;color:var(--text2)}
+/* pavimentos */
+.cfg-pav-wrap{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start}
+.cfg-pav-lista{flex:1;min-width:300px}
+.cfg-pav{display:flex;align-items:center;gap:12px;padding:8px 12px;border:1px solid var(--border);background:var(--surface);margin-bottom:5px}
+.cfg-pav-setas{display:flex;flex-direction:column;gap:1px}
+.cfg-pav-setas button{border:none;background:none;cursor:pointer;color:var(--text3);font-size:9px;line-height:1;padding:1px 3px}
+.cfg-pav-setas button:hover{color:var(--text)}
+.cfg-pav-setas button:disabled{opacity:0.25;cursor:default}
+.cfg-pav-sig{font-family:var(--mono);font-size:12.5px;font-weight:600;width:42px;color:var(--text)}
+.cfg-pav-novo{font-family:var(--mono);font-size:9px;padding:1px 6px;border:1px solid var(--acento-borda);color:var(--acento-forte);background:var(--acento-fundo)}
+.cfg-terreno{display:flex;align-items:center;gap:8px;margin:4px 0 9px}
+.cfg-terreno i{flex:1;border-top:1.5px solid var(--text2)}
+.cfg-terreno span{font-family:var(--sans);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3)}
+.cfg-ger{width:230px;flex-shrink:0;padding:13px 15px;border:1px dashed var(--border2)}
+.cfg-ordem-barra{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--acento-fundo);border:1px solid var(--acento-borda);margin-bottom:12px}
+.cfg-add{display:flex;gap:8px;margin-top:12px}
+.cfg-add input{font-family:var(--mono);font-size:12px;padding:6px 10px;border:1px solid var(--border2);background:var(--surface);width:90px;text-transform:uppercase;outline:none}
+/* paleta de cores */
+.cfg-paleta{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.cfg-cor{width:30px;height:24px;border:2px solid transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:8px;font-weight:700}
+.cfg-cor.on{outline:2px solid var(--acento);outline-offset:1px}
+.cfg-cat{display:flex;flex-wrap:wrap;gap:6px;max-height:220px;overflow:auto;padding:2px}
+.cfg-cat-it{cursor:pointer;display:flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid var(--border);font-family:var(--sans);font-size:12px}
+.cfg-cat-it:hover{border-color:var(--text2)}
+.cfg-toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--surface);font-family:var(--sans);font-size:12px;padding:9px 16px;z-index:4000;display:none}
+@media (max-width:760px){.cfg-cab,.cfg-corpo{padding-left:16px;padding-right:16px}}
+</style>
+</head>
+<body data-page="configuracoes">
+
+<div class="app-shell">
+  <div id="ospa-sidebar"></div>
+  <div class="shell-content">
+
+<!-- LOGIN -->
+<div id="screen-login">
+  <div class="login-box">
+    <img id="login-logo" class="login-logo" alt="OSPA">
+    <div class="login-title">Página Inicial do Projeto</div>
+    <div class="login-sub">Acesso restrito</div>
+    <!-- onsubmit inline: garante que um erro de script NUNCA envie o
+     formulário pela URL, expondo email e senha no endereço. -->
+    <form id="login-form" autocomplete="on" onsubmit="return false" action="javascript:void(0)" method="post">
+      <div class="login-field">
+        <label>Email</label>
+        <input type="email" id="login-email" name="email" placeholder="seu@email.com" autocomplete="username">
+      </div>
+      <div class="login-field">
+        <label>Senha</label>
+        <input type="password" id="login-password" name="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button type="submit" class="login-btn" id="login-btn">Entrar</button>
+      <div class="login-err" id="login-err"></div>
+      <div style="font-family:var(--mono,monospace);font-size:9.5px;line-height:1.5;color:var(--text3,#999);margin-top:14px">Os acessos ao sistema são registrados para fins de coordenação do projeto.</div>
+    </form>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="screen-loading">
+  <img id="loading-logo" class="loading-logo" alt="OSPA">
+  <div class="loading-text" id="loading-text">Carregando…</div>
+</div>
+
+<!-- APP -->
+<div id="screen-app">
+  <div class="cfg-cab">
+    <div class="cfg-cod" id="cfg-cod"></div>
+    <div class="cfg-tit">Configurações do projeto</div>
+    <div class="cfg-abas" id="cfg-abas"></div>
+  </div>
+  <div class="cfg-corpo" id="cfg-corpo"></div>
+</div>
+
+<!-- janela de edição, reaproveitada pelas operações -->
+<div class="pmodal" id="cfg-modal">
+  <div class="pmodal-box">
+    <div class="pmodal-title"></div>
+    <div class="cfg-modal-corpo"></div>
+    <div class="pmodal-acoes">
+      <button class="pbtn" onclick="fecharModal()">Cancelar</button>
+      <button class="pbtn pbtn-primary" id="cfg-modal-ok">Salvar</button>
+    </div>
+  </div>
+</div>
+<div class="cfg-toast" id="cfg-toast"></div>
+
+  </div>
+</div>
+
+<script src="sidebar.js?v=5"></script>
+<script src="editor-launcher.js?v=3"></script>
+<script src="auth.js?v=2"></script>
+<script>
+// Sessão (SB_URL, SB_KEY, SB_AUTH, SESSION, SESSION_KEY, saveSession,
+// loadSavedSession, clearSavedSession, refreshSession, tryRestoreSession
+// e sbFetch) vive em auth.js — compartilhado por todas as páginas.
+
+// Alimenta o sidebar com o código do projeto assim que possível — antes de
+// qualquer autenticação — pra ele já nascer certo na primeira renderização
+// (feita pelo próprio sidebar.js no DOMContentLoaded), sem esperar o login.
+document.body.dataset.projeto = new URLSearchParams(window.location.search).get('id') || '';
+const LOGO_URL = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIyIiBoZWlnaHQ9IjkxIiB2aWV3Qm94PSIwIDAgMTIyIDkxIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBkPSJNMTkuOTUxOCAxMS41NjkzQzE5Ljk1MTggOC44NjE0NiAxNy43NTY2IDYuNjY2MzMgMTUuMDQ4OCA2LjY2NjMzSDExLjU2OTNDOC44NjE0NiA2LjY2NjMzIDYuNjY2MzMgOC44NjE0NiA2LjY2NjMzIDExLjU2OTNWNDYuNjgwOEM2LjY2NjMzIDQ5LjM4ODYgOC44NjE0NiA1MS41ODM3IDExLjU2OTMgNTEuNTgzN0gxNS4wNDg4QzE3Ljc1NjYgNTEuNTgzNyAxOS45NTE4IDQ5LjM4ODYgMTkuOTUxOCA0Ni42ODA4VjExLjU2OTNaTTI1Ljk2MTggNDYuNjgwOEMyNS45NjE4IDUyLjcwNzkgMjEuMDc1OSA1Ny41OTM4IDE1LjA0ODggNTcuNTkzOEgxMS41NjkzQzUuNTQyMTggNTcuNTkzOCAwLjY1NjI1IDUyLjcwNzkgMC42NTYyNSA0Ni42ODA4VjExLjU2OTNDMC42NTYyNSA1LjU0MjE4IDUuNTQyMTggMC42NTYyNSAxMS41NjkzIDAuNjU2MjVIMTUuMDQ4OEMyMS4wNzU5IDAuNjU2MjUgMjUuOTYxOCA1LjU0MjE4IDI1Ljk2MTggMTEuNTY5M1Y0Ni42ODA4WiIgZmlsbD0iIzE5MTkxOSIvPgo8cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0iTTEwOS45NDUgMC42NTYyNUMxMTUuOTcyIDAuNjU2MjUgMTIwLjg1OCA1LjU0MjE4IDEyMC44NTggMTEuNTY5M1Y1Ny4xMTkzQzEyMC44NTggNTcuMzgxNCAxMjAuNjQ2IDU3LjU5MzggMTIwLjM4NCA1Ny41OTM4SDExNS4zMjNDMTE1LjA2MSA1Ny41OTM4IDExNC44NDggNTcuMzgxNCAxMTQuODQ4IDU3LjExOTNWNDYuNjAxN0MxMTQuODQ4IDQ2LjQ3MDcgMTE0Ljc0MiA0Ni4zNjQ1IDExNC42MTEgNDYuMzY0NUgxMDEuOEMxMDEuNjY5IDQ2LjM2NDUgMTAxLjU2MyA0Ni40NzA3IDEwMS41NjMgNDYuNjAxN1Y1Ny4xMTkzQzEwMS41NjMgNTcuMzgxNCAxMDEuMzUgNTcuNTkzOCAxMDEuMDg4IDU3LjU5MzhIOTYuMDI3MkM5NS43NjUyIDU3LjU5MzggOTUuNTUyNyA1Ny4zODE0IDk1LjU1MjcgNTcuMTE5M1YxMS41NjkzQzk1LjU1MjcgNS41NDIxOCAxMDAuNDM5IDAuNjU2MjUgMTA2LjQ2NiAwLjY1NjI1SDEwOS45NDVaTTEwNi40NjYgNi42NjYzM0MxMDMuNzU4IDYuNjY2MzMgMTAxLjU2MyA4Ljg2MTQ2IDEwMS41NjMgMTEuNTY5M1Y0MC4xMTcyQzEwMS41NjMgNDAuMjQ4MiAxMDEuNjY5IDQwLjM1NDQgMTAxLjggNDAuMzU0NEgxMTQuNjExQzExNC43NDIgNDAuMzU0NCAxMTQuODQ4IDQwLjI0ODIgMTE0Ljg0OCA0MC4xMTcyVjExLjU2OTNDMTE0Ljg0OCA4Ljg2MTQ2IDExMi42NTMgNi42NjYzMyAxMDkuOTQ1IDYuNjY2MzNIMTA2LjQ2NloiIGZpbGw9IiMxOTE5MTkiLz4KPHBhdGggZD0iTTU3LjU5NDcgNDYuNjgwOEM1Ny41OTQ3IDUyLjcwNzkgNTIuNzA4NyA1Ny41OTM4IDQ2LjY4MTYgNTcuNTkzOEg0My4yMDIxQzM3LjE3NSA1Ny41OTM4IDMyLjI4OTEgNTIuNzA3OSAzMi4yODkxIDQ2LjY4MDhWMzguNjE0NkMzMi4yODkxIDM4LjM1MjYgMzIuNTAxNSAzOC4xNDAyIDMyLjc2MzUgMzguMTQwMkgzNy44MjQ3QzM4LjA4NjcgMzguMTQwMiAzOC4yOTkxIDM4LjM1MjYgMzguMjk5MSAzOC42MTQ2VjQ2LjY4MDhDMzguMjk5MSA0OS4zODg2IDQwLjQ5NDMgNTEuNTgzNyA0My4yMDIxIDUxLjU4MzdINDYuNjgxNkM0OS4zODk0IDUxLjU4MzcgNTEuNTg0NiA0OS4zODg2IDUxLjU4NDYgNDYuNjgwOFYzNy4wMzNDNTEuNTg0NiAzNC4zNjc1IDQ5LjQ1NzYgMzIuMTk4OCA0Ni44MDgzIDMyLjEzMTZMNDMuMjAyMSAzMi4xMzAxQzM3LjI2OTIgMzIuMTMwMSAzMi40NDIyIDI3LjM5NTcgMzIuMjkyOCAyMS40OTg4TDMyLjI4OTEgMTEuNTY5M0MzMi4yODkxIDUuNTQyMTggMzcuMTc1IDAuNjU2MjUgNDMuMjAyMSAwLjY1NjI1SDQ2LjY4MTZDNTIuNzA4NyAwLjY1NjI1IDU3LjU5NDcgNS41NDIxOCA1Ny41OTQ3IDExLjU2OTNWMTkuNjM1NEM1Ny41OTQ3IDE5Ljg5NzUgNTcuMzgyMiAyMC4xMDk5IDU3LjEyMDIgMjAuMTA5OUg1Mi4wNTkxQzUxLjc5NyAyMC4xMDk5IDUxLjU4NDYgMTkuODk3NSA1MS41ODQ2IDE5LjYzNTRWMTEuNTY5M0M1MS41ODQ2IDguODYxNDYgNDkuMzg5NCA2LjY2NjMzIDQ2LjY4MTYgNi42NjYzM0g0My4yMDIxQzQwLjQ5NDMgNi42NjYzMyAzOC4yOTkxIDguODYxNDYgMzguMjk5MSAxMS41NjkzVjIxLjIxN0MzOC4yOTkxIDIzLjkyNDkgNDAuNDk0MyAyNi4xMiA0My4yMDIxIDI2LjEySDQ2LjY4MTZDNTIuNzA4NyAyNi4xMiA1Ny41OTQ3IDMxLjAwNTkgNTcuNTk0NyAzNy4wMzNWNDYuNjgwOFoiIGZpbGw9IiMxOTE5MTkiLz4KPHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik04OS4yMjE4IDM1LjczMzJDODkuMDcyNCA0MS42MzAxIDg0LjI0NTQgNDYuMzY0NSA3OC4zMTI1IDQ2LjM2NDVINzAuMTY3MkM3MC4wMzYyIDQ2LjM2NDUgNjkuOTMgNDYuNDcwNyA2OS45MyA0Ni42MDE3VjU3LjExOTNDNjkuOTMgNTcuMzgxNCA2OS43MTc2IDU3LjU5MzggNjkuNDU1NSA1Ny41OTM4SDY0LjM5NDRDNjQuMTMyNCA1Ny41OTM4IDYzLjkxOTkgNTcuMzgxNCA2My45MTk5IDU3LjExOTNWMTEuNTY5M0M2My45MTk5IDUuNTQyMTggNjguODA1OSAwLjY1NjI1IDc0LjgzMyAwLjY1NjI1SDc4LjMxMjVDODQuMzM5NiAwLjY1NjI1MSA4OS4yMjU1IDUuNTQyMTggODkuMjI1NSAxMS41NjkzTDg5LjIyMTggMzUuNzMzMlpNODMuMjE1NCAxMS41NjkzQzgzLjIxNTQgOC44NjE0NiA4MS4wMjAzIDYuNjY2MzMgNzguMzEyNSA2LjY2NjMzSDc0LjgzM0M3Mi4xMjUxIDYuNjY2MzMgNjkuOTMgOC44NjE0NiA2OS45MyAxMS41NjkzVjQwLjExNzFDNjkuOTMgNDAuMjQ4MSA3MC4wMzYyIDQwLjM1NDQgNzAuMTY3MyA0MC4zNTQzTDc4LjQzOTEgNDAuMzUyOEM4MS4wODg0IDQwLjI4NTcgODMuMjE1NCAzOC4xMTY5IDgzLjIxNTQgMzUuNDUxNFYxMS41NjkzWiIgZmlsbD0iIzE5MTkxOSIvPgo8cGF0aCBkPSJNMTA4LjMwNCA3Mi4wOTM4SDEwOC45MjRWNzQuMjUwNUgxMDcuODE5QzEwNC45MzQgNzQuMjUwNSAxMDQuMTUyIDc2LjY0OTkgMTA0LjE1MiA3OC44MzM2Vjg1Ljg0MzFIMTAxLjk0MVY3Mi4wOTM4SDEwNC4xNTJWNzQuMTY5NkMxMDQuNzk5IDczLjExODIgMTA1Ljg1MSA3Mi4wOTM4IDEwOC4zMDQgNzIuMDkzOFoiIGZpbGw9IiMxOTE5MTkiLz4KPHBhdGggZD0iTTk3Ljg4NTUgNzguOTY4NFY3Mi4wOTM4SDEwMC4wOTZWODUuODQzMUg5Ny44ODU1Vjg0LjAwOThDOTcuMDc2NyA4NS4wMzQzIDk1Ljc1NTcgODYuMDA0OCA5My40OTExIDg2LjAwNDhDOTAuNDcxNyA4Ni4wMDQ4IDg4LjA3MjMgODQuMzA2NCA4OC4wNzIzIDc5Ljc1MDJWNzIuMDkzOEg5MC4yODI5Vjc5LjYxNTRDOTAuMjgyOSA4Mi40NzMyIDkxLjU3NyA4My45ODI5IDkzLjg2ODYgODMuOTgyOUM5Ni4zNzU4IDgzLjk4MjkgOTcuODg1NSA4Mi4wNjg4IDk3Ljg4NTUgNzguOTY4NFoiIGZpbGw9IiMxOTE5MTkiLz4KPHBhdGggZD0iTTgwLjI0IDgyLjI1NThWNzQuMTE0SDc3Ljc1OThWNzIuMDkyMUg4MC4yNFY2OC42NjAySDgyLjQ1MDdWNzIuMDkyMUg4Ni4wMDk0Vjc0LjExNEg4Mi40NTA3VjgyLjIyODlDODIuNDUwNyA4My4zODgxIDgyLjg1NTEgODMuODE5NSA4NC4wNDEzIDgzLjgxOTVIODYuMjI1Vjg1Ljg0MTRIODMuODI1NkM4MS4xODM2IDg1Ljg0MTQgODAuMjQgODQuNjgyMiA4MC4yNCA4Mi4yNTU4WiIgZmlsbD0iIzE5MTkxOSIvPgo8cGF0aCBkPSJNNzAuODQ4MSA4Ni4wMDQ1QzY2LjcyMzMgODYuMDA0NSA2NC4wMjczIDgzLjE3MzcgNjQuMDI3MyA3OC45NjgxQzY0LjAyNzMgNzQuNzg5MyA2Ni42Njk0IDcxLjkzMTYgNzAuNTUxNSA3MS45MzE2Qzc0LjQzMzcgNzEuOTMxNiA3Ni45Njc5IDc0LjM4NSA3Ny4wNzU3IDc4LjQ1NThDNzcuMDc1NyA3OC43NTI0IDc3LjA0ODggNzkuMDc1OSA3Ny4wMjE4IDc5LjM5OTRINjYuMzQ1OVY3OS41ODgxQzY2LjQyNjcgODIuMjAzMiA2OC4wNzEzIDg0LjAzNjUgNzAuNjg2MyA4NC4wMzY1QzcyLjYyNzQgODQuMDM2NSA3NC4xMzcyIDgzLjAxMiA3NC41OTU1IDgxLjIzMjdINzYuODMzMUM3Ni4yOTM5IDgzLjk4MjUgNzQuMDI5MyA4Ni4wMDQ1IDcwLjg0ODEgODYuMDA0NVpNNjYuNDgwNyA3Ny41NjYySDc0LjcwMzNDNzQuNDg3NiA3NS4xOTM3IDcyLjg3MDEgNzMuODcyNyA3MC41Nzg1IDczLjg3MjdDNjguNTU2NSA3My44NzI3IDY2LjY5NjMgNzUuMzI4NSA2Ni40ODA3IDc3LjU2NjJaIiBmaWxsPSIjMTkxOTE5Ii8+CjxwYXRoIGQ9Ik01Ny4zNTUzIDgyLjI1NzlWNzQuMTE2MUg1NC44NzVWNzIuMDk0Mkg1Ny4zNTUzVjY4LjY1NDNINTkuNTY2VjcyLjA5NDJINjMuMTI0NlY3NC4xMTYxSDU5LjU2NlY4Mi4yMzA5QzU5LjU2NiA4My4zOTAyIDU5Ljk3MDMgODMuODIxNSA2MS4xNTY2IDgzLjgyMTVINjMuMzQwM1Y4NS44NDM1SDYwLjk0MDlDNTguMjk4OSA4NS44NDM1IDU3LjM1NTMgODQuNjg0MiA1Ny4zNTUzIDgyLjI1NzlaIiBmaWxsPSIjMTkxOTE5Ii8+CjxwYXRoIGQ9Ik01MS4wNzYyIDg1Ljg0MzFWNzIuMDkzOEg1My4yODY5Vjg1Ljg0MzFINTEuMDc2MloiIGZpbGw9IiMxOTE5MTkiLz4KPHBhdGggZD0iTTUxLjA3NjIgNjguNjU0M0g1My4yODdWNzAuNDkzOEg1MS4wNzYyVjY4LjY1NDNaIiBmaWxsPSIjMTkxOTE5Ii8+CjxwYXRoIGQ9Ik00Ni40NjE3IDc4Ljk2ODRWNzIuMDkzOEg0OC42NzI0Vjg1Ljg0MzFINDYuNDYxN1Y4NC4wMDk4QzQ1LjY1MjkgODUuMDM0MyA0NC4zMzE5IDg2LjAwNDggNDIuMDY3MyA4Ni4wMDQ4QzM5LjA0NzggODYuMDA0OCAzNi42NDg0IDg0LjMwNjQgMzYuNjQ4NCA3OS43NTAyVjcyLjA5MzhIMzguODU5MVY3OS42MTU0QzM4Ljg1OTEgODIuNDczMiA0MC4xNTMyIDgzLjk4MjkgNDIuNDQ0NyA4My45ODI5QzQ0Ljk1MiA4My45ODI5IDQ2LjQ2MTcgODIuMDY4OCA0Ni40NjE3IDc4Ljk2ODRaIiBmaWxsPSIjMTkxOTE5Ii8+CjxwYXRoIGQ9Ik0zMi43MjE0IDc0LjE5NjJWNzIuMDkzNEgzNC45MzIxVjkwLjk3OTVIMzIuNzIxNFY4My42MzIxQzMxLjgwNDggODQuODk5MiAzMC4zMjIgODYuMDA0NSAyOC4wMDM1IDg2LjAwNDVDMjQuMjAyMiA4Ni4wMDQ1IDIxLjM5ODQgODMuNDQzMyAyMS4zOTg0IDc4Ljk2ODFDMjEuMzk4NCA3NC43NjI0IDI0LjIwMjIgNzEuOTMxNiAyOC4wMDM1IDcxLjkzMTZDMzAuMzIyIDcxLjkzMTYgMzEuODg1NyA3Mi44NzUyIDMyLjcyMTQgNzQuMTk2MlpNMjguMjE5MiA4NC4wMzY1QzMwLjkxNTEgODQuMDM2NSAzMi43NDg0IDgxLjk2MDYgMzIuNzQ4NCA3OS4wMjJDMzIuNzQ4NCA3Ni4wMDI1IDMwLjkxNTEgNzMuODk5NyAyOC4yMTkyIDczLjg5OTdDMjUuNDk2MyA3My44OTk3IDIzLjY2MyA3NS45NzU2IDIzLjY2MyA3OC45NjgxQzIzLjY2MyA4MS45NjA2IDI1LjQ5NjMgODQuMDM2NSAyOC4yMTkyIDg0LjAzNjVaIiBmaWxsPSIjMTkxOTE5Ii8+CjxwYXRoIGQ9Ik0yMC40MzQ3IDcyLjA5MzhIMjEuMDU0OFY3NC4yNTA1SDE5Ljk0OTRDMTcuMDY0OCA3NC4yNTA1IDE2LjI4MjkgNzYuNjQ5OSAxNi4yODI5IDc4LjgzMzZWODUuODQzMUgxNC4wNzIzVjcyLjA5MzhIMTYuMjgyOVY3NC4xNjk2QzE2LjkzIDczLjExODIgMTcuOTgxNCA3Mi4wOTM4IDIwLjQzNDcgNzIuMDkzOFoiIGZpbGw9IiMxOTE5MTkiLz4KPHBhdGggZD0iTTEyLjM1NTUgODUuODQyN0gxMC4yNTI3VjgzLjcxMjlDOS4zODk5NyA4NC45NTMxIDguMDE1MDQgODYuMDA0NSA1LjY0MjYgODYuMDA0NUMyLjYyMzE0IDg2LjAwNDUgMC41NzQyMTkgODQuNDk0OCAwLjU3NDIxOSA4MS45ODc1QzAuNTc0MjE5IDc5LjIzNzcgMi40ODgzNCA3Ny43MDEgNi4xMDA5MiA3Ny43MDFIMTAuMTQ0OFY3Ni43NTc0QzEwLjE0NDggNzQuOTc4MSA4Ljg3Nzc0IDczLjg5OTcgNi43MjA5OCA3My44OTk3QzQuNzc5OSA3My44OTk3IDMuNDg1ODQgNzQuODE2MyAzLjIxNjI1IDc2LjIxODJIMS4wMDU1N0MxLjMyOTA4IDczLjUyMjMgMy41MTI4IDcxLjkzMTYgNi44Mjg4MiA3MS45MzE2QzEwLjMzMzYgNzEuOTMxNiAxMi4zNTU1IDczLjY4NCAxMi4zNTU1IDc2Ljg5MjJWODUuODQyN1pNMTAuMTQ0OCA4MC4yMzUyVjc5LjU2MTJINS44ODUyNEMzLjkxNzIgNzkuNTYxMiAyLjgxMTg2IDgwLjI4OTEgMi44MTE4NiA4MS44NTI3QzIuODExODYgODMuMjAwNyAzLjk3MTExIDg0LjExNzMgNS44MDQzNiA4NC4xMTczQzguNTU0MjMgODQuMTE3MyAxMC4xNDQ4IDgyLjUyNjcgMTAuMTQ0OCA4MC4yMzUyWiIgZmlsbD0iIzE5MTkxOSIvPgo8cGF0aCBkPSJNMTIxLjE4MiA4NS45NDA0SDExOS4wNzlWODMuODEwNkMxMTguMjE2IDg1LjA1MDcgMTE2Ljg0MSA4Ni4xMDIyIDExNC40NjkgODYuMTAyMkMxMTEuNDQ5IDg2LjEwMjIgMTA5LjQgODQuNTkyNCAxMDkuNCA4Mi4wODUyQzEwOS40IDc5LjMzNTMgMTExLjMxNSA3Ny43OTg2IDExNC45MjcgNzcuNzk4NkgxMTguOTcxVjc2Ljg1NUMxMTguOTcxIDc1LjA3NTcgMTE3LjcwNCA3My45OTczIDExNS41NDcgNzMuOTk3M0MxMTMuNjA2IDczLjk5NzMgMTEyLjMxMiA3NC45MTQgMTEyLjA0MiA3Ni4zMTU5SDEwOS44MzJDMTEwLjE1NSA3My42MTk5IDExMi4zMzkgNzIuMDI5MyAxMTUuNjU1IDcyLjAyOTNDMTE5LjE2IDcyLjAyOTMgMTIxLjE4MiA3My43ODE3IDEyMS4xODIgNzYuOTg5OFY4NS45NDA0Wk0xMTguOTcxIDgwLjMzMjhWNzkuNjU4OEgxMTQuNzExQzExMi43NDMgNzkuNjU4OCAxMTEuNjM4IDgwLjM4NjcgMTExLjYzOCA4MS45NTA0QzExMS42MzggODMuMjk4NCAxMTIuNzk3IDg0LjIxNSAxMTQuNjMxIDg0LjIxNUMxMTcuMzggODQuMjE1IDExOC45NzEgODIuNjI0NCAxMTguOTcxIDgwLjMzMjhaIiBmaWxsPSIjMTkxOTE5Ii8+Cjwvc3ZnPgo=";
+
+// ── LOGO ──
+function setLogos(src) {
+  ['login-logo','loading-logo'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.src = src;
+  });
+}
+setLogos(LOGO_URL);
+
+// ── SUPABASE HELPERS (idêntico às outras páginas) ──
+async function api(method, table, body, qs, customHeaders) {
+  const url = '/rest/v1/' + table + (qs ? '?' + qs : '');
+  const r = await sbFetch(url, {
+    method,
+    headers: customHeaders || (method !== 'GET' ? {'Prefer':'return=representation'} : {}),
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.message || 'HTTP ' + r.status);
+  }
+  return (method === 'DELETE' || (customHeaders && customHeaders.Prefer && customHeaders.Prefer.indexOf('return=minimal') >= 0)) ? null : r.json();
+}
+
+// ── AUTH (idêntico às outras páginas — mesma chave de sessão) ──
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-password').value;
+  const err   = document.getElementById('login-err');
+  err.style.display = 'none';
+
+  if (!email || !pass) { showLoginErr('Preencha email e senha.'); return; }
+
+  document.getElementById('login-btn').textContent = 'Entrando…';
+  try {
+    const r = await fetch(SB_AUTH + '/token?grant_type=password', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','apikey':SB_KEY},
+      body: JSON.stringify({email, password: pass})
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error_description || data.msg || 'Credenciais inválidas');
+    SESSION = data;
+    saveSession(SESSION);
+    await loadApp();
+  } catch(e) {
+    showLoginErr(e.message);
+    document.getElementById('login-btn').textContent = 'Entrar';
+  }
+}
+
+function showLoginErr(msg) {
+  const el = document.getElementById('login-err');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function doLogout() {
+  SESSION = null; USER_PROFILE = null;
+  clearSavedSession();
+  show('login');
+  document.getElementById('login-password').value = '';
+  document.getElementById('login-btn').textContent = 'Entrar';
+}
+
+// Contrato usado pelo sidebar.js: o link "Sair" do menu chama window.ospaLogout()
+window.ospaLogout = doLogout;
+
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+
+// ════════════════════════════════════════════════════════════
+// CONFIGURAÇÕES DO PROJETO
+// Toda alteração passa por funções no banco (cfg_*), que conferem
+// a permissão no servidor, rodam em transação e espelham o
+// resultado no cadastro antigo, lido pelas demais telas.
+// ════════════════════════════════════════════════════════════
+
+let USER_PROFILE = null, PROJETO = null, PROJ_ID = null;
+let DISC = [], USO_DISC = {}, PASTAS = [], CATALOGO = [];
+let PAV = [], USO_PAV = {};
+let ABA = 'disciplinas';
+let ORDEM_EDITADA = null;       // pavimentos (de cima para baixo) enquanto você reordena
+let VER_INATIVAS = false, VER_INATIVOS = false, VER_MANTIDAS = false;
+let OCUPADO = false;
+
+const ABAS = [
+  ['disciplinas','Disciplinas', true],
+  ['pavimentos','Pavimentos', true],
+  ['equipe','Equipe', false],
+  ['dados','Dados gerais', false],
+  ['drive','Drive', false],
+  ['backups','Backups', false]
+];
+
+// Chamada às funções do banco. Resposta vazia (funções sem retorno)
+// é tratada à parte, para não quebrar ao tentar ler JSON inexistente.
+async function rpc(nome, args) {
+  const r = await sbFetch('/rest/v1/rpc/' + nome, {
+    method: 'POST', body: JSON.stringify(args || {})
+  });
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    throw new Error(e.message || 'HTTP ' + r.status);
+  }
+  const t = await r.text();
+  return t ? JSON.parse(t) : null;
+}
+
+function toast(msg) {
+  const el = document.getElementById('cfg-toast');
+  el.textContent = msg; el.style.display = 'block';
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { el.style.display = 'none'; }, 2600);
+}
+
+// Executa uma operação: trava cliques repetidos, recarrega e redesenha
+async function operar(fn, sucesso) {
+  if (OCUPADO) return;
+  OCUPADO = true;
+  toast('Salvando…');
+  try {
+    await fn();
+    await carregarTudo();
+    render();
+    toast(sucesso || 'Salvo.');
+  } catch (e) {
+    document.getElementById('cfg-toast').style.display = 'none';
+    alert(e.message);
+  } finally {
+    OCUPADO = false;
+  }
+}
+
+// ── CARREGAMENTO ──
+async function loadApp() {
+  show('loading');
+  setLoadingText('Identificando usuário…');
+  PROJ_ID = new URLSearchParams(window.location.search).get('id');
+  if (!PROJ_ID) { setLoadingText('Nenhum projeto especificado. Use ?id=CODIGO na URL.'); return; }
+
+  try {
+    const uid = SESSION.user.id;
+    const meArr = await api('GET','usuarios',null,'id=eq.'+uid);
+    if (!meArr || !meArr.length) { setLoadingText('Usuário não cadastrado no sistema.'); return; }
+    const me = meArr[0];
+
+    if (me.papel_global === 'admin') {
+      USER_PROFILE = { id: uid, nome: me.nome, email: me.email, papel: 'admin' };
+    } else {
+      const perfis = await api('GET','projeto_usuarios_v2',null,
+        'usuario_id=eq.'+uid+'&projeto_id=eq.'+PROJ_ID);
+      if (!perfis || !perfis.length) { setLoadingText('Você não tem acesso a este projeto.'); return; }
+      USER_PROFILE = { id: uid, nome: me.nome, email: me.email, papel: perfis[0].papel };
+    }
+
+    // A configuração é da coordenação (o banco também confere isso)
+    if (USER_PROFILE.papel !== 'admin' && USER_PROFILE.papel !== 'coordenador') {
+      setLoadingText('As configurações do projeto são acessíveis apenas à coordenação.');
+      return;
+    }
+
+    setLoadingText('Carregando configurações…');
+    await carregarTudo();
+    if (typeof ospaRenderSidebar === 'function') ospaRenderSidebar();
+    render();
+    show('app');
+  } catch (e) {
+    setLoadingText('Erro: ' + e.message);
+  }
+}
+
+async function carregarTudo() {
+  const [proj, disc, uso, pastas, cat, pav, usoPav] = await Promise.all([
+    api('GET','projetos',null,'id=eq.'+encodeURIComponent(PROJ_ID)).then(r => r[0]),
+    api('GET','disciplinas',null,'projeto_id=eq.'+encodeURIComponent(PROJ_ID)+'&order=sigla.asc'),
+    rpc('cfg_uso_disciplinas', { p_projeto: PROJ_ID }),
+    rpc('cfg_pastas', { p_projeto: PROJ_ID }),
+    api('GET','disciplinas_catalogo',null,'order=sigla.asc'),
+    api('GET','pavimentos',null,'projeto_id=eq.'+encodeURIComponent(PROJ_ID)+'&order=ordem.asc'),
+    rpc('cfg_uso_pavimentos', { p_projeto: PROJ_ID })
+  ]);
+  PROJETO = proj;
+  DISC = disc || [];
+  USO_DISC = {}; (uso || []).forEach(u => { USO_DISC[u.sigla] = u; });
+  PASTAS = pastas || [];
+  CATALOGO = cat || [];
+  PAV = pav || [];
+  USO_PAV = {}; (usoPav || []).forEach(u => { USO_PAV[u.sigla] = u.fichas; });
+  ORDEM_EDITADA = null;
+}
+
+// ── DESENHO GERAL ──
+function render() {
+  document.getElementById('cfg-cod').textContent =
+    (PROJETO ? PROJETO.nome + ' · ' : '') + PROJ_ID;
+
+  document.getElementById('cfg-abas').innerHTML = ABAS.map(([k, rot, ok]) =>
+    '<button class="cfg-aba' + (k === ABA ? ' on' : '') + (ok ? '' : ' off') + '" data-aba="' + k + '">' +
+    rot + (ok ? '' : ' <span>· em breve</span>') + '</button>'
+  ).join('');
+  document.querySelectorAll('.cfg-aba').forEach(b => {
+    b.onclick = () => {
+      const a = ABAS.find(x => x[0] === b.dataset.aba);
+      if (a && a[2]) { ABA = a[0]; render(); }
+    };
+  });
+
+  const el = document.getElementById('cfg-corpo');
+  el.innerHTML = (ABA === 'disciplinas') ? htmlDisciplinas() : htmlPavimentos();
+  ligarEventos();
+}
+
+// ── DISCIPLINAS ──
+function badge(d) {
+  const tx = d.cor_texto || '#4A5560', fu = d.cor_fundo || '#EDF0F1', bo = d.cor_borda || '#CDD4D8';
+  return '<span class="cfg-badge" style="color:' + tx + ';background:' + fu + ';border-color:' + bo + '">' + esc(d.sigla) + '</span>';
+}
+
+function usoTotal(sigla) {
+  const u = USO_DISC[sigla];
+  return u ? (u.fichas + u.respostas + u.usuarios + u.documentos) : 0;
+}
+
+function textoUso(sigla) {
+  const u = USO_DISC[sigla];
+  if (!u || !usoTotal(sigla)) return 'sem uso';
+  const p = [];
+  if (u.fichas)     p.push(u.fichas + (u.fichas == 1 ? ' ficha' : ' fichas'));
+  if (u.respostas)  p.push(u.respostas + ' resp.');
+  if (u.usuarios)   p.push(u.usuarios + (u.usuarios == 1 ? ' pessoa' : ' pessoas'));
+  if (u.documentos) p.push(u.documentos + ' docs');
+  return p.join(' · ');
+}
+
+function htmlDisciplinas() {
+  const ativas = DISC.filter(d => d.ativa);
+  const inativas = DISC.filter(d => !d.ativa);
+  const avulsas = PASTAS.filter(p => !p.disciplina_id && !p.mantida_avulsa);
+  const mantidas = PASTAS.filter(p => !p.disciplina_id && p.mantida_avulsa);
+
+  let h = '';
+
+  avulsas.forEach(p => {
+    h += '<div class="cfg-aviso">' +
+      '<i class="ti ti-folder-question" style="font-size:18px;color:var(--acento)" aria-hidden="true"></i>' +
+      '<div class="cfg-aviso-txt"><b>Pasta sem disciplina:</b> "' + esc(p.pasta_nome) + '" · ' +
+        p.documentos + (p.documentos == 1 ? ' documento' : ' documentos') +
+        ' — aparece em Documentos com o próprio nome</div>' +
+      '<button class="cfg-btn" data-associar="' + esc(p.pasta_drive_id) + '">Associar a uma disciplina</button>' +
+      '<button class="cfg-btn leve" data-manter="' + esc(p.pasta_drive_id) + '">Manter avulsa</button>' +
+    '</div>';
+  });
+
+  h += '<div class="cfg-barra">' +
+       '<span class="cfg-conta">' + ativas.length + ' disciplinas ativas</span>' +
+       '<button class="cfg-btn pri" id="btn-add-disc">+ Adicionar disciplina</button></div>';
+
+  h += '<table class="cfg-tab"><thead><tr><th>Sigla</th><th>Nome</th><th>Pasta no Drive</th><th>Em uso</th><th></th></tr></thead><tbody>';
+  ativas.forEach(d => {
+    const pasta = d.pasta_drive_id
+      ? '<span class="cfg-pasta"><i class="ti ti-folder" style="font-size:13px;vertical-align:-2px;color:var(--text3)"></i> ' + esc(d.pasta_nome || '(pasta)') + '</span>'
+      : '<span class="cfg-pasta sem">sem pasta própria</span>';
+    h += '<tr><td>' + badge(d) + '</td>' +
+         '<td>' + (d.nome ? esc(d.nome) : '<span style="color:var(--text3)">—</span>') + '</td>' +
+         '<td>' + pasta + '</td>' +
+         '<td><span class="cfg-uso">' + textoUso(d.sigla) + '</span></td>' +
+         '<td style="text-align:right"><button class="cfg-mais" data-disc="' + d.id + '" aria-label="Ações">⋯</button></td></tr>';
+  });
+  h += '</tbody></table>';
+
+  if (inativas.length) {
+    h += '<div class="cfg-sec"><div class="cfg-sec-tit" id="tg-inativas">' + (VER_INATIVAS ? '▾' : '▸') +
+         ' Desativadas (' + inativas.length + ')</div>';
+    if (VER_INATIVAS) inativas.forEach(d => {
+      h += '<div class="cfg-linha-sec">' + badge(d) + '<span style="flex:1">' + esc(d.nome || '') +
+           ' · <span class="cfg-uso">' + textoUso(d.sigla) + '</span></span>' +
+           '<button class="cfg-btn" data-reativar="' + d.id + '">Reativar</button></div>';
+    });
+    h += '</div>';
+  }
+
+  if (mantidas.length) {
+    h += '<div class="cfg-sec"><div class="cfg-sec-tit" id="tg-mantidas">' + (VER_MANTIDAS ? '▾' : '▸') +
+         ' Pastas mantidas avulsas (' + mantidas.length + ')</div>';
+    if (VER_MANTIDAS) mantidas.forEach(p => {
+      h += '<div class="cfg-linha-sec"><i class="ti ti-folder" style="color:var(--text3)"></i>' +
+           '<span style="flex:1">' + esc(p.pasta_nome) + ' · <span class="cfg-uso">' + p.documentos + ' docs</span></span>' +
+           '<button class="cfg-btn" data-associar="' + esc(p.pasta_drive_id) + '">Associar</button></div>';
+    });
+    h += '</div>';
+  }
+  return h;
+}
+
+function menuDisciplina(botao, d) {
+  const livre = usoTotal(d.sigla) === 0;
+  const itens = [
+    ['Editar nome e cor', () => modalEditar(d)],
+    ['Trocar pasta', () => modalPasta(d)],
+    ['Renomear sigla…', null, 'Chega na próxima etapa, junto com a leitura dos documentos pelo sistema.'],
+    ['Mesclar com outra…', null, 'Chega na próxima etapa.'],
+    ['Desativar', () => confirmarDesativar(d), null, 'perigo'],
+    ['Excluir', livre ? () => confirmarExcluir(d) : null,
+      livre ? null : 'Em uso (' + textoUso(d.sigla) + '). Desative em vez de excluir.', 'perigo']
+  ];
+  abrirMenu(botao, itens);
+}
+
+function confirmarDesativar(d) {
+  const uso = usoTotal(d.sigla) ? '\n\nEla continua registrada em todas as fichas e respostas atuais (' + textoUso(d.sigla) + ').' : '';
+  if (!confirm('Desativar ' + d.sigla + '?\n\nEla deixa de aparecer como opção para fichas novas.' + uso + '\n\nPode ser reativada a qualquer momento.')) return;
+  operar(() => rpc('cfg_ativar_disciplina', { p_id: d.id, p_ativa: false }), d.sigla + ' desativada.');
+}
+
+function confirmarExcluir(d) {
+  if (!confirm('Excluir ' + d.sigla + ' definitivamente?\n\nEla não está em uso em nenhum lugar do projeto.')) return;
+  operar(() => rpc('cfg_excluir_disciplina', { p_id: d.id }), d.sigla + ' excluída.');
+}
+
+// ── PALETA (cores do catálogo, mais uma neutra) ──
+function paleta() {
+  const vistas = {}, lista = [];
+  CATALOGO.forEach(c => {
+    const k = c.cor_texto + c.cor_fundo;
+    if (c.cor_texto && !vistas[k]) { vistas[k] = 1; lista.push([c.cor_texto, c.cor_fundo, c.cor_borda]); }
+  });
+  lista.push(['#4A5560', '#EDF0F1', '#CDD4D8']);
+  return lista;
+}
+
+function htmlPaleta(atual) {
+  return '<div class="cfg-paleta">' + paleta().map((p, i) =>
+    '<div class="cfg-cor' + (atual && atual[0] === p[0] && atual[1] === p[1] ? ' on' : '') + '" data-cor="' + i +
+    '" style="color:' + p[0] + ';background:' + p[1] + ';border-color:' + p[2] + '">Aa</div>'
+  ).join('') + '</div>';
+}
+
+function ligarPaleta(box, aoEscolher) {
+  const lista = paleta();
+  box.querySelectorAll('.cfg-cor').forEach(el => {
+    el.onclick = () => {
+      box.querySelectorAll('.cfg-cor').forEach(x => x.classList.remove('on'));
+      el.classList.add('on');
+      aoEscolher(lista[+el.dataset.cor]);
+    };
+  });
+}
+
+// ── JANELAS ──
+function abrirModal(titulo, corpoHtml, rotuloOk, aoConfirmar) {
+  const m = document.getElementById('cfg-modal');
+  m.querySelector('.pmodal-title').textContent = titulo;
+  m.querySelector('.cfg-modal-corpo').innerHTML = corpoHtml;
+  const ok = m.querySelector('#cfg-modal-ok');
+  ok.textContent = rotuloOk || 'Salvar';
+  ok.style.display = aoConfirmar ? '' : 'none';
+  ok.onclick = async () => { if (await aoConfirmar() !== false) fecharModal(); };
+  m.classList.add('open');
+  return m.querySelector('.cfg-modal-corpo');
+}
+function fecharModal() { document.getElementById('cfg-modal').classList.remove('open'); }
+
+function modalEditar(d) {
+  let cor = [d.cor_texto, d.cor_fundo, d.cor_borda];
+  const corpo = abrirModal('Editar ' + d.sigla,
+    '<div class="pfield"><label>Nome</label><input id="ed-nome" value="' + esc(d.nome || '') + '"></div>' +
+    '<div class="pfield"><label>Cor</label>' + htmlPaleta(cor) + '</div>',
+    'Salvar', () => {
+      const nome = document.getElementById('ed-nome').value.trim();
+      operar(() => rpc('cfg_editar_disciplina', {
+        p_id: d.id, p_nome: nome || null,
+        p_cor_texto: cor[0], p_cor_fundo: cor[1], p_cor_borda: cor[2]
+      }), d.sigla + ' atualizada.');
+    });
+  ligarPaleta(corpo, c => { cor = c; });
+}
+
+function modalPasta(d) {
+  // Pastas livres: sem disciplina, ou a atual desta
+  const opcoes = PASTAS.filter(p => !p.disciplina_id || p.disciplina_id === d.id);
+  const sel = '<select id="ed-pasta" style="width:100%;padding:8px;font-family:var(--sans);font-size:13px;border:1px solid var(--border2);background:var(--bg)">' +
+    '<option value="">— sem pasta própria —</option>' +
+    opcoes.map(p => '<option value="' + esc(p.pasta_drive_id) + '"' + (p.pasta_drive_id === d.pasta_drive_id ? ' selected' : '') + '>' +
+                    esc(p.pasta_nome) + ' (' + p.documentos + ' docs)</option>').join('') +
+    '</select>';
+  abrirModal('Pasta de ' + d.sigla,
+    '<div class="pfield"><label>Pasta no Drive</label>' + sel + '</div>' +
+    '<div style="font-family:var(--mono);font-size:10px;color:var(--text3);line-height:1.5">Aparecem as pastas encontradas pela varredura que ainda não pertencem a outra disciplina.</div>',
+    'Salvar', () => {
+      const v = document.getElementById('ed-pasta').value;
+      const p = PASTAS.find(x => x.pasta_drive_id === v);
+      operar(() => rpc('cfg_definir_pasta', { p_id: d.id, p_pasta_drive_id: v || null, p_pasta_nome: p ? p.pasta_nome : null }),
+             'Pasta de ' + d.sigla + ' atualizada.');
+    });
+}
+
+function modalAssociar(pastaId) {
+  const p = PASTAS.find(x => x.pasta_drive_id === pastaId);
+  const alvo = DISC.filter(d => d.ativa);
+  const sel = '<select id="as-disc" style="width:100%;padding:8px;font-family:var(--sans);font-size:13px;border:1px solid var(--border2);background:var(--bg)">' +
+    alvo.map(d => '<option value="' + d.id + '">' + esc(d.sigla) + (d.nome ? ' — ' + esc(d.nome) : '') +
+                  (d.pasta_drive_id ? '  (já tem pasta)' : '') + '</option>').join('') + '</select>';
+  abrirModal('Associar "' + (p ? p.pasta_nome : '') + '"',
+    '<div class="pfield"><label>Disciplina</label>' + sel + '</div>' +
+    '<div style="font-family:var(--mono);font-size:10px;color:var(--text3);line-height:1.5">Se a disciplina já tiver pasta, a associação é substituída por esta. Para uma disciplina nova, crie-a antes em "Adicionar disciplina".</div>',
+    'Associar', () => {
+      const id = document.getElementById('as-disc').value;
+      operar(() => rpc('cfg_definir_pasta', { p_id: id, p_pasta_drive_id: pastaId, p_pasta_nome: p ? p.pasta_nome : null }),
+             'Pasta associada.');
+    });
+}
+
+function modalAdicionar() {
+  const existentes = {}; DISC.forEach(d => { existentes[d.sigla] = d; });
+  const doCat = CATALOGO.filter(c => !existentes[c.sigla] || !existentes[c.sigla].ativa);
+  let cor = null;
+
+  const corpo = abrirModal('Adicionar disciplina',
+    (doCat.length
+      ? '<div class="pfield"><label>Do catálogo</label><div class="cfg-cat">' +
+          doCat.map(c => '<div class="cfg-cat-it" data-cat="' + esc(c.sigla) + '">' +
+            '<span class="cfg-badge" style="color:' + c.cor_texto + ';background:' + c.cor_fundo + ';border-color:' + c.cor_borda + '">' + esc(c.sigla) + '</span>' +
+            esc(c.nome) + '</div>').join('') +
+        '</div></div><div style="font-family:var(--sans);font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin:16px 0 10px">Ou uma nova</div>'
+      : '') +
+    '<div style="display:flex;gap:10px"><div class="pfield" style="width:110px"><label>Sigla</label><input id="nv-sigla" maxlength="6" style="text-transform:uppercase"></div>' +
+    '<div class="pfield" style="flex:1"><label>Nome</label><input id="nv-nome"></div></div>' +
+    '<div class="pfield"><label>Cor</label>' + htmlPaleta(null) + '</div>',
+    'Adicionar', () => {
+      const sigla = document.getElementById('nv-sigla').value.trim().toUpperCase();
+      const nome = document.getElementById('nv-nome').value.trim();
+      if (!sigla) { alert('Informe a sigla, ou escolha uma disciplina do catálogo.'); return false; }
+      const c = cor || ['#4A5560', '#EDF0F1', '#CDD4D8'];
+      operar(() => rpc('cfg_adicionar_disciplina', {
+        p_projeto: PROJ_ID, p_sigla: sigla, p_nome: nome || null,
+        p_cor_texto: c[0], p_cor_fundo: c[1], p_cor_borda: c[2]
+      }), sigla + ' adicionada.');
+    });
+
+  ligarPaleta(corpo, c => { cor = c; });
+  corpo.querySelectorAll('[data-cat]').forEach(el => {
+    el.onclick = () => {
+      const c = CATALOGO.find(x => x.sigla === el.dataset.cat);
+      fecharModal();
+      operar(() => rpc('cfg_adicionar_disciplina', {
+        p_projeto: PROJ_ID, p_sigla: c.sigla, p_nome: c.nome,
+        p_cor_texto: c.cor_texto, p_cor_fundo: c.cor_fundo, p_cor_borda: c.cor_borda
+      }), c.sigla + ' adicionada.');
+    };
+  });
+}
+
+// ── PAVIMENTOS ──
+// Mostrados de cima para baixo, como num corte
+function ordemAtual() {
+  if (ORDEM_EDITADA) return ORDEM_EDITADA;
+  return PAV.filter(p => p.ativo).sort((a, b) => b.ordem - a.ordem).map(p => p.sigla);
+}
+function ordemMudou() {
+  if (!ORDEM_EDITADA) return false;
+  const salva = PAV.filter(p => p.ativo).sort((a, b) => b.ordem - a.ordem).map(p => p.sigla);
+  return ORDEM_EDITADA.join() !== salva.join();
+}
+
+function htmlPavimentos() {
+  const ordem = ordemAtual();
+  const porSigla = {}; PAV.forEach(p => { porSigla[p.sigla] = p; });
+  const inativos = PAV.filter(p => !p.ativo);
+
+  let lista = '';
+  if (ordemMudou()) {
+    lista += '<div class="cfg-ordem-barra"><span style="flex:1;font-family:var(--sans);font-size:12.5px;color:var(--acento-forte)">A ordem foi alterada.</span>' +
+             '<button class="cfg-btn pri" id="btn-salvar-ordem">Salvar ordem</button>' +
+             '<button class="cfg-btn leve" id="btn-desc-ordem">Descartar</button></div>';
+  }
+  lista += '<div style="font-family:var(--sans);font-size:12px;color:var(--text3);margin-bottom:10px">De cima para baixo, como num corte. Use as setas para reordenar.</div>';
+
+  ordem.forEach((sig, i) => {
+    const p = porSigla[sig];
+    const novo = p && p.ordem >= 1000 && !ORDEM_EDITADA;
+    const f = USO_PAV[sig] || 0;
+    lista += '<div class="cfg-pav">' +
+      '<div class="cfg-pav-setas">' +
+        '<button data-sobe="' + i + '"' + (i === 0 ? ' disabled' : '') + ' aria-label="Subir">▲</button>' +
+        '<button data-desce="' + i + '"' + (i === ordem.length - 1 ? ' disabled' : '') + ' aria-label="Descer">▼</button>' +
+      '</div>' +
+      '<span class="cfg-pav-sig">' + esc(sig) + '</span>' +
+      (novo ? '<span class="cfg-pav-novo">posicione</span>' : '') +
+      '<span style="flex:1"></span>' +
+      '<span class="cfg-uso">' + (f ? f + (f == 1 ? ' ficha' : ' fichas') : 'sem uso') + '</span>' +
+      '<button class="cfg-mais" data-pav="' + esc(sig) + '" aria-label="Ações">⋯</button>' +
+    '</div>';
+    if (sig === 'TER') {
+      lista += '<div class="cfg-terreno"><i></i><span>nível do terreno</span><i style="flex:0 0 24px"></i></div>';
+    }
+  });
+
+  lista += '<div class="cfg-add"><input id="nv-pav" maxlength="3" placeholder="SIGLA">' +
+           '<button class="cfg-btn pri" id="btn-add-pav">+ Adicionar pavimento</button></div>' +
+           '<div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:6px">Entra no topo; depois ajuste a posição com as setas.</div>';
+
+  if (inativos.length) {
+    lista += '<div class="cfg-sec"><div class="cfg-sec-tit" id="tg-inativos">' + (VER_INATIVOS ? '▾' : '▸') +
+             ' Desativados (' + inativos.length + ')</div>';
+    if (VER_INATIVOS) inativos.forEach(p => {
+      lista += '<div class="cfg-linha-sec"><span class="cfg-pav-sig">' + esc(p.sigla) + '</span><span style="flex:1"></span>' +
+               '<button class="cfg-btn" data-reativar-pav="' + esc(p.sigla) + '">Reativar</button></div>';
+    });
+    lista += '</div>';
+  }
+
+  return '<div class="cfg-pav-wrap"><div class="cfg-pav-lista">' + lista + '</div>' +
+    '<div class="cfg-ger"><div style="font-family:var(--mono);font-size:12px;font-weight:600;color:var(--text2)">GER</div>' +
+    '<div style="font-family:var(--sans);font-size:12px;color:var(--text3);margin-top:5px;line-height:1.55">Geral — para fichas e arquivos que não pertencem a um pavimento. Fixo, fora da ordem.</div></div>' +
+  '</div>';
+}
+
+function menuPavimento(botao, sig) {
+  const f = USO_PAV[sig] || 0;
+  abrirMenu(botao, [
+    ['Renomear sigla…', () => renomearPavimento(sig)],
+    ['Desativar', () => {
+      if (ordemMudou()) { alert('Salve ou descarte a nova ordem antes.'); return; }
+      if (!confirm('Desativar ' + sig + '?\n\nEle deixa de aparecer como opção.' + (f ? '\nAs ' + f + ' fichas que o usam continuam com ele.' : ''))) return;
+      operar(() => rpc('cfg_ativar_pavimento', { p_projeto: PROJ_ID, p_sigla: sig, p_ativo: false }), sig + ' desativado.');
+    }, null, 'perigo'],
+    ['Excluir', f ? null : () => {
+      if (ordemMudou()) { alert('Salve ou descarte a nova ordem antes.'); return; }
+      if (!confirm('Excluir ' + sig + ' definitivamente?')) return;
+      operar(() => rpc('cfg_excluir_pavimento', { p_projeto: PROJ_ID, p_sigla: sig }), sig + ' excluído.');
+    }, f ? 'Usado em ' + f + (f == 1 ? ' ficha' : ' fichas') + '. Desative em vez de excluir.' : null, 'perigo']
+  ]);
+}
+
+function renomearPavimento(sig) {
+  if (ordemMudou()) { alert('Salve ou descarte a nova ordem antes.'); return; }
+  const f = USO_PAV[sig] || 0;
+  const nova = (prompt('Nova sigla para ' + sig + ' (3 caracteres):', sig) || '').trim().toUpperCase();
+  if (!nova || nova === sig) return;
+  if (!/^[A-Z0-9]{3}$/.test(nova)) { alert('A sigla deve ter exatamente 3 letras ou números.'); return; }
+  if (!confirm('Renomear ' + sig + ' para ' + nova + '?\n\n' +
+               (f ? 'As ' + f + ' fichas que usam ' + sig + ' serão atualizadas junto.\n' : '') +
+               'Um backup do projeto é criado antes, automaticamente.')) return;
+  operar(() => rpc('cfg_renomear_pavimento', { p_projeto: PROJ_ID, p_antiga: sig, p_nova: nova }),
+         sig + ' renomeado para ' + nova + '.');
+}
+
+// ── MENU FLUTUANTE ──
+function abrirMenu(botao, itens) {
+  fecharMenu();
+  const m = document.createElement('div');
+  m.className = 'cfg-menu'; m.id = 'cfg-menu';
+  itens.forEach(([rot, acao, nota, classe]) => {
+    const it = document.createElement('div');
+    it.className = 'cfg-menu-it' + (acao ? '' : ' off') + (classe && acao ? ' ' + classe : '');
+    it.textContent = rot;
+    if (acao) it.onclick = () => { fecharMenu(); acao(); };
+    m.appendChild(it);
+    if (nota) {
+      const n = document.createElement('div'); n.className = 'cfg-menu-nota'; n.textContent = nota;
+      m.appendChild(n);
+    }
+  });
+  document.body.appendChild(m);
+  const r = botao.getBoundingClientRect();
+  const larg = m.offsetWidth, alt = m.offsetHeight;
+  m.style.left = Math.max(8, Math.min(r.right - larg, window.innerWidth - larg - 8)) + 'px';
+  m.style.top = (r.bottom + alt + 8 > window.innerHeight ? r.top - alt - 4 : r.bottom + 4) + 'px';
+  setTimeout(() => document.addEventListener('click', fecharMenu, { once: true }), 0);
+}
+function fecharMenu() { const m = document.getElementById('cfg-menu'); if (m) m.remove(); }
+
+// ── EVENTOS ──
+function ligarEventos() {
+  const q = s => document.querySelectorAll(s);
+
+  q('[data-disc]').forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    menuDisciplina(b, DISC.find(d => d.id === b.dataset.disc));
+  });
+  q('[data-associar]').forEach(b => b.onclick = () => modalAssociar(b.dataset.associar));
+  q('[data-manter]').forEach(b => b.onclick = () =>
+    operar(() => rpc('cfg_manter_avulsa', { p_projeto: PROJ_ID, p_pasta_drive_id: b.dataset.manter }),
+           'Pasta mantida avulsa.'));
+  q('[data-reativar]').forEach(b => b.onclick = () =>
+    operar(() => rpc('cfg_ativar_disciplina', { p_id: b.dataset.reativar, p_ativa: true }), 'Disciplina reativada.'));
+
+  const add = document.getElementById('btn-add-disc');
+  if (add) add.onclick = modalAdicionar;
+  const tgA = document.getElementById('tg-inativas'); if (tgA) tgA.onclick = () => { VER_INATIVAS = !VER_INATIVAS; render(); };
+  const tgM = document.getElementById('tg-mantidas'); if (tgM) tgM.onclick = () => { VER_MANTIDAS = !VER_MANTIDAS; render(); };
+
+  // pavimentos
+  q('[data-sobe]').forEach(b => b.onclick = () => {
+    const o = ordemAtual().slice(), i = +b.dataset.sobe;
+    [o[i - 1], o[i]] = [o[i], o[i - 1]]; ORDEM_EDITADA = o; render();
+  });
+  q('[data-desce]').forEach(b => b.onclick = () => {
+    const o = ordemAtual().slice(), i = +b.dataset.desce;
+    [o[i + 1], o[i]] = [o[i], o[i + 1]]; ORDEM_EDITADA = o; render();
+  });
+  q('[data-pav]').forEach(b => b.onclick = e => { e.stopPropagation(); menuPavimento(b, b.dataset.pav); });
+  q('[data-reativar-pav]').forEach(b => b.onclick = () =>
+    operar(() => rpc('cfg_ativar_pavimento', { p_projeto: PROJ_ID, p_sigla: b.dataset.reativarPav, p_ativo: true }), 'Pavimento reativado.'));
+
+  const salvar = document.getElementById('btn-salvar-ordem');
+  if (salvar) salvar.onclick = () => {
+    const deBaixoParaCima = ORDEM_EDITADA.slice().reverse();
+    operar(() => rpc('cfg_reordenar_pavimentos', { p_projeto: PROJ_ID, p_siglas: deBaixoParaCima }), 'Ordem salva.');
+  };
+  const desc = document.getElementById('btn-desc-ordem');
+  if (desc) desc.onclick = () => { ORDEM_EDITADA = null; render(); };
+
+  const addPav = document.getElementById('btn-add-pav');
+  if (addPav) addPav.onclick = () => {
+    if (ordemMudou()) { alert('Salve ou descarte a nova ordem antes.'); return; }
+    const s = document.getElementById('nv-pav').value.trim().toUpperCase();
+    if (!/^[A-Z0-9]{3}$/.test(s)) { alert('A sigla deve ter exatamente 3 letras ou números.'); return; }
+    operar(() => rpc('cfg_adicionar_pavimento', { p_projeto: PROJ_ID, p_sigla: s }), s + ' adicionado no topo.');
+  };
+  const tgI = document.getElementById('tg-inativos'); if (tgI) tgI.onclick = () => { VER_INATIVOS = !VER_INATIVOS; render(); };
+}
+
+// Aviso antes de sair com a ordem dos pavimentos alterada e não salva
+window.addEventListener('beforeunload', e => { if (ordemMudou()) { e.preventDefault(); e.returnValue = ''; } });
+
+function show(screen) {
+  ['login','loading','app'].forEach(s => {
+    const el = document.getElementById('screen-'+s);
+    if (!el) return;
+    if (s !== screen) { el.style.display = 'none'; return; }
+    el.style.display = (s === 'app') ? 'block' : 'flex';
+  });
+  const sb = document.getElementById('ospa-sidebar');
+  if (sb) sb.style.display = (screen === 'login') ? 'none' : '';
+}
+
+function setLoadingText(t) {
+  document.getElementById('loading-text').textContent = t;
+}
+
+document.getElementById('login-form').addEventListener('submit', e => { e.preventDefault(); doLogin(); });
+
+(async () => {
+  show('loading');
+  setLoadingText('Restaurando sessão…');
+  const restored = await tryRestoreSession();
+  if (restored) {
+    await loadApp();
+  } else {
+    show('login');
+  }
+})();
+</script>
+</body>
+</html>

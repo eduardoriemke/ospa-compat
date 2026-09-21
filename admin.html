@@ -199,19 +199,12 @@ let DISC_POR_PROJETO = {};
 
 async function carregarDisciplinas() {
   try {
-    const [cfgs, docs] = await Promise.all([
-      apiTodos('config_projeto','select=projeto_id,disciplinas'),
-      api('POST','rpc/disciplinas_todos',{}).catch(() => [])
-    ]);
+    // Só disciplinas cadastradas de cada projeto (tela de Configurações)
+    const cfgs = await apiTodos('config_projeto','select=projeto_id,disciplinas');
 
     const mapa = {};
     (cfgs || []).forEach(r => {
       mapa[r.projeto_id] = new Set(r.disciplinas || []);
-    });
-    (docs || []).forEach(r => {
-      if (!r.projeto_id || !r.disciplina) return;
-      if (!mapa[r.projeto_id]) mapa[r.projeto_id] = new Set();
-      mapa[r.projeto_id].add(r.disciplina);
     });
 
     DISC_POR_PROJETO = {};
