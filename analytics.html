@@ -290,7 +290,7 @@ async function loadApp(){
     PROJETO = proj;
     // União: disciplinas cadastradas no editor + as que têm pasta no Drive.
     // Uma disciplina nova passa a existir nas fichas sem cadastro manual.
-    const _discDocs = await api('POST','rpc/disciplinas_projeto',{p_id:projId})
+    const _discDocs = await api('POST','rpc/disciplinas_projeto',{p_id:PROJ_ID})
                             .catch(() => []);
     CONFIG.disciplines = [...new Set([
       ...(cfg.disciplinas || []),
