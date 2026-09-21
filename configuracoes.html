@@ -388,12 +388,13 @@ async function loadApp() {
     const me = meArr[0];
 
     if (me.papel_global === 'admin') {
-      USER_PROFILE = { id: uid, nome: me.nome, email: me.email, papel: 'admin' };
+      USER_PROFILE = { id: uid, nome: me.nome, email: me.email, papel: 'admin', disciplinas: [] };
     } else {
       const perfis = await api('GET','projeto_usuarios_v2',null,
         'usuario_id=eq.'+uid+'&projeto_id=eq.'+PROJ_ID);
       if (!perfis || !perfis.length) { setLoadingText('Você não tem acesso a este projeto.'); return; }
-      USER_PROFILE = { id: uid, nome: me.nome, email: me.email, papel: perfis[0].papel };
+      USER_PROFILE = { id: uid, nome: me.nome, email: me.email, papel: perfis[0].papel,
+                       disciplinas: perfis[0].disciplinas || [] };
     }
 
     // A configuração é da coordenação (o banco também confere isso)
@@ -404,6 +405,13 @@ async function loadApp() {
 
     setLoadingText('Carregando configurações…');
     await carregarTudo();
+
+    // A sidebar lê nome, papel e disciplinas destas marcações — sem elas,
+    // assume "projetista" e esconde os itens da coordenação.
+    document.body.dataset.userName = USER_PROFILE.nome || '';
+    document.body.dataset.userRole = USER_PROFILE.papel || 'projetista';
+    document.body.dataset.projeto = PROJ_ID;
+    document.body.dataset.userDisciplinas = (USER_PROFILE.disciplinas || []).join(',');
     if (typeof ospaRenderSidebar === 'function') ospaRenderSidebar();
     render();
     show('app');
