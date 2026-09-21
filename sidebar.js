@@ -156,6 +156,7 @@ function ospaRenderSidebar() {
 
   ospaIniciarOndas();   // o canvas é recriado a cada redesenho
   ospaIndicarNovos(projeto);
+  ospaRegistrarAcesso(projeto);
 }
 
 
@@ -221,6 +222,33 @@ async function ospaIndicarNovos(projeto) {
   } catch (e) {
     // sem conexão ou tabela indisponível: apenas não mostra o indicador
   }
+}
+
+/* ============================================================
+   REGISTRO DE ACESSO
+   Grava o último acesso de cada pessoa a cada tela do projeto.
+   Só a coordenação terá acesso a essa informação (na futura seção
+   de equipe das configurações do projeto).
+
+   A sidebar é desenhada duas vezes: antes do login (sem sessão) e
+   depois dele. Só a segunda registra, e uma única vez por página.
+   ============================================================ */
+
+let _acessoRegistrado = false;
+
+function ospaRegistrarAcesso(projeto) {
+  if (_acessoRegistrado) return;
+  if (!projeto || typeof SESSION === 'undefined' || !SESSION) return;
+  if (typeof sbFetch !== 'function') return;
+
+  _acessoRegistrado = true;
+  const pagina = (location.pathname.split('/').pop() || '').replace('.html', '') || 'inicio';
+
+  // Silencioso: uma falha aqui nunca deve atrapalhar o uso da tela
+  sbFetch('/rest/v1/rpc/registrar_acesso', {
+    method: 'POST',
+    body: JSON.stringify({ p_projeto: projeto, p_pagina: pagina })
+  }).catch(() => {});
 }
 
 let _ondasAtivas = null;   // laço em execução, para encerrar o anterior
