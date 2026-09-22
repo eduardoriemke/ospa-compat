@@ -549,13 +549,27 @@ function menuDisciplina(botao, d) {
   const itens = [
     ['Editar nome e cor', () => modalEditar(d)],
     ['Trocar pasta', () => modalPasta(d)],
-    ['Renomear sigla…', null, 'Chega na próxima etapa, junto com a leitura dos documentos pelo sistema.'],
-    ['Mesclar com outra…', null, 'Chega na próxima etapa.'],
+    ['Renomear sigla…', () => renomearDisciplina(d)],
+    ['Mesclar com outra…', null, 'Sob demanda: será feito quando surgir uma disciplina duplicada de verdade.'],
     ['Desativar', () => confirmarDesativar(d), null, 'perigo'],
     ['Excluir', livre ? () => confirmarExcluir(d) : null,
       livre ? null : 'Em uso (' + textoUso(d.sigla) + '). Desative em vez de excluir.', 'perigo']
   ];
   abrirMenu(botao, itens);
+}
+
+function renomearDisciplina(d) {
+  const nova = (prompt('Nova sigla para ' + d.sigla + ' (2 a 6 letras ou números):', d.sigla) || '').trim().toUpperCase();
+  if (!nova || nova === d.sigla) return;
+  if (!/^[A-Z0-9]{2,6}$/.test(nova)) { alert('A sigla deve ter de 2 a 6 letras ou números.'); return; }
+  const uso = usoTotal(d.sigla)
+    ? '\n\nSerá atualizada em todos os registros: ' + textoUso(d.sigla) + ', além de comentários e rodadas.'
+    : '';
+  if (!confirm('Renomear ' + d.sigla + ' para ' + nova + '?' + uso +
+               '\n\nUm backup do projeto é criado antes, automaticamente.' +
+               '\n\nOs nomes dos arquivos no Drive não mudam — só o que o sistema registra.')) return;
+  operar(() => rpc('cfg_renomear_disciplina', { p_id: d.id, p_nova: nova }),
+         d.sigla + ' renomeada para ' + nova + '.');
 }
 
 function confirmarDesativar(d) {
