@@ -187,6 +187,7 @@ svg text{font-family:var(--mono);fill:var(--text3);font-size:10px}
 <script src="sidebar.js?v=5"></script>
 <script src="editor-launcher.js?v=3"></script>
 <script src="auth.js?v=2"></script>
+<script src="disciplinas.js?v=1"></script>
 <script>
 // Sessão (SB_URL, SB_KEY, SB_AUTH, SESSION, SESSION_KEY, saveSession,
 // loadSavedSession, clearSavedSession, refreshSession, tryRestoreSession
@@ -309,6 +310,7 @@ async function loadApp(){
     document.body.dataset.userDisciplinas = (USER_PROFILE.disciplinas || []).join(',');
     if (typeof ospaRenderSidebar === 'function') ospaRenderSidebar();
 
+    await ospaCarregarCores(PROJ_ID);  // Cores das disciplinas vindas do banco (disciplinas.js)
     renderAnalytics();
     show('app');
   }catch(e){
@@ -328,6 +330,9 @@ const KNOWN_COLORS = {
 };
 const colorCache = {};
 function getDiscColor(d){
+  // Primeiro a cor definida nas Configurações; as fixas ficam de reserva
+  const doBanco = (window.OSPA_CORES || {})[d];
+  if(doBanco) return { c: doBanco.texto, bg: doBanco.fundo };
   if(KNOWN_COLORS[d]) return KNOWN_COLORS[d];
   if(colorCache[d]) return colorCache[d];
   let hash=0; for(let i=0;i<d.length;i++){ hash = d.charCodeAt(i) + ((hash<<5)-hash); hash|=0; }

@@ -1450,6 +1450,10 @@ function exportViewer(hideResolved){
   ].forEach(function(p){html=html.replace(p[1],p[2]);});
   html = html.replace('/*__NOTES__*/""', '/*__NOTES__*/'+JSON.stringify(META.notes||''));
   if (hideResolved) html = html.replace('hideResolved: false', 'hideResolved: true');
+  // O modelo do relatório só conhece 10 disciplinas: leva junto as cores
+  // atuais de todas, vindas das Configurações do projeto.
+  const coresEl = document.getElementById('ospa-cores-disciplinas');
+  if (coresEl) html = html.replace('</head>', '<style id="ospa-cores-disciplinas">' + coresEl.textContent + '</style>\n</head>');
   downloadHTML(html, _filename('VIEW'));
 }
 function saveEditor(){

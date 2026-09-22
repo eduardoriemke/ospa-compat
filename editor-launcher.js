@@ -48,12 +48,15 @@ async function ospaOpenEditor(id, papel) {
   }
   try {
     // Busca o editor e os dados do projeto em paralelo
-    const [modelo, proj, cfg, cfls, imgs] = await Promise.all([
+    const [modelo, proj, cfg, cfls, imgs, cores] = await Promise.all([
       _carregarEditorApp(),
       api("GET","projetos",null,"id=eq."+id).then(function(r){return r[0];}),
       api("GET","config_projeto",null,"projeto_id=eq."+id).then(function(r){return r[0]||{};}),
       _apiTodos("conflitos","projeto_id=eq."+id+"&order=ordem.asc,created_at.asc"),
-      _apiTodos("imagens","projeto_id=eq."+id+"&order=conflito_id.asc,ordem.asc&select=conflito_id,ordem,dados")
+      _apiTodos("imagens","projeto_id=eq."+id+"&order=conflito_id.asc,ordem.asc&select=conflito_id,ordem,dados"),
+      // Cores das disciplinas (tela de Configurações)
+      api("GET","disciplinas",null,"projeto_id=eq."+encodeURIComponent(id)+"&select=sigla,cor_texto,cor_fundo,cor_borda")
+        .catch(function(){ return []; })
     ]);
 
     if (!proj) throw new Error('Projeto não encontrado.');
@@ -102,6 +105,13 @@ async function ospaOpenEditor(id, papel) {
     }
     if (cfg.locais && cfg.locais.length) {
       html = html.replace(/locations:\s*\[[^\]]*\]/, 'locations: ' + JSON.stringify(cfg.locais));
+    }
+
+    // Cores das disciplinas: entram por último no <head> e têm prioridade
+    // sobre as fixas do editor. O relatório exportado herda daqui.
+    var coresCss = (typeof ospaCssDeLista === 'function') ? ospaCssDeLista(cores) : '';
+    if (coresCss) {
+      html = html.replace('</head>', '<style id="ospa-cores-disciplinas">\n' + coresCss + '</style>\n</head>');
     }
 
     var blob = new Blob([html], {type:"text/html; charset=utf-8"});
