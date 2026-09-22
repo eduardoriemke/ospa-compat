@@ -161,6 +161,10 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .grupo-qtd b{color:var(--text);font-weight:600}
 .grupo-data{font-family:var(--mono);font-size:10px;color:var(--text3);white-space:nowrap}
 .grupo-dias{color:var(--text2)}
+/* Pasta sem disciplina: nome truncado na coluna do crachá, sem desalinhar a grade */
+.d-tag.d-avulsa{background:transparent;color:var(--text2);border:1px dashed var(--border2);
+  display:inline-block;max-width:58px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
+.grupo-avulsa{color:var(--acento-forte);font-family:var(--sans);font-size:10.5px}
 /* Servidor: caixinha sempre na mesma posição, texto cresce à direita */
 
 
@@ -538,7 +542,9 @@ async function loadApp() {
     const [proj, cfg, docs] = await Promise.all([
       api('GET','projetos',null,'id=eq.'+projId).then(r=>r[0]),
       api('GET','config_projeto',null,'projeto_id=eq.'+projId).then(r=>r[0]||{}),
-      apiTodos('documentos_projeto',
+      // v_documentos: a disciplina vem da associação de pastas feita nas
+      // Configurações, não mais do mapa fixo do Apps Script
+      apiTodos('v_documentos',
         'projeto_id=eq.'+projId+'&removido_em=is.null&order=disciplina.asc,nome_arquivo.asc'),
     ]);
 
@@ -546,7 +552,11 @@ async function loadApp() {
     DOCS = docs;
     CONFIG.locais = cfg.locais || [];   // pavimentos cadastrados no editor
 
-    CONFIG.disciplines = [...new Set(DOCS.map(d => d.disciplina))].filter(Boolean).sort();
+    // Disciplinas primeiro; pastas sem disciplina (avulsas) no fim
+    const _avulsas = new Set(DOCS.filter(d => d.pasta_avulsa).map(d => d.disciplina));
+    const _todas = [...new Set(DOCS.map(d => d.disciplina))].filter(Boolean);
+    CONFIG.disciplines = _todas.filter(d => !_avulsas.has(d)).sort()
+                         .concat(_todas.filter(d => _avulsas.has(d)).sort());
     // Compatibilização (CPT) não é uma disciplina técnica como as outras —
     // é o resultado consolidado. Fica sempre em primeiro no filtro.
     if (CONFIG.disciplines.includes('CPT')) {
@@ -1069,7 +1079,8 @@ function fecharGerador() {
 
 function montarGerador() {
   // Disciplinas e etapas: as que o projeto usa de fato
-  const discsUso  = [...new Set(DOCS.map(d => d.disciplina).filter(Boolean))].sort();
+  // Pastas avulsas não são disciplinas: ficam fora do gerador
+  const discsUso  = [...new Set(DOCS.filter(d => !d.pasta_avulsa).map(d => d.disciplina).filter(Boolean))].sort();
   const etapasUso = [...new Set(DOCS.map(d => d.etapa).filter(Boolean))].sort();
 
   const sel = document.getElementById('g-disc');
@@ -1535,7 +1546,14 @@ function montarCabecalhoGrupo(disc, pilhasGrupo, aberto) {
   } else {
     tag = document.createElement('span');
   }
-  tag.className = 'd-tag d-' + disc;
+  const avulsa = DOCS.some(d => d.disciplina === disc && d.pasta_avulsa);
+  if (avulsa) {
+    // Pasta sem disciplina: nome da própria pasta, visual neutro
+    tag.className = 'd-tag d-avulsa';
+    tag.title = 'Pasta "' + disc + '" sem disciplina associada — associe nas Configurações do projeto';
+  } else {
+    tag.className = 'd-tag d-' + disc;
+  }
   tag.textContent = disc;
   linha.appendChild(tag);
 
@@ -1547,6 +1565,12 @@ function montarCabecalhoGrupo(disc, pilhasGrupo, aberto) {
     ? '<b>' + totalDisc + '</b> documentos'
     : '<b>' + pilhasGrupo.length + '</b> de ' + totalDisc + ' documentos';
   linha.appendChild(qtd);
+  if (avulsa) {
+    const aviso = document.createElement('span');
+    aviso.className = 'grupo-avulsa';
+    aviso.textContent = ' · pasta sem disciplina';
+    qtd.appendChild(aviso);
+  }
 
   // Última postagem e atividade: estado real da disciplina, sem filtro
   let ultima = '';

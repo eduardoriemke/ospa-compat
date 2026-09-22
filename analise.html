@@ -352,13 +352,14 @@ async function loadApp() {
 
     const [proj, docs, rodadas] = await Promise.all([
       api('GET','projetos',null,'id=eq.'+PROJ_ID).then(r=>r[0]),
-      apiTodos('documentos_projeto','projeto_id=eq.'+PROJ_ID+'&removido_em=is.null&order=disciplina.asc'),
+      apiTodos('v_documentos','projeto_id=eq.'+PROJ_ID+'&removido_em=is.null&order=disciplina.asc'),  // disciplina pela associação de pastas
       api('GET','rodadas_compatibilizacao',null,'projeto_id=eq.'+PROJ_ID+'&order=data_abertura.desc'),
     ]);
 
     PROJETO = proj; DOCS = docs; RODADAS = rodadas;
 
-    CONFIG.disciplines = [...new Set(DOCS.map(d => d.disciplina))].filter(d => d && d !== 'CPT').sort();
+    // Pastas avulsas não entram nas rodadas: não são disciplinas
+    CONFIG.disciplines = [...new Set(DOCS.filter(d => !d.pasta_avulsa).map(d => d.disciplina))].filter(d => d && d !== 'CPT').sort();
 
     RODADA_ABERTA = RODADAS.find(r => r.status === 'aberta') || null;
     if (RODADA_ABERTA) {
