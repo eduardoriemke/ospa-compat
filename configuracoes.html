@@ -123,6 +123,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .cfg-badge{font-family:var(--mono);font-size:11px;font-weight:600;padding:2px 7px;border:1px solid;white-space:nowrap}
 .cfg-pasta{font-family:var(--sans);font-size:12px;color:var(--text2)}
 .cfg-pasta.sem{color:var(--text3)}
+.cfg-papel{padding:4px 7px;font-family:var(--sans);font-size:12px;border:1px solid var(--border2);background:var(--bg);color:var(--text)}
 .cfg-uso{font-family:var(--mono);font-size:10.5px;color:var(--text3);white-space:nowrap}
 .cfg-mais{border:none;background:none;cursor:pointer;color:var(--text3);font-size:17px;line-height:1;padding:2px 8px}
 .cfg-mais:hover{color:var(--text)}
@@ -322,6 +323,7 @@ function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replac
 let USER_PROFILE = null, PROJETO = null, PROJ_ID = null;
 let DISC = [], USO_DISC = {}, PASTAS = [], CATALOGO = [];
 let PAV = [], USO_PAV = {};
+let MEMBROS = [], CANDIDATOS = [];
 let ABA = 'disciplinas';
 let ORDEM_EDITADA = null;       // pavimentos (de cima para baixo) enquanto você reordena
 let VER_INATIVAS = false, VER_INATIVOS = false, VER_MANTIDAS = false;
@@ -330,7 +332,7 @@ let OCUPADO = false;
 const ABAS = [
   ['disciplinas','Disciplinas', true],
   ['pavimentos','Pavimentos', true],
-  ['equipe','Equipe', false],
+  ['equipe','Equipe', true],
   ['dados','Dados gerais', false],
   ['drive','Drive', false],
   ['backups','Backups', false]
@@ -379,7 +381,11 @@ async function operar(fn, sucesso) {
 async function loadApp() {
   show('loading');
   setLoadingText('Identificando usuário…');
-  PROJ_ID = new URLSearchParams(window.location.search).get('id');
+  const _params = new URLSearchParams(window.location.search);
+  PROJ_ID = _params.get('id');
+  // ?aba=equipe abre direto na aba (usado pelo atalho do admin)
+  const _aba = _params.get('aba');
+  if (_aba && ABAS.some(a => a[0] === _aba && a[2])) ABA = _aba;
   if (!PROJ_ID) { setLoadingText('Nenhum projeto especificado. Use ?id=CODIGO na URL.'); return; }
 
   try {
@@ -422,14 +428,16 @@ async function loadApp() {
 }
 
 async function carregarTudo() {
-  const [proj, disc, uso, pastas, cat, pav, usoPav] = await Promise.all([
+  const [proj, disc, uso, pastas, cat, pav, usoPav, membros, candidatos] = await Promise.all([
     api('GET','projetos',null,'id=eq.'+encodeURIComponent(PROJ_ID)).then(r => r[0]),
     api('GET','disciplinas',null,'projeto_id=eq.'+encodeURIComponent(PROJ_ID)+'&order=sigla.asc'),
     rpc('cfg_uso_disciplinas', { p_projeto: PROJ_ID }),
     rpc('cfg_pastas', { p_projeto: PROJ_ID }),
     api('GET','disciplinas_catalogo',null,'order=sigla.asc'),
     api('GET','pavimentos',null,'projeto_id=eq.'+encodeURIComponent(PROJ_ID)+'&order=ordem.asc'),
-    rpc('cfg_uso_pavimentos', { p_projeto: PROJ_ID })
+    rpc('cfg_uso_pavimentos', { p_projeto: PROJ_ID }),
+    rpc('eq_membros',    { p_projeto: PROJ_ID }),
+    rpc('eq_candidatos', { p_projeto: PROJ_ID })
   ]);
   PROJETO = proj;
   DISC = disc || [];
@@ -438,6 +446,8 @@ async function carregarTudo() {
   CATALOGO = cat || [];
   PAV = pav || [];
   USO_PAV = {}; (usoPav || []).forEach(u => { USO_PAV[u.sigla] = u.fichas; });
+  MEMBROS = membros || [];
+  CANDIDATOS = candidatos || [];
   ORDEM_EDITADA = null;
 }
 
@@ -458,7 +468,9 @@ function render() {
   });
 
   const el = document.getElementById('cfg-corpo');
-  el.innerHTML = (ABA === 'disciplinas') ? htmlDisciplinas() : htmlPavimentos();
+  el.innerHTML = ABA === 'disciplinas' ? htmlDisciplinas()
+               : ABA === 'pavimentos'  ? htmlPavimentos()
+               : htmlEquipe();
   ligarEventos();
 }
 
@@ -716,6 +728,131 @@ function modalAdicionar() {
   });
 }
 
+// ── EQUIPE ──
+// Quem participa do projeto, com que papel e por quais disciplinas.
+// A relação pessoa ↔ disciplina é a mesma que a tabela de disciplinas
+// mostra pelo outro lado: um dado só, editado aqui.
+
+function quando(iso) {
+  if (!iso) return '—';
+  const dias = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  if (dias <= 0) return 'hoje';
+  if (dias === 1) return 'ontem';
+  if (dias < 30) return 'há ' + dias + ' dias';
+  return new Date(iso).toLocaleDateString('pt-BR');
+}
+
+function htmlEquipe() {
+  const coords = MEMBROS.filter(m => m.papel === 'coordenador').length;
+
+  let h = '<div class="cfg-barra">' +
+    '<span class="cfg-conta">' + MEMBROS.length + (MEMBROS.length === 1 ? ' pessoa' : ' pessoas') +
+    ' · ' + coords + (coords === 1 ? ' coordenador' : ' coordenadores') + '</span>' +
+    '<button class="cfg-btn pri" id="btn-add-pessoa">+ Adicionar pessoa</button></div>';
+
+  h += '<table class="cfg-tab"><thead><tr>' +
+       ['Pessoa','Empresa','Papel','Disciplinas','Último acesso','Última atividade',''].map(t =>
+         '<th>' + t + '</th>').join('') + '</tr></thead><tbody>';
+
+  MEMBROS.forEach(m => {
+    const chips = (m.disciplinas || []).length
+      ? m.disciplinas.map(s => {
+          const d = DISC.find(x => x.sigla === s) || { sigla: s };
+          return badge(d);
+        }).join(' ')
+      : '<span style="color:var(--text3)">—</span>';
+
+    // a atividade mais recente entre responder e comentar
+    const atividade = [m.ultima_resposta, m.ultimo_comentario].filter(Boolean).sort().pop();
+
+    h += '<tr>' +
+      '<td>' + esc(m.nome || '') +
+        '<div style="font-family:var(--mono);font-size:10px;color:var(--text3)">' + esc(m.email || '') + '</div></td>' +
+      '<td>' + (m.empresa ? esc(m.empresa) : '<span style="color:var(--text3)">—</span>') + '</td>' +
+      '<td><select class="cfg-papel" data-papel="' + m.usuario_id + '">' +
+        ['coordenador','projetista'].map(p =>
+          '<option value="' + p + '"' + (m.papel === p ? ' selected' : '') + '>' + p + '</option>').join('') +
+      '</select></td>' +
+      '<td>' + chips + '</td>' +
+      '<td><span class="cfg-uso">' + quando(m.ultimo_acesso) + '</span></td>' +
+      '<td><span class="cfg-uso">' + quando(atividade) + '</span></td>' +
+      '<td style="text-align:right"><button class="cfg-mais" data-membro="' + m.usuario_id + '" aria-label="Ações">⋯</button></td>' +
+    '</tr>';
+  });
+  h += '</tbody></table>';
+
+  h += '<div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:10px;line-height:1.5">' +
+       'Último acesso e atividade são visíveis apenas à coordenação. ' +
+       'Contas novas são criadas na administração do sistema.</div>';
+  return h;
+}
+
+function menuMembro(botao, m) {
+  abrirMenu(botao, [
+    ['Editar disciplinas…', () => modalDisciplinasPessoa(m)],
+    ['Remover do projeto', () => removerPessoa(m), null, 'perigo']
+  ]);
+}
+
+function modalDisciplinasPessoa(m) {
+  const escolhidas = new Set(m.disciplinas || []);
+  const corpo = abrirModal('Disciplinas de ' + (m.nome || ''),
+    '<div class="pfield"><label>Responde por</label>' +
+    '<div class="cfg-paleta" id="dp-chips">' +
+      DISC.filter(d => d.ativa).map(d =>
+        '<span class="chip d-' + d.sigla + (escolhidas.has(d.sigla) ? ' on' : '') +
+        '" data-sig="' + d.sigla + '" style="cursor:pointer">' + esc(d.sigla) + '</span>').join('') +
+    '</div></div>' +
+    '<div style="font-family:var(--mono);font-size:10px;color:var(--text3);line-height:1.5">' +
+    'Define o que a pessoa vê marcado ao entrar no relatório e por quais disciplinas ela responde.</div>',
+    'Salvar', () => {
+      operar(() => rpc('eq_disciplinas', {
+        p_projeto: PROJ_ID, p_usuario: m.usuario_id, p_disciplinas: [...escolhidas]
+      }), 'Disciplinas atualizadas.');
+    });
+
+  corpo.querySelectorAll('[data-sig]').forEach(el => {
+    el.onclick = () => {
+      const s = el.dataset.sig;
+      if (escolhidas.has(s)) { escolhidas.delete(s); el.classList.remove('on'); }
+      else { escolhidas.add(s); el.classList.add('on'); }
+    };
+  });
+}
+
+function removerPessoa(m) {
+  if (!confirm('Remover ' + (m.nome || '') + ' do projeto?\n\n' +
+               'Ela perde o acesso, mas as respostas e comentários que registrou continuam no histórico.')) return;
+  operar(() => rpc('eq_remover', { p_projeto: PROJ_ID, p_usuario: m.usuario_id }),
+         (m.nome || 'Pessoa') + ' removida do projeto.');
+}
+
+function modalAdicionarPessoa() {
+  if (!CANDIDATOS.length) {
+    abrirModal('Adicionar pessoa',
+      '<div style="font-family:var(--sans);font-size:13px;color:var(--text2);line-height:1.6">' +
+      'Todas as pessoas com conta já participam deste projeto.<br><br>' +
+      'Contas novas são criadas na administração do sistema.</div>', null, null);
+    return;
+  }
+  abrirModal('Adicionar pessoa',
+    '<div class="pfield"><label>Pessoa</label>' +
+      '<select id="ap-user" style="width:100%;padding:8px;font-family:var(--sans);font-size:13px;border:1px solid var(--border2);background:var(--bg)">' +
+      CANDIDATOS.map(u => '<option value="' + u.usuario_id + '">' + esc(u.nome || u.email) +
+        (u.empresa ? ' — ' + esc(u.empresa) : '') + '</option>').join('') +
+      '</select></div>' +
+    '<div class="pfield"><label>Papel</label>' +
+      '<select id="ap-papel" style="width:100%;padding:8px;font-family:var(--sans);font-size:13px;border:1px solid var(--border2);background:var(--bg)">' +
+      '<option value="projetista">projetista</option><option value="coordenador">coordenador</option></select></div>',
+    'Adicionar', () => {
+      operar(() => rpc('eq_adicionar', {
+        p_projeto: PROJ_ID,
+        p_usuario: document.getElementById('ap-user').value,
+        p_papel: document.getElementById('ap-papel').value
+      }), 'Pessoa adicionada ao projeto.');
+    });
+}
+
 // ── PAVIMENTOS ──
 // Mostrados de cima para baixo, como num corte
 function ordemAtual() {
@@ -885,6 +1022,19 @@ function ligarEventos() {
     operar(() => rpc('cfg_adicionar_pavimento', { p_projeto: PROJ_ID, p_sigla: s }), s + ' adicionado no topo.');
   };
   const tgI = document.getElementById('tg-inativos'); if (tgI) tgI.onclick = () => { VER_INATIVOS = !VER_INATIVOS; render(); };
+
+  // equipe
+  q('[data-membro]').forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    menuMembro(b, MEMBROS.find(m => m.usuario_id === b.dataset.membro));
+  });
+  q('[data-papel]').forEach(s => s.onchange = () => {
+    const m = MEMBROS.find(x => x.usuario_id === s.dataset.papel);
+    operar(() => rpc('eq_papel', { p_projeto: PROJ_ID, p_usuario: s.dataset.papel, p_papel: s.value }),
+           'Papel atualizado.');
+  });
+  const addP = document.getElementById('btn-add-pessoa');
+  if (addP) addP.onclick = modalAdicionarPessoa;
 }
 
 // Aviso antes de sair com a ordem dos pavimentos alterada e não salva

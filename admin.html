@@ -518,110 +518,28 @@ function renderAccessRow(u, a) {
     tags.appendChild(t);
   });
   row.appendChild(tags);
+  // Papel e disciplinas são editados na Equipe de cada projeto, para não
+  // existirem dois lugares mexendo na mesma coisa. Aqui, só consulta.
   const actions = document.createElement('div'); actions.className = 'proj-access-actions';
-  const editBtn = document.createElement('button'); editBtn.className = 'icon-btn'; editBtn.textContent = 'Editar';
-  editBtn.onclick = e => { e.stopPropagation(); editAccessInline(u, a, row); };
-  const delBtn = document.createElement('button'); delBtn.className = 'icon-btn danger'; delBtn.textContent = 'Remover';
-  delBtn.onclick = e => { e.stopPropagation(); removeAccess(a); };
-  actions.appendChild(editBtn); actions.appendChild(delBtn);
+  const link = document.createElement('a');
+  link.className = 'icon-btn'; link.textContent = 'Equipe do projeto ↗';
+  link.href = 'configuracoes.html?id=' + encodeURIComponent(a.projeto_id) + '&aba=equipe';
+  link.target = '_blank'; link.rel = 'noopener';
+  link.style.textDecoration = 'none';
+  link.onclick = e => e.stopPropagation();
+  actions.appendChild(link);
   row.appendChild(actions);
   return row;
 }
 
-function editAccessInline(u, a, rowEl) {
-  rowEl.innerHTML = '';
-  const papelSel = document.createElement('select');
-  ['coordenador','projetista'].forEach(p => {
-    const o = document.createElement('option'); o.value = p; o.textContent = p;
-    if (a.papel === p) o.selected = true;
-    papelSel.appendChild(o);
-  });
-  const discPicker = document.createElement('div'); discPicker.className = 'disc-mini-picker';
-  disciplinasDo(a.projeto_id).forEach(d => {
-    const chip = document.createElement('span');
-    chip.className = 'disc-mini-chip' + ((a.disciplinas||[]).includes(d) ? ' on' : '');
-    chip.textContent = d; chip.dataset.disc = d;
-    chip.onclick = () => chip.classList.toggle('on');
-    discPicker.appendChild(chip);
-  });
-  const saveBtn = document.createElement('button'); saveBtn.className = 'add-access-btn'; saveBtn.textContent = 'Salvar';
-  saveBtn.onclick = async () => {
-    const novoPapel = papelSel.value;
-    const novasDiscs = Array.from(discPicker.querySelectorAll('.on')).map(c => c.dataset.disc);
-    try {
-      await api('PATCH','projeto_usuarios_v2',{papel:novoPapel, disciplinas:novasDiscs},'id=eq.'+a.id);
-      a.papel = novoPapel; a.disciplinas = novasDiscs;
-      toast('Atualizado');
-      renderUsersTab();
-      document.getElementById('ucard-'+u.id).classList.add('open');
-    } catch(e) { toast('Erro: '+e.message); }
-  };
-  const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;flex-direction:column;gap:6px;width:100%';
-  const topRow = document.createElement('div'); topRow.style.cssText = 'display:flex;gap:8px;align-items:center';
-  topRow.appendChild(papelSel); topRow.appendChild(saveBtn);
-  wrap.appendChild(topRow); wrap.appendChild(discPicker);
-  rowEl.appendChild(wrap);
-}
-
 function renderAddAccessForm(u) {
-  const existingProjIds = ACCESS.filter(a => a.usuario_id === u.id).map(a => a.projeto_id);
-  const availableProjects = PROJECTS.filter(p => !existingProjIds.includes(p.id));
-
-  const form = document.createElement('div'); form.className = 'add-access-form';
-  if (!availableProjects.length) {
-    form.innerHTML = '<div class="no-access">Já tem acesso a todos os projetos cadastrados.</div>';
-    return form;
-  }
-  const projSel = document.createElement('select');
-  availableProjects.forEach(p => {
-    const o = document.createElement('option'); o.value = p.id; o.textContent = p.nome;
-    projSel.appendChild(o);
-  });
-  const papelSel = document.createElement('select');
-  [['projetista','Projetista'],['coordenador','Coordenador']].forEach(([v,t]) => {
-    const o = document.createElement('option'); o.value = v; o.textContent = t;
-    papelSel.appendChild(o);
-  });
-  const discPicker = document.createElement('div'); discPicker.className = 'disc-mini-picker';
-  // As disciplinas dependem do projeto escolhido, então o quadro
-  // é redesenhado quando a seleção muda.
-  function montarChipsDisc() {
-    discPicker.innerHTML = '';
-    disciplinasDo(projSel.value).forEach(d => {
-      const chip = document.createElement('span'); chip.className = 'disc-mini-chip'; chip.textContent = d; chip.dataset.disc = d;
-      chip.onclick = () => chip.classList.toggle('on');
-      discPicker.appendChild(chip);
-    });
-  }
-  montarChipsDisc();
-  projSel.addEventListener('change', montarChipsDisc);
-  const addBtn = document.createElement('button'); addBtn.className = 'add-access-btn'; addBtn.textContent = '+ Adicionar';
-  addBtn.onclick = async () => {
-    const discs = Array.from(discPicker.querySelectorAll('.on')).map(c => c.dataset.disc);
-    try {
-      const res = await api('POST','projeto_usuarios_v2',{
-        projeto_id: projSel.value, usuario_id: u.id, papel: papelSel.value,
-        disciplinas: papelSel.value === 'projetista' ? discs : []
-      });
-      ACCESS.push(res[0]);
-      toast('Acesso adicionado');
-      renderUsersTab();
-      document.getElementById('ucard-'+u.id).classList.add('open');
-    } catch(e) { toast('Erro: '+e.message); }
-  };
-  form.appendChild(projSel); form.appendChild(papelSel); form.appendChild(addBtn); form.appendChild(discPicker);
-  return form;
-}
-
-async function removeAccess(a) {
-  const proj = PROJECTS.find(p => p.id === a.projeto_id);
-  if (!confirm('Remover acesso a "'+(proj?proj.nome:a.projeto_id)+'"?')) return;
-  try {
-    await api('DELETE','projeto_usuarios_v2',null,'id=eq.'+a.id);
-    ACCESS = ACCESS.filter(x => x.id !== a.id);
-    toast('Acesso removido');
-    renderUsersTab();
-  } catch(e) { toast('Erro: '+e.message); }
+  // Incluir alguém num projeto passou a ser feito na Equipe daquele
+  // projeto, por quem o coordena. Aqui fica só a orientação.
+  const box = document.createElement('div'); box.className = 'add-access-form';
+  box.innerHTML = '<div class="no-access" style="margin:0">' +
+    'Para dar acesso a um projeto, abra <b>Configurações → Equipe</b> do projeto. ' +
+    'Papel e disciplinas também são definidos lá.</div>';
+  return box;
 }
 
 // ── NEW USER TAB ──
