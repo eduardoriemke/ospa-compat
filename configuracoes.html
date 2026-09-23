@@ -323,7 +323,7 @@ function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replac
 let USER_PROFILE = null, PROJETO = null, PROJ_ID = null;
 let DISC = [], USO_DISC = {}, PASTAS = [], CATALOGO = [];
 let PAV = [], USO_PAV = {};
-let MEMBROS = [], CANDIDATOS = [];
+let MEMBROS = [], CANDIDATOS = [], EMPRESAS = [];
 let ABA = 'disciplinas';
 let ORDEM_EDITADA = null;       // pavimentos (de cima para baixo) enquanto você reordena
 let VER_INATIVAS = false, VER_INATIVOS = false, VER_MANTIDAS = false;
@@ -428,7 +428,7 @@ async function loadApp() {
 }
 
 async function carregarTudo() {
-  const [proj, disc, uso, pastas, cat, pav, usoPav, membros, candidatos] = await Promise.all([
+  const [proj, disc, uso, pastas, cat, pav, usoPav, membros, candidatos, empresas] = await Promise.all([
     api('GET','projetos',null,'id=eq.'+encodeURIComponent(PROJ_ID)).then(r => r[0]),
     api('GET','disciplinas',null,'projeto_id=eq.'+encodeURIComponent(PROJ_ID)+'&order=sigla.asc'),
     rpc('cfg_uso_disciplinas', { p_projeto: PROJ_ID }),
@@ -437,7 +437,8 @@ async function carregarTudo() {
     api('GET','pavimentos',null,'projeto_id=eq.'+encodeURIComponent(PROJ_ID)+'&order=ordem.asc'),
     rpc('cfg_uso_pavimentos', { p_projeto: PROJ_ID }),
     rpc('eq_membros',    { p_projeto: PROJ_ID }),
-    rpc('eq_candidatos', { p_projeto: PROJ_ID })
+    rpc('eq_candidatos', { p_projeto: PROJ_ID }),
+    api('GET','empresas',null,'order=nome.asc')
   ]);
   PROJETO = proj;
   DISC = disc || [];
@@ -448,6 +449,7 @@ async function carregarTudo() {
   USO_PAV = {}; (usoPav || []).forEach(u => { USO_PAV[u.sigla] = u.fichas; });
   MEMBROS = membros || [];
   CANDIDATOS = candidatos || [];
+  EMPRESAS = empresas || [];
   ORDEM_EDITADA = null;
 }
 
@@ -519,14 +521,23 @@ function htmlDisciplinas() {
        '<span class="cfg-conta">' + ativas.length + ' disciplinas ativas</span>' +
        '<button class="cfg-btn pri" id="btn-add-disc">+ Adicionar disciplina</button></div>';
 
-  h += '<table class="cfg-tab"><thead><tr><th>Sigla</th><th>Nome</th><th>Pasta no Drive</th><th>Em uso</th><th></th></tr></thead><tbody>';
+  h += '<table class="cfg-tab"><thead><tr><th>Sigla</th><th>Nome</th><th>Pasta no Drive</th>' +
+       '<th>Empresa</th><th>Responsáveis</th><th>Em uso</th><th></th></tr></thead><tbody>';
   ativas.forEach(d => {
     const pasta = d.pasta_drive_id
       ? '<span class="cfg-pasta"><i class="ti ti-folder" style="font-size:13px;vertical-align:-2px;color:var(--text3)"></i> ' + esc(d.pasta_nome || '(pasta)') + '</span>'
       : '<span class="cfg-pasta sem">sem pasta própria</span>';
+    const emp = EMPRESAS.find(e => e.id === d.empresa_id);
+    const resp = responsaveisDe(d.sigla);
+    const respTxt = resp.length
+      ? esc(resp[0].nome || resp[0].email) + (resp.length > 1 ? ' <span style="color:var(--text3)">+' + (resp.length - 1) + '</span>' : '')
+      : '<span style="color:var(--text3)">—</span>';
+
     h += '<tr><td>' + badge(d) + '</td>' +
          '<td>' + (d.nome ? esc(d.nome) : '<span style="color:var(--text3)">—</span>') + '</td>' +
          '<td>' + pasta + '</td>' +
+         '<td>' + (emp ? esc(emp.nome) : '<span style="color:var(--text3)">—</span>') + '</td>' +
+         '<td>' + respTxt + '</td>' +
          '<td><span class="cfg-uso">' + textoUso(d.sigla) + '</span></td>' +
          '<td style="text-align:right"><button class="cfg-mais" data-disc="' + d.id + '" aria-label="Ações">⋯</button></td></tr>';
   });
@@ -561,6 +572,8 @@ function menuDisciplina(botao, d) {
   const itens = [
     ['Editar nome e cor', () => modalEditar(d)],
     ['Trocar pasta', () => modalPasta(d)],
+    ['Definir empresa…', () => modalEmpresaDisciplina(d)],
+    ['Definir responsáveis…', () => modalResponsaveis(d)],
     ['Renomear sigla…', () => renomearDisciplina(d)],
     ['Mesclar com outra…', null, 'Sob demanda: será feito quando surgir uma disciplina duplicada de verdade.'],
     ['Desativar', () => confirmarDesativar(d), null, 'perigo'],
@@ -593,6 +606,87 @@ function confirmarDesativar(d) {
 function confirmarExcluir(d) {
   if (!confirm('Excluir ' + d.sigla + ' definitivamente?\n\nEla não está em uso em nenhum lugar do projeto.')) return;
   operar(() => rpc('cfg_excluir_disciplina', { p_id: d.id }), d.sigla + ' excluída.');
+}
+
+// Quem responde pela disciplina: a mesma informação da Equipe,
+// lida pelo outro lado (o vínculo de cada pessoa com o projeto).
+function responsaveisDe(sigla) {
+  return MEMBROS.filter(m => (m.disciplinas || []).includes(sigla));
+}
+
+function modalEmpresaDisciplina(d) {
+  const ativas = EMPRESAS.filter(e => e.ativa || e.id === d.empresa_id);
+  abrirModal('Empresa responsável por ' + d.sigla,
+    '<div class="pfield"><label>Empresa</label>' +
+      '<select id="de-emp" style="width:100%;padding:8px;font-family:var(--sans);font-size:13px;border:1px solid var(--border2);background:var(--bg)">' +
+      '<option value="">— sem empresa —</option>' +
+      ativas.map(e => '<option value="' + e.id + '"' + (e.id === d.empresa_id ? ' selected' : '') + '>' +
+                      esc(e.nome) + (e.ativa ? '' : ' (desativada)') + '</option>').join('') +
+      '</select></div>' +
+    '<button class="cfg-btn" id="de-nova" style="margin-bottom:8px">+ Cadastrar nova empresa</button>' +
+    '<div style="font-family:var(--mono);font-size:10px;color:var(--text3);line-height:1.5">' +
+    'O cadastro de empresas é global: a mesma empresa serve a todos os projetos.</div>',
+    'Salvar', () => {
+      operar(() => rpc('disc_empresa', { p_id: d.id, p_empresa: document.getElementById('de-emp').value || null }),
+             'Empresa de ' + d.sigla + ' atualizada.');
+    });
+
+  document.getElementById('de-nova').onclick = async () => {
+    const nome = (prompt('Nome da nova empresa:') || '').trim();
+    if (nome.length < 2) return;
+    try {
+      const id = await rpc('emp_criar', { p_nome: nome });
+      await rpc('disc_empresa', { p_id: d.id, p_empresa: id });
+      fecharModal();
+      await carregarTudo(); render();
+      toast('Empresa cadastrada e vinculada a ' + d.sigla + '.');
+    } catch (e) { alert(e.message); }
+  };
+}
+
+function modalResponsaveis(d) {
+  if (!MEMBROS.length) {
+    abrirModal('Responsáveis por ' + d.sigla,
+      '<div style="font-family:var(--sans);font-size:13px;color:var(--text2);line-height:1.6">' +
+      'Este projeto ainda não tem equipe. Adicione pessoas na aba <b>Equipe</b> primeiro.</div>', null, null);
+    return;
+  }
+  const escolhidos = new Set(responsaveisDe(d.sigla).map(m => m.usuario_id));
+  // quem é da mesma empresa da disciplina aparece primeiro
+  const emp = EMPRESAS.find(e => e.id === d.empresa_id);
+  const ordenados = MEMBROS.slice().sort((a, b) => {
+    const pa = (emp && a.empresa === emp.nome) ? 0 : 1;
+    const pb = (emp && b.empresa === emp.nome) ? 0 : 1;
+    return pa - pb || (a.nome || '').localeCompare(b.nome || '');
+  });
+
+  const corpo = abrirModal('Responsáveis por ' + d.sigla,
+    '<div class="pfield"><label>Quem responde</label><div id="dr-lista"></div></div>' +
+    '<div style="font-family:var(--mono);font-size:10px;color:var(--text3);line-height:1.5">' +
+    'É a mesma informação da aba Equipe: alterar aqui altera lá.</div>',
+    'Salvar', () => {
+      operar(() => rpc('disc_responsaveis', { p_id: d.id, p_usuarios: [...escolhidos] }),
+             'Responsáveis por ' + d.sigla + ' atualizados.');
+    });
+
+  const lista = corpo.querySelector('#dr-lista');
+  ordenados.forEach(m => {
+    const it = document.createElement('div');
+    it.className = 'cfg-linha-sec';
+    it.style.cursor = 'pointer';
+    const marca = document.createElement('input');
+    marca.type = 'checkbox'; marca.checked = escolhidos.has(m.usuario_id);
+    marca.onclick = (e) => e.stopPropagation();
+    marca.onchange = () => { marca.checked ? escolhidos.add(m.usuario_id) : escolhidos.delete(m.usuario_id); };
+    it.onclick = () => { marca.checked = !marca.checked; marca.onchange(); };
+    it.appendChild(marca);
+    it.insertAdjacentHTML('beforeend',
+      '<span style="flex:1">' + esc(m.nome || m.email) +
+      (m.empresa ? ' <span style="color:var(--text3)">· ' + esc(m.empresa) + '</span>' : '') +
+      (emp && m.empresa === emp.nome ? ' <span style="color:var(--acento-forte);font-size:10px">mesma empresa</span>' : '') +
+      '</span>');
+    lista.appendChild(it);
+  });
 }
 
 // ── PALETA (cores do catálogo, mais uma neutra) ──
