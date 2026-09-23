@@ -124,7 +124,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .empresa-qtd{font-family:var(--mono);font-size:10.5px;color:var(--text3);white-space:nowrap}
 .empresa-novo{display:flex;gap:8px;margin:14px 0 20px}
 .empresa-novo input{flex:1;max-width:320px;padding:8px 11px;font-family:var(--sans);font-size:13px;border:1px solid var(--border2);background:var(--bg);color:var(--text);outline:none}
-.user-empresa{display:flex;align-items:center;gap:8px;padding:8px 0 12px;border-bottom:1px solid var(--border);margin-bottom:10px}
+.user-empresa{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0 12px;border-bottom:1px solid var(--border);margin-bottom:10px}
 .user-empresa label{font-family:var(--sans);font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3)}
 .user-empresa select{padding:6px 9px;font-family:var(--sans);font-size:12.5px;border:1px solid var(--border2);background:var(--bg);color:var(--text)}
 .user-empresa-badge{font-family:var(--mono);font-size:10px;color:var(--text3);margin-left:8px}
@@ -446,6 +446,18 @@ async function ativarEmpresa(e, ativa) {
   } catch (err) { alert(err.message); }
 }
 
+// Corrige o nome de alguém. Útil agora que a empresa é campo próprio:
+// nomes no formato "Fulano (Empresa)" ficaram com a informação repetida.
+async function editarNomeUsuario(u) {
+  const nome = (prompt('Nome de ' + u.email + ':', u.nome || '') || '').trim();
+  if (!nome || nome === u.nome) return;
+  try {
+    await rpc('usr_editar_nome', { p_usuario: u.id, p_nome: nome });
+    await recarregarEmpresas();
+    toast('Nome atualizado.');
+  } catch (e) { alert(e.message); }
+}
+
 async function definirEmpresaUsuario(usuarioId, empresaId) {
   try {
     await rpc('emp_definir_usuario', { p_usuario: usuarioId, p_empresa: empresaId || null });
@@ -488,9 +500,20 @@ function renderUsersTab() {
     sel.onchange = () => definirEmpresaUsuario(u.id, sel.value);
     emp.innerHTML = '<label>Empresa</label>';
     emp.appendChild(sel);
+    const btnNome = document.createElement('button');
+    btnNome.className = 'icon-btn';
+    btnNome.textContent = 'Editar nome';
+    btnNome.style.marginLeft = 'auto';
+    btnNome.onclick = () => editarNomeUsuario(u);
+    emp.appendChild(btnNome);
     body.appendChild(emp);
     if (u.papel_global === 'admin') {
-      body.innerHTML = '<div class="no-access">Administradores globais têm acesso irrestrito a todos os projetos automaticamente.</div>';
+      // acrescenta o aviso — não substitui o conteúdo, que já tem
+      // o campo de empresa e o botão de editar nome
+      const aviso = document.createElement('div');
+      aviso.className = 'no-access';
+      aviso.textContent = 'Administradores globais têm acesso irrestrito a todos os projetos automaticamente.';
+      body.appendChild(aviso);
     } else {
       if (!accessRows.length) {
         const none = document.createElement('div'); none.className = 'no-access';
