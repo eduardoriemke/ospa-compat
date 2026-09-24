@@ -333,7 +333,7 @@ const ABAS = [
   ['disciplinas','Disciplinas', true],
   ['pavimentos','Pavimentos', true],
   ['equipe','Equipe', true],
-  ['dados','Dados gerais', false],
+  ['dados','Dados gerais', true],
   ['drive','Drive', false],
   ['backups','Backups', false]
 ];
@@ -472,6 +472,7 @@ function render() {
   const el = document.getElementById('cfg-corpo');
   el.innerHTML = ABA === 'disciplinas' ? htmlDisciplinas()
                : ABA === 'pavimentos'  ? htmlPavimentos()
+               : ABA === 'dados'       ? htmlDados()
                : htmlEquipe();
   ligarEventos();
 }
@@ -822,6 +823,49 @@ function modalAdicionar() {
   });
 }
 
+// ── DADOS GERAIS ──
+// Antes ficavam espalhados: nome e cliente na home, revisão e data no
+// editor, responsável e endereço em lugar nenhum. Agora, num lugar só.
+
+function campo(id, rotulo, valor, dica) {
+  return '<div class="pfield"><label>' + rotulo + '</label>' +
+         '<input id="' + id + '" value="' + esc(valor || '') + '">' +
+         (dica ? '<div style="font-family:var(--mono);font-size:9.5px;color:var(--text3);margin-top:3px">' + dica + '</div>' : '') +
+         '</div>';
+}
+
+function htmlDados() {
+  const p = PROJETO || {};
+  return '<div style="max-width:560px">' +
+    '<div class="pfield pfield-ro"><label>Código do projeto</label>' +
+      '<input value="' + esc(PROJ_ID) + '" disabled></div>' +
+    campo('dg-nome', 'Nome', p.nome) +
+    campo('dg-cliente', 'Cliente', p.cliente) +
+    campo('dg-endereco', 'Endereço', p.endereco) +
+    campo('dg-responsavel', 'Responsável técnico', p.responsavel, 'Nome e registro profissional, como deve sair no relatório') +
+    campo('dg-revisao', 'Revisão', p.revisao, 'Aparece no cabeçalho do relatório e na exportação') +
+    campo('dg-data', 'Data', p.data) +
+    '<div class="pfield"><label>Notas</label>' +
+      '<textarea id="dg-notas" style="min-height:90px">' + esc(p.notas || '') + '</textarea>' +
+      '<div style="font-family:var(--mono);font-size:9.5px;color:var(--text3);margin-top:3px">' +
+      'Aparecem na página inicial do projeto, para toda a equipe.</div></div>' +
+    '<div style="display:flex;gap:8px;margin-top:18px">' +
+      '<button class="cfg-btn pri" id="dg-salvar">Salvar</button>' +
+      '<button class="cfg-btn leve" id="dg-desfazer">Desfazer alterações</button>' +
+    '</div></div>';
+}
+
+function salvarDados() {
+  const v = id => document.getElementById(id).value;
+  if (v('dg-nome').trim().length < 2) { alert('O nome do projeto não pode ficar em branco.'); return; }
+  operar(() => rpc('proj_editar', {
+    p_projeto: PROJ_ID,
+    p_nome: v('dg-nome'), p_cliente: v('dg-cliente'), p_endereco: v('dg-endereco'),
+    p_responsavel: v('dg-responsavel'), p_notas: v('dg-notas'),
+    p_revisao: v('dg-revisao'), p_data: v('dg-data')
+  }), 'Dados do projeto atualizados.');
+}
+
 // ── EQUIPE ──
 // Quem participa do projeto, com que papel e por quais disciplinas.
 // A relação pessoa ↔ disciplina é a mesma que a tabela de disciplinas
@@ -1129,6 +1173,12 @@ function ligarEventos() {
   });
   const addP = document.getElementById('btn-add-pessoa');
   if (addP) addP.onclick = modalAdicionarPessoa;
+
+  // dados gerais
+  const btnDados = document.getElementById('dg-salvar');
+  if (btnDados) btnDados.onclick = salvarDados;
+  const btnDesfazer = document.getElementById('dg-desfazer');
+  if (btnDesfazer) btnDesfazer.onclick = () => render();
 }
 
 // Aviso antes de sair com a ordem dos pavimentos alterada e não salva

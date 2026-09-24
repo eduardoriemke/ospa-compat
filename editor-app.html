@@ -687,13 +687,12 @@ function renderHeader() {
       el.readOnly = true;
       el.style.pointerEvents = 'none';
       el.style.opacity = '0.6';
-      el.title = 'Editado na página inicial do projeto (Editar dados do projeto)';
+      el.title = 'Editado em Configurações do projeto → Dados gerais';
       return;
     }
     if (IS_EDITOR) {
       el.onblur = function() {
         META[key] = el.value.trim(); updatePrintHeader();
-        sbPatch('projetos','id',META.code,{revisao:META.rev,data:META.date||''});
       };
     } else {
       el.readOnly = true;
@@ -705,11 +704,11 @@ function renderHeader() {
   // existirem dois lugares gravando o mesmo campo. Aqui ficam apenas
   // visíveis, em modo de leitura.
   wireInput('hdr-project-input', 'project', 'NOME DO PROJETO', true);
-  wireInput('hdr-rev-input',     'rev',     'REVISÃO');
+  wireInput('hdr-rev-input',     'rev',     'REVISÃO', true);
   // Code = project ID (readonly)
   var codeEl = document.getElementById('hdr-code-input');
   if (codeEl) { codeEl.value = META.code || ''; codeEl.readOnly = true; codeEl.style.opacity='0.6'; }
-  wireInput('hdr-date-input',    'date',    'DATA');
+  wireInput('hdr-date-input',    'date',    'DATA', true);
   wireInput('hdr-client-input',  'client',  'CLIENTE', true);
   updatePrintHeader();
 }
@@ -841,7 +840,7 @@ function renderNotes() {
     // para não haver dois lugares gravando o mesmo campo.
     ta.readOnly = true;
     ta.style.opacity = '0.6';
-    ta.title = 'Editado na página inicial do projeto (Editar dados do projeto)';
+    ta.title = 'Editado em Configurações do projeto → Dados gerais';
     ta.oninput = () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
     setTimeout(() => { ta.style.height = 'auto'; ta.style.height = (ta.scrollHeight || 60) + 'px'; }, 0);
     wrap.appendChild(ta);
@@ -1334,7 +1333,7 @@ function makeFrow(label, key, val) {
 function saveMeta() {
   renderHeader();
   document.querySelectorAll('.drawer-body .btn-primary').forEach(b => { b.textContent='Salvo ✓'; setTimeout(()=>b.textContent='Salvar',1500); });
-  sbPatch('projetos','id',META.code,{revisao:META.rev,data:META.date||''});
+
 }
 
 function _snapImagesDB() {

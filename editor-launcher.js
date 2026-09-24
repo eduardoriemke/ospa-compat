@@ -12,7 +12,7 @@
 // O sidebar.js chama window.ospaOpenEditor(projetoId, papel).
 // Requer a função global api(method, table, body, qs), presente em todas as páginas.
 
-const EDITOR_APP_URL = 'editor-app.html?v=1';
+const EDITOR_APP_URL = 'editor-app.html?v=2';
 
 // Guarda o HTML do editor após a primeira busca, para abrir instantaneamente
 // nas vezes seguintes dentro da mesma página.
