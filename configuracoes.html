@@ -324,6 +324,7 @@ let USER_PROFILE = null, PROJETO = null, PROJ_ID = null;
 let DISC = [], USO_DISC = {}, PASTAS = [], CATALOGO = [];
 let PAV = [], USO_PAV = {};
 let MEMBROS = [], CANDIDATOS = [], EMPRESAS = [];
+let BACKUPS = [];
 let ABA = 'disciplinas';
 let ORDEM_EDITADA = null;       // pavimentos (de cima para baixo) enquanto você reordena
 let VER_INATIVAS = false, VER_INATIVOS = false, VER_MANTIDAS = false;
@@ -335,7 +336,7 @@ const ABAS = [
   ['equipe','Equipe', true],
   ['dados','Dados gerais', true],
   ['drive','Drive', false],
-  ['backups','Backups', false]
+  ['backups','Backups', true]
 ];
 
 // Chamada às funções do banco. Resposta vazia (funções sem retorno)
@@ -428,7 +429,7 @@ async function loadApp() {
 }
 
 async function carregarTudo() {
-  const [proj, disc, uso, pastas, cat, pav, usoPav, membros, candidatos, empresas] = await Promise.all([
+  const [proj, disc, uso, pastas, cat, pav, usoPav, membros, candidatos, empresas, backups] = await Promise.all([
     api('GET','projetos',null,'id=eq.'+encodeURIComponent(PROJ_ID)).then(r => r[0]),
     api('GET','disciplinas',null,'projeto_id=eq.'+encodeURIComponent(PROJ_ID)+'&order=sigla.asc'),
     rpc('cfg_uso_disciplinas', { p_projeto: PROJ_ID }),
@@ -438,7 +439,8 @@ async function carregarTudo() {
     rpc('cfg_uso_pavimentos', { p_projeto: PROJ_ID }),
     rpc('eq_membros',    { p_projeto: PROJ_ID }),
     rpc('eq_candidatos', { p_projeto: PROJ_ID }),
-    api('GET','empresas',null,'order=nome.asc')
+    api('GET','empresas',null,'order=nome.asc'),
+    rpc('bk_listar', { p_projeto: PROJ_ID }).catch(() => [])
   ]);
   PROJETO = proj;
   DISC = disc || [];
@@ -450,6 +452,7 @@ async function carregarTudo() {
   MEMBROS = membros || [];
   CANDIDATOS = candidatos || [];
   EMPRESAS = empresas || [];
+  BACKUPS = backups || [];
   ORDEM_EDITADA = null;
 }
 
@@ -473,6 +476,7 @@ function render() {
   el.innerHTML = ABA === 'disciplinas' ? htmlDisciplinas()
                : ABA === 'pavimentos'  ? htmlPavimentos()
                : ABA === 'dados'       ? htmlDados()
+               : ABA === 'backups'     ? htmlBackups()
                : htmlEquipe();
   ligarEventos();
 }
@@ -821,6 +825,58 @@ function modalAdicionar() {
       }), c.sigla + ' adicionada.');
     };
   });
+}
+
+// ── BACKUPS ──
+// Backups deste projeto. Restaurar um projeto EXCLUÍDO continua na
+// lista de projetos: não se faz de dentro de algo que não existe mais.
+
+function htmlBackups() {
+  let h = '<div class="cfg-barra">' +
+    '<span class="cfg-conta">' + BACKUPS.length + (BACKUPS.length === 1 ? ' backup' : ' backups') + '</span>' +
+    '<button class="cfg-btn pri" id="bk-novo">+ Criar backup agora</button></div>';
+
+  if (!BACKUPS.length) {
+    h += '<div style="font-family:var(--mono);font-size:11px;color:var(--text3);padding:14px;border:1px solid var(--border)">' +
+         'Nenhum backup ainda.</div>';
+  } else {
+    h += '<table class="cfg-tab"><thead><tr><th>Quando</th><th>Tipo</th><th>Descrição</th><th>Tamanho</th><th></th></tr></thead><tbody>';
+    BACKUPS.forEach(b => {
+      const d = new Date(b.created_at);
+      h += '<tr>' +
+        '<td>' + d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) +
+          '<div style="font-family:var(--mono);font-size:10px;color:var(--text3)">' + quando(b.created_at) + '</div></td>' +
+        '<td>' + esc((b.tipo || '').replace(/_/g, ' ')) + '</td>' +
+        '<td>' + esc(b.descricao || '—') + '</td>' +
+        '<td><span class="cfg-uso">' + (b.tamanho_mb != null ? b.tamanho_mb + ' MB' : '—') + '</span></td>' +
+        '<td style="text-align:right"><button class="cfg-mais" data-backup="' + b.id + '" aria-label="Ações">⋯</button></td>' +
+      '</tr>';
+    });
+    h += '</tbody></table>';
+  }
+
+  h += '<div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:12px;line-height:1.6">' +
+       'O backup guarda fichas, imagens, comentários, respostas e a configuração do projeto.<br>' +
+       'Ainda não cobre documentos, rodadas de análise nem vínculos de equipe.<br>' +
+       'Para recuperar um projeto já excluído, use a lista de projetos.</div>';
+  return h;
+}
+
+function menuBackup(botao, b) {
+  const d = new Date(b.created_at);
+  const rotulo = d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+  abrirMenu(botao, [
+    ['Restaurar este backup', () => {
+      if (!confirm('Restaurar o backup de ' + rotulo + '?\n\n' +
+                   'Todas as fichas, imagens, comentários e respostas atuais são substituídas pelas do backup.\n\n' +
+                   'Um backup do estado atual é criado antes, automaticamente.')) return;
+      operar(() => rpc('bk_restaurar', { p_id: b.id }), 'Projeto restaurado.');
+    }, null, 'perigo'],
+    ['Excluir este backup', () => {
+      if (!confirm('Excluir o backup de ' + rotulo + '?\n\nNão há como desfazer.')) return;
+      operar(() => rpc('bk_excluir', { p_id: b.id }), 'Backup excluído.');
+    }, null, 'perigo']
+  ]);
 }
 
 // ── DADOS GERAIS ──
@@ -1173,6 +1229,17 @@ function ligarEventos() {
   });
   const addP = document.getElementById('btn-add-pessoa');
   if (addP) addP.onclick = modalAdicionarPessoa;
+
+  // backups
+  q('[data-backup]').forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    menuBackup(b, BACKUPS.find(x => String(x.id) === b.dataset.backup));
+  });
+  const bkNovo = document.getElementById('bk-novo');
+  if (bkNovo) bkNovo.onclick = () => {
+    const desc = (prompt('Descrição do backup (opcional):', '') || '').trim();
+    operar(() => rpc('bk_criar', { p_projeto: PROJ_ID, p_desc: desc }), 'Backup criado.');
+  };
 
   // dados gerais
   const btnDados = document.getElementById('dg-salvar');

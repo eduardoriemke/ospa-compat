@@ -57,10 +57,10 @@ um HTML com o script embutido, mais arquivos compartilhados.
 8. **3C** — empresa e responsáveis na tabela de disciplinas
 9. **3D** — editar nome de usuário
 10. **4A** — dados gerais nas Configurações; home vira leitura; editor deixa de configurar
+11. **4B** — backups ganham aba no projeto; lista de projetos mostra só os de projetos excluídos
 
 ## Próximas etapas
 
-- **4B** — backups ganham aba no projeto; lista de projetos fica só com os de projetos excluídos
 - **5** — página inicial global: administração migra para lá
 - **6** — Apps Script lê a configuração do banco (um script para todos os projetos)
 - **Frente do projetista** — home como painel pessoal, avisos e indicadores

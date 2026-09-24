@@ -289,8 +289,12 @@ async function openBackups(){
   try{
     // Lista vem do banco já com o tamanho calculado — sem trazer o
     // conteúdo dos backups (que inclui todas as imagens em base64).
-    var bkps=await api("POST","rpc/listar_backups",{});
-    if(!bkps.length){list.innerHTML="<div style=\"font-family:var(--mono);font-size:11px;color:var(--text3);padding:8px\">Nenhum backup encontrado.</div>";return;}
+    // Backups de projetos que ainda existem ficam nas Configurações de
+    // cada um. Aqui, só o que não tem onde mais ser recuperado.
+    var todos=await api("POST","rpc/listar_backups",{});
+    var vivos={}; (PROJETOS||[]).forEach(function(p){ vivos[p.id]=1; });
+    var bkps=todos.filter(function(b){ return !vivos[b.projeto_id]; });
+    if(!bkps.length){list.innerHTML="<div style=\"font-family:var(--mono);font-size:11px;color:var(--text3);padding:8px\">Nenhum backup de projeto excluído. Os backups de projetos ativos estão nas Configurações de cada projeto.</div>";return;}
     list.innerHTML="";
     bkps.forEach(function(b){
       var d=new Date(b.created_at);
