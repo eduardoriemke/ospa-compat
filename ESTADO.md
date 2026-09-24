@@ -58,10 +58,12 @@ um HTML com o script embutido, mais arquivos compartilhados.
 9. **3D** — editar nome de usuário
 10. **4A** — dados gerais nas Configurações; home vira leitura; editor deixa de configurar
 11. **4B** — backups ganham aba no projeto; lista de projetos mostra só os de projetos excluídos
+12. **5** — lista de projetos vira o nível global: usa a sessão do usuário (não mais a chave
+    pública), criar/excluir projeto e backups de projetos excluídos exigem admin, e a
+    Administração sai da barra lateral e passa a ser alcançada por ali
 
 ## Próximas etapas
 
-- **5** — página inicial global: administração migra para lá
 - **6** — Apps Script lê a configuração do banco (um script para todos os projetos)
 - **Frente do projetista** — home como painel pessoal, avisos e indicadores
 - **Limpeza** — unificar login e funções de acesso (hoje copiados em 8 páginas);
@@ -69,8 +71,6 @@ um HTML com o script embutido, mais arquivos compartilhados.
 
 ## Pendências conhecidas
 
-- `index.html` conversa com o banco **com a chave pública**, não com a sessão.
-  Funciona porque o RLS está desligado; quebra no dia em que for ligado.
 - Mesclar disciplinas não foi implementado (não há duplicata real no projeto).
 - Uma disciplina tem **uma pasta só** no Drive.
 - Arquivos de gás moram na pasta do hidrossanitário e aparecem como HID.
