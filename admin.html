@@ -164,6 +164,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 <div class="toast" id="toast"></div>
 
 <script src="auth.js?v=2"></script>
+<script src="dados.js?v=1"></script>
 <script src="login.js?v=1"></script>
 <script src="disciplinas.js?v=1"></script>
 <script>
@@ -176,41 +177,6 @@ let EMPRESAS = [];   // cadastro global de empresas
 
 
 setLogos(OSPA_LOGO);
-
-async function api(method, table, body, qs) {
-  const url = '/rest/v1/' + table + (qs ? '?' + qs : '');
-  const r = await sbFetch(url, {
-    method,
-    headers: method !== 'GET' ? {'Prefer':'return=representation'} : {},
-    body: body ? JSON.stringify(body) : undefined
-  });
-  if (!r.ok) { const err = await r.json().catch(()=>({})); throw new Error(err.message || 'HTTP '+r.status); }
-  return method === 'DELETE' ? null : r.json();
-}
-// Chamada às funções do banco. Função sem retorno devolve corpo vazio,
-// que não pode ser lido como JSON.
-async function rpc(nome, args) {
-  const r = await sbFetch('/rest/v1/rpc/' + nome, { method:'POST', body: JSON.stringify(args || {}) });
-  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.message || 'HTTP '+r.status); }
-  const t = await r.text();
-  return t ? JSON.parse(t) : null;
-}
-
-// Busca TODAS as linhas de uma consulta, em páginas de 1000.
-// O Supabase limita cada consulta a 1000 linhas; sem isso, o excedente
-// simplesmente não chega — sem erro e sem aviso.
-async function apiTodos(table, qs) {
-  const PAGINA = 1000;
-  let resultado = [], offset = 0;
-  while (true) {
-    const lote = await api('GET', table, null, qs + '&limit=' + PAGINA + '&offset=' + offset);
-    resultado = resultado.concat(lote);
-    if (lote.length < PAGINA) break;
-    offset += PAGINA;
-  }
-  return resultado;
-}
-
 
 // Sessão (SESSION_KEY, save/load/clear, refreshSession,
 // tryRestoreSession, sbFetch) vive em auth.js — compartilhado.
@@ -256,8 +222,6 @@ async function loadApp() {
     setLoadingText('Erro: ' + e.message);
   }
 }
-function setLoadingText(t) { document.getElementById('loading-text').textContent = t; }
-
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   document.getElementById('tab-usuarios').style.display = name === 'usuarios' ? 'block' : 'none';

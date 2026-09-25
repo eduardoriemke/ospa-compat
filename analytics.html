@@ -155,6 +155,7 @@ svg text{font-family:var(--mono);fill:var(--text3);font-size:10px}
 <script src="sidebar.js?v=7"></script>
 <script src="editor-launcher.js?v=3"></script>
 <script src="auth.js?v=2"></script>
+<script src="dados.js?v=1"></script>
 <script src="login.js?v=1"></script>
 <script src="disciplinas.js?v=1"></script>
 <script>
@@ -177,27 +178,6 @@ let CONFLICTS = [];
 
 setLogos(OSPA_LOGO);
 
-async function api(method, table, body, qs){
-  const url = '/rest/v1/' + table + (qs ? '?' + qs : '');
-  const r = await sbFetch(url, { method, headers: method!=='GET' ? {'Prefer':'return=representation'} : {}, body: body ? JSON.stringify(body) : undefined });
-  if(!r.ok){ const err = await r.json().catch(()=>({})); throw new Error(err.message || 'HTTP ' + r.status); }
-  return method==='DELETE' ? null : r.json();
-}
-// Busca TODAS as linhas de uma consulta, em páginas de 1000.
-// O Supabase limita cada consulta a 1000 linhas; sem isso, o excedente
-// simplesmente não chega — sem erro e sem aviso.
-async function apiTodos(table, qs) {
-  const PAGINA = 1000;
-  let resultado = [], offset = 0;
-  while (true) {
-    const lote = await api('GET', table, null, qs + '&limit=' + PAGINA + '&offset=' + offset);
-    resultado = resultado.concat(lote);
-    if (lote.length < PAGINA) break;
-    offset += PAGINA;
-  }
-  return resultado;
-}
-
 function doLogout(){ SESSION=null; USER_PROFILE=null; clearSavedSession(); show('login'); }
 // Contrato usado pelo sidebar.js: o link "Sair" do menu chama window.ospaLogout()
 window.ospaLogout = doLogout;
@@ -209,8 +189,6 @@ function show(screen){
   const sb = document.getElementById('ospa-sidebar');
   if (sb) sb.style.display = (screen === 'login') ? 'none' : '';
 }
-function setLoadingText(t){ document.getElementById('loading-text').textContent = t; }
-
 // ══════════════════════════════════════════════════════
 // LOAD APP
 // ══════════════════════════════════════════════════════

@@ -126,6 +126,7 @@ body.restricted-coordinator .proj-header button{display:none!important}
 
 <div class="toast" id="toast"></div>
 <script src="auth.js?v=2"></script>
+<script src="dados.js?v=1"></script>
 <script src="login.js?v=1"></script>
 <script>
 // Sessão (SB_URL, SB_KEY, SB_AUTH, SESSION, SESSION_KEY, saveSession,
@@ -140,39 +141,6 @@ document.getElementById("loading-logo").src = LOGO;
 document.getElementById("projects-logo").src = LOGO;
 document.getElementById("login-logo").src = LOGO;
 document.getElementById("denied-logo").src = LOGO;
-
-
-// Fala com o banco COMO O USUÁRIO LOGADO (sbFetch usa o token da sessão).
-// Antes usava a chave pública, como se ninguém estivesse autenticado —
-// por isso as funções do banco não conseguiam conferir permissão aqui.
-async function api(method,table,body,qs){
-  var r;
-  try{
-    r = await sbFetch("/rest/v1/"+table+(qs?"?"+qs:""), {
-      method: method,
-      headers: method === "GET" ? {} : {"Prefer":"return=representation"},
-      body: body ? JSON.stringify(body) : undefined
-    });
-  } catch(e){ throw new Error("Falha de rede: "+e.message); }
-  if(!r.ok){var m;try{m=(await r.json()).message;}catch(_){m="HTTP "+r.status;}throw new Error(m);}
-  if (method === "DELETE") return null;
-  var t = await r.text();
-  return t ? JSON.parse(t) : null;
-}
-// Busca TODAS as linhas de uma consulta, em páginas de 1000.
-// O Supabase limita cada consulta a 1000 linhas; sem isso, o excedente
-// simplesmente não chega — sem erro e sem aviso.
-async function apiTodos(table, qs) {
-  const PAGINA = 1000;
-  let resultado = [], offset = 0;
-  while (true) {
-    const lote = await api('GET', table, null, qs + '&limit=' + PAGINA + '&offset=' + offset);
-    resultado = resultado.concat(lote);
-    if (lote.length < PAGINA) break;
-    offset += PAGINA;
-  }
-  return resultado;
-}
 
 
 function toast(msg){

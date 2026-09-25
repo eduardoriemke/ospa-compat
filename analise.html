@@ -188,6 +188,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 <script src="sidebar.js?v=7"></script>
 <script src="editor-launcher.js?v=3"></script>
 <script src="auth.js?v=2"></script>
+<script src="dados.js?v=1"></script>
 <script src="login.js?v=1"></script>
 <script src="disciplinas.js?v=1"></script>
 <script>
@@ -208,30 +209,6 @@ let RODADA_ABERTA = null;
 let LINHAS_ABERTA = []; // rodada_disciplinas da rodada aberta
 let CONFIG = { disciplines: [] };
 let ULTIMA_ANALISE = {}; // disciplina -> última linha concluída (qualquer rodada)
-
-// ── SUPABASE HELPERS (idêntico às demais páginas) ──
-async function api(method, table, body, qs, customHeaders) {
-  const url = '/rest/v1/' + table + (qs ? '?' + qs : '');
-  const r = await sbFetch(url, {
-    method,
-    headers: customHeaders || (method !== 'GET' ? {'Prefer':'return=representation'} : {}),
-    body: body ? JSON.stringify(body) : undefined
-  });
-  if (!r.ok) { const err = await r.json().catch(()=>({})); throw new Error(err.message || 'HTTP '+r.status); }
-  const minimal = customHeaders && customHeaders.Prefer && customHeaders.Prefer.indexOf('return=minimal') >= 0;
-  return (method === 'DELETE' || minimal) ? null : r.json();
-}
-async function apiTodos(table, qs) {
-  const PAGINA = 1000;
-  let resultado = []; let offset = 0;
-  while (true) {
-    const lote = await api('GET', table, null, qs + '&limit=' + PAGINA + '&offset=' + offset);
-    resultado = resultado.concat(lote);
-    if (lote.length < PAGINA) break;
-    offset += PAGINA;
-  }
-  return resultado;
-}
 
 setLogos(OSPA_LOGO);
 
@@ -261,8 +238,6 @@ function show(screen) {
   const sb = document.getElementById('ospa-sidebar');
   if (sb) sb.style.display = (screen === 'login' || screen === 'denied') ? 'none' : '';
 }
-function setLoadingText(t) { document.getElementById('loading-text').textContent = t; }
-
 // ── CARREGAR APP ──
 async function loadApp() {
   show('loading');

@@ -30,6 +30,10 @@ um HTML com o script embutido, mais arquivos compartilhados.
 | `sidebar.js` / `sidebar.css` | Navegação, ondas do topo, registro de acesso |
 | `disciplinas.js` | Cores das disciplinas, vindas do banco |
 | `tokens.css` | Cor de acento do sistema (ardósia `#5F7684`) |
+| `login.js` / `login.css` | Tela de entrada e o logo — compartilhados pelas 8 páginas |
+| `dados.js` | Acesso ao banco: `api`, `apiTodos`, `rpc`, `setLoadingText` |
+| `viewer-modelo.json` | Modelo do relatório exportado; buscado só na exportação |
+| `controle_documentos.js` | Apps Script da varredura do Drive (vive na planilha, não no repositório) |
 
 ## Convenções
 
@@ -58,16 +62,30 @@ um HTML com o script embutido, mais arquivos compartilhados.
 9. **3D** — editar nome de usuário
 10. **4A** — dados gerais nas Configurações; home vira leitura; editor deixa de configurar
 11. **4B** — backups ganham aba no projeto; lista de projetos mostra só os de projetos excluídos
+13. **6** — Apps Script lê a configuração do banco: um script para todos os projetos,
+    sem planilha; o mapa pasta → disciplina vem do cadastro; aba Drive nas Configurações,
+    com "Atualizar agora" (pedido registrado, atendido pelo gatilho)
 12. **5** — lista de projetos vira o nível global: usa a sessão do usuário (não mais a chave
     pública), criar/excluir projeto e backups de projetos excluídos exigem admin, e a
     Administração sai da barra lateral e passa a ser alcançada por ali
 
+## Como a varredura funciona hoje
+
+Gatilho de tempo a cada 10 minutos em `atualizarBase` (implantação "Teste" —
+o código salvo, não uma versão congelada). Ele só varre um projeto quando:
+alguém pediu pela tela, o projeto nunca foi varrido, ou passou de 1 hora
+(`INTERVALO_PADRAO_HORAS` no script). Fora isso, faz uma consulta e encerra.
+Cada varredura do Silva Jardim leva ~2 minutos; a conta tem 6 h de cota
+diária. Com vários projetos ativos, revisar esse intervalo.
+
 ## Próximas etapas
 
-- **6** — Apps Script lê a configuração do banco (um script para todos os projetos)
-- **Frente do projetista** — home como painel pessoal, avisos e indicadores
-- **Limpeza** — unificar login e funções de acesso (hoje copiados em 8 páginas);
-  separar o modelo de relatório do `editor-app.html` (278 KB)
+- **Frente do projetista** — home como painel pessoal: conflitos aguardando a pessoa,
+  novidades desde a última visita, avisos da coordenação; e a visão inversa para
+  quem coordena (quem está devendo resposta, há quanto tempo, por empresa).
+  Depende da estrutura das fases 3 e 6, já pronta.
+- **Limpeza** — feita: login, logo e acesso ao banco unificados; modelo do relatório
+  separado do editor (277 → 126 KB). As 8 páginas somam 304 KB (eram 389).
 
 ## Pendências conhecidas
 
@@ -77,6 +95,18 @@ um HTML com o script embutido, mais arquivos compartilhados.
 - Backup não cobre `documentos_projeto`, `rodadas_compatibilizacao`,
   `rodada_disciplinas` nem vínculos de usuário.
 - Troca de senha e recuperação por e-mail dependem de SMTP (parado na TI).
+- RLS continua desligado em todas as tabelas.
+- As telas nunca foram revisadas no celular.
+- Comentários e respostas guardam o nome de quem escreveu na época; renomear
+  um usuário não muda os registros antigos (decisão consciente).
+
+## O que NÃO unificar
+
+- `esc()` — o `analise.html` tem uma versão diferente, que escapa para texto de
+  código, não para HTML.
+- `show()` e `doLogout()` — dependem das telas e variáveis de cada página.
+- As cores fixas de disciplina no CSS de cada tela são RESERVA: valem se a
+  consulta ao banco falhar.
 
 ## Armadilhas já encontradas
 
@@ -87,3 +117,8 @@ um HTML com o script embutido, mais arquivos compartilhados.
 - **Verificação de sintaxe não pega variável inexistente.** Executar a página
   (navegador simulado) é o que pega.
 - O limite de 1000 linhas por consulta do Supabase exige paginação (`apiTodos`).
+- Dois arquivos compartilhados não podem declarar o mesmo nome: `const` repetido
+  em scripts clássicos quebra a página inteira (aconteceu com o logo, em
+  `sidebar.js` e `login.js`).
+- Código copiado diverge sozinho: ao unificar o login havia 5 versões de
+  `doLogin` e 6 de `api`, todas supostamente iguais.

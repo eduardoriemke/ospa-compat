@@ -198,6 +198,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 <script src="sidebar.js?v=7"></script>
 <script src="editor-launcher.js?v=3"></script>
 <script src="auth.js?v=2"></script>
+<script src="dados.js?v=1"></script>
 <script src="login.js?v=1"></script>
 <script src="disciplinas.js?v=1"></script>
 <script>
@@ -211,21 +212,6 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 document.body.dataset.projeto = new URLSearchParams(window.location.search).get('id') || '';
 
 setLogos(OSPA_LOGO);
-
-// ── SUPABASE HELPERS (idêntico às outras páginas) ──
-async function api(method, table, body, qs, customHeaders) {
-  const url = '/rest/v1/' + table + (qs ? '?' + qs : '');
-  const r = await sbFetch(url, {
-    method,
-    headers: customHeaders || (method !== 'GET' ? {'Prefer':'return=representation'} : {}),
-    body: body ? JSON.stringify(body) : undefined
-  });
-  if (!r.ok) {
-    const err = await r.json().catch(() => ({}));
-    throw new Error(err.message || 'HTTP ' + r.status);
-  }
-  return (method === 'DELETE' || (customHeaders && customHeaders.Prefer && customHeaders.Prefer.indexOf('return=minimal') >= 0)) ? null : r.json();
-}
 
 function doLogout() {
   SESSION = null; USER_PROFILE = null;
@@ -267,20 +253,6 @@ const ABAS = [
   ['drive','Drive', true],
   ['backups','Backups', true]
 ];
-
-// Chamada às funções do banco. Resposta vazia (funções sem retorno)
-// é tratada à parte, para não quebrar ao tentar ler JSON inexistente.
-async function rpc(nome, args) {
-  const r = await sbFetch('/rest/v1/rpc/' + nome, {
-    method: 'POST', body: JSON.stringify(args || {})
-  });
-  if (!r.ok) {
-    const e = await r.json().catch(() => ({}));
-    throw new Error(e.message || 'HTTP ' + r.status);
-  }
-  const t = await r.text();
-  return t ? JSON.parse(t) : null;
-}
 
 function toast(msg) {
   const el = document.getElementById('cfg-toast');
@@ -1278,10 +1250,6 @@ function show(screen) {
   });
   const sb = document.getElementById('ospa-sidebar');
   if (sb) sb.style.display = (screen === 'login') ? 'none' : '';
-}
-
-function setLoadingText(t) {
-  document.getElementById('loading-text').textContent = t;
 }
 
 (async () => {
