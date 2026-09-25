@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=IBM+Plex+Serif:wght@300;400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="tokens.css?v=1">
+<link rel="stylesheet" href="login.css?v=1">
 <style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#F8F8F8;--surface:#FFF;--surface2:#F6F5F3;--surface3:#E5E4E1;--border:#E5E4E1;--border2:#CCC8C4;--text:#191919;--text2:#727272;--text3:#B5B5B5;--pend:#7A5200;--resol:#1A6B48;--alert:#C42828;--sans:'Manrope',sans-serif;--serif:'IBM Plex Serif',serif;--mono:'IBM Plex Mono',monospace;}
 body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh}
@@ -61,18 +62,6 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .backup-meta{font-family:var(--mono);font-size:10px;color:var(--text2);margin-top:2px}
 .backup-time{font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:2px}
 /* ── LOGIN ── */
-#screen-login{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;font-family:var(--sans)}
-.login-box{background:var(--surface);border:1px solid var(--border);padding:40px;width:min(380px,100%)}
-.login-logo{height:32px;margin-bottom:28px;display:block}
-.login-title{font-family:var(--serif);font-size:18px;font-weight:300;color:var(--text);margin-bottom:6px}
-.login-sub{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:28px}
-.login-field{margin-bottom:14px}
-.login-field label{display:block;font-family:var(--sans);font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:5px}
-.login-field input{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 12px;font-family:var(--sans);font-size:13px;outline:none}
-.login-field input:focus{border-color:var(--text2)}
-.login-btn{width:100%;background:var(--text);color:var(--surface);border:none;padding:11px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;margin-top:6px;letter-spacing:0.04em}
-.login-btn:hover{opacity:0.85}
-.login-err{font-family:var(--mono);font-size:11px;color:var(--alert);margin-top:10px;display:none}
 #screen-denied{display:none;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:12px;text-align:center;padding:20px;font-family:var(--sans)}
 .denied-title{font-family:var(--serif);font-size:18px;font-weight:300;color:var(--text)}
 .denied-text{font-family:var(--mono);font-size:11px;color:var(--text3)}
@@ -86,28 +75,7 @@ body.restricted-coordinator .proj-header button{display:none!important}
 </style>
 </head>
 <body>
-<div id="screen-login">
-  <div class="login-box">
-    <img id="login-logo" class="login-logo" alt="OSPA">
-    <div class="login-title">Editor de Compatibilização</div>
-    <div class="login-sub">Acesso restrito</div>
-    <!-- onsubmit inline: garante que um erro de script NUNCA envie o
-     formulário pela URL, expondo email e senha no endereço. -->
-    <form id="login-form" autocomplete="on" onsubmit="return false" action="javascript:void(0)" method="post">
-      <div class="login-field">
-        <label>Email</label>
-        <input type="email" id="login-email" name="email" placeholder="seu@email.com" autocomplete="username">
-      </div>
-      <div class="login-field">
-        <label>Senha</label>
-        <input type="password" id="login-password" name="password" placeholder="••••••••" autocomplete="current-password">
-      </div>
-      <button type="submit" class="login-btn" id="login-btn">Entrar</button>
-      <div class="login-err" id="login-err"></div>
-      <div style="font-family:var(--mono,monospace);font-size:9.5px;line-height:1.5;color:var(--text3,#999);margin-top:14px">Os acessos ao sistema são registrados para fins de coordenação do projeto.</div>
-    </form>
-  </div>
-</div>
+<div id="screen-login" data-titulo="Relatórios de Compatibilização" data-sub="Acesso restrito"></div>
 <div id="screen-denied">
   <img id="denied-logo" class="login-logo" alt="OSPA">
   <div class="denied-title">Acesso restrito</div>
@@ -158,6 +126,7 @@ body.restricted-coordinator .proj-header button{display:none!important}
 
 <div class="toast" id="toast"></div>
 <script src="auth.js?v=2"></script>
+<script src="login.js?v=1"></script>
 <script>
 // Sessão (SB_URL, SB_KEY, SB_AUTH, SESSION, SESSION_KEY, saveSession,
 // loadSavedSession, clearSavedSession, refreshSession, tryRestoreSession
@@ -394,30 +363,6 @@ async function apiAuth(method, table, body, qs) {
   if (!r.ok) { const err = await r.json().catch(()=>({})); throw new Error(err.message || 'HTTP '+r.status); }
   return method === 'DELETE' ? null : r.json();
 }
-async function doLogin() {
-  const email = document.getElementById('login-email').value.trim();
-  const pass  = document.getElementById('login-password').value;
-  const err   = document.getElementById('login-err');
-  err.style.display = 'none';
-  if (!email || !pass) { err.textContent = 'Preencha email e senha.'; err.style.display = 'block'; return; }
-  document.getElementById('login-btn').textContent = 'Entrando…';
-  try {
-    const r = await fetch(SB_AUTH + '/token?grant_type=password', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json','apikey':SB_KEY},
-      body: JSON.stringify({email, password: pass})
-    });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error_description || data.msg || 'Credenciais inválidas');
-    SESSION = data;
-    saveSession(SESSION);
-    await afterLogin();
-  } catch(e) {
-    err.textContent = e.message; err.style.display = 'block';
-    document.getElementById('login-btn').textContent = 'Entrar';
-  }
-}
-
 function doLogout() {
   SESSION = null; ME = null; MY_PROJECT_IDS = null; PROJECT_ROLES = null;
   clearSavedSession();
@@ -478,8 +423,6 @@ function showDenied() {
   document.getElementById('screen-loading').style.display = 'none';
   document.getElementById('screen-denied').style.display = 'flex';
 }
-
-document.getElementById('login-form').addEventListener('submit', e => { e.preventDefault(); doLogin(); });
 
 (async () => {
   document.getElementById('screen-login').style.display = 'none';

@@ -12,7 +12,7 @@
 // O sidebar.js chama window.ospaOpenEditor(projetoId, papel).
 // Requer a função global api(method, table, body, qs), presente em todas as páginas.
 
-const EDITOR_APP_URL = 'editor-app.html?v=2';
+const EDITOR_APP_URL = 'editor-app.html?v=3';
 
 // Guarda o HTML do editor após a primeira busca, para abrir instantaneamente
 // nas vezes seguintes dentro da mesma página.
@@ -106,6 +106,11 @@ async function ospaOpenEditor(id, papel) {
     if (cfg.locais && cfg.locais.length) {
       html = html.replace(/locations:\s*\[[^\]]*\]/, 'locations: ' + JSON.stringify(cfg.locais));
     }
+
+    // O modelo do relatório mora fora do editor e é buscado só na
+    // exportação. Como o editor roda num endereço temporário (blob),
+    // caminhos relativos não resolvem: injetamos o endereço completo.
+    html = html.replace('/*__VIEWER_URL__*/', new URL('viewer-modelo.json', location.href).href);
 
     // Cores das disciplinas: entram por último no <head> e têm prioridade
     // sobre as fixas do editor. O relatório exportado herda daqui.

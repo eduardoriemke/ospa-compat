@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
 <link rel="stylesheet" href="sidebar.css?v=4">
 <link rel="stylesheet" href="tokens.css?v=1">
+<link rel="stylesheet" href="login.css?v=1">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -21,18 +22,6 @@
 body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh}
 
 /* ── LOGIN / LOADING (idêntico às demais páginas — mesma sessão) ── */
-#screen-login{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
-.login-box{background:var(--surface);border:1px solid var(--border);padding:40px;width:min(380px,100%)}
-.login-logo{height:32px;margin-bottom:28px;display:block}
-.login-title{font-family:var(--serif);font-size:18px;font-weight:300;color:var(--text);margin-bottom:6px}
-.login-sub{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:28px}
-.login-field{margin-bottom:14px}
-.login-field label{display:block;font-family:var(--sans);font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:5px}
-.login-field input{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 12px;font-family:var(--sans);font-size:13px;outline:none;transition:border-color 0.12s}
-.login-field input:focus{border-color:var(--text2)}
-.login-btn{width:100%;background:var(--text);color:var(--surface);border:none;padding:11px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;margin-top:6px;transition:opacity 0.1s;letter-spacing:0.04em}
-.login-btn:hover{opacity:0.85}
-.login-err{font-family:var(--mono);font-size:11px;color:var(--alert);margin-top:10px;display:none}
 
 #screen-loading{display:none;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:12px}
 .loading-logo{height:36px;opacity:0.6}
@@ -133,7 +122,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 @media (max-width: 720px) {
   .main{padding:14px 16px 60px}
-  .login-box{padding:28px 22px}
+  
   .rodada-hdr{flex-direction:column;align-items:flex-start}
 }
 </style>
@@ -145,28 +134,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <div class="shell-content">
 
 <!-- LOGIN -->
-<div id="screen-login">
-  <div class="login-box">
-    <img id="login-logo" class="login-logo" alt="OSPA">
-    <div class="login-title">Análise de Compatibilização</div>
-    <div class="login-sub">Acesso restrito</div>
-    <!-- onsubmit inline: garante que um erro de script NUNCA envie o
-     formulário pela URL, expondo email e senha no endereço. -->
-    <form id="login-form" autocomplete="on" onsubmit="return false" action="javascript:void(0)" method="post">
-      <div class="login-field">
-        <label>Email</label>
-        <input type="email" id="login-email" name="email" placeholder="seu@email.com" autocomplete="username">
-      </div>
-      <div class="login-field">
-        <label>Senha</label>
-        <input type="password" id="login-password" name="password" placeholder="••••••••" autocomplete="current-password">
-      </div>
-      <button type="submit" class="login-btn" id="login-btn">Entrar</button>
-      <div class="login-err" id="login-err"></div>
-      <div style="font-family:var(--mono,monospace);font-size:9.5px;line-height:1.5;color:var(--text3,#999);margin-top:14px">Os acessos ao sistema são registrados para fins de coordenação do projeto.</div>
-    </form>
-  </div>
-</div>
+<div id="screen-login" data-titulo="Análise de Compatibilização" data-sub="Acesso restrito"></div>
 
 <!-- LOADING -->
 <div id="screen-loading">
@@ -217,9 +185,10 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 <div class="toast" id="toast"></div>
 
-<script src="sidebar.js?v=6"></script>
+<script src="sidebar.js?v=7"></script>
 <script src="editor-launcher.js?v=3"></script>
 <script src="auth.js?v=2"></script>
+<script src="login.js?v=1"></script>
 <script src="disciplinas.js?v=1"></script>
 <script>
 // Sessão (SB_URL, SB_KEY, SB_AUTH, SESSION, SESSION_KEY, saveSession,
@@ -264,9 +233,7 @@ async function apiTodos(table, qs) {
   return resultado;
 }
 
-const LOGO_URL = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIyIiBoZWlnaHQ9IjkxIiB2aWV3Qm94PSIwIDAgMTIyIDkxIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBkPSJNMTkuOTUxOCAxMS41NjkzQzE5Ljk1MTggOC44NjE0NiAxNy43NTY2IDYuNjY2MzMgMTUuMDQ4OCA2LjY2NjMzSDExLjU2OTNDOC44NjE0NiA2LjY2NjMzIDYuNjY2MzMgOC44NjE0NiA2LjY2NjMzIDExLjU2OTNWNDYuNjgwOEM2LjY2NjMzIDQ5LjM4ODYgOC44NjE0NiA1MS41ODM3IDExLjU2OTMgNTEuNTgzN0gxNS4wNDg4QzE3Ljc1NjYgNTEuNTgzNyAxOS45NTE4IDQ5LjM4ODYgMTkuOTUxOCA0Ni42ODA4VjExLjU2OTNaIiBmaWxsPSIjMTkxOTE5Ii8+Cjwvc3ZnPgo=";
-function setLogos(src) { ['login-logo','loading-logo','app-logo','denied-logo'].forEach(id => { const el = document.getElementById(id); if (el) el.src = src; }); }
-setLogos(LOGO_URL);
+setLogos(OSPA_LOGO);
 
 function esc(s){return (s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n').replace(/\r/g,'');}
 
@@ -276,30 +243,6 @@ function toast(msg) {
   setTimeout(() => t.classList.remove('show'), 2200);
 }
 
-// ── SESSÃO (idêntico às demais páginas) ──
-async function doLogin() {
-  const email = document.getElementById('login-email').value.trim();
-  const pass  = document.getElementById('login-password').value;
-  if (!email || !pass) { showLoginErr('Preencha email e senha.'); return; }
-  document.getElementById('login-btn').textContent = 'Entrando…';
-  try {
-    const r = await fetch(SB_AUTH + '/token?grant_type=password', {
-      method: 'POST', headers: {'Content-Type':'application/json','apikey':SB_KEY},
-      body: JSON.stringify({email, password: pass})
-    });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error_description || data.msg || 'Credenciais inválidas');
-    SESSION = data; saveSession(SESSION);
-    await loadApp();
-  } catch(e) {
-    showLoginErr(e.message);
-    document.getElementById('login-btn').textContent = 'Entrar';
-  }
-}
-function showLoginErr(msg) {
-  const el = document.getElementById('login-err');
-  el.textContent = msg; el.style.display = 'block';
-}
 function doLogout() {
   SESSION = null; USER_PROFILE = null;
   clearSavedSession();
@@ -686,8 +629,7 @@ function fmtDate(s) {
   return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
 }
 
-// ── INIT ──
-document.getElementById('login-form').addEventListener('submit', e => { e.preventDefault(); doLogin(); });
+// ── INIT ── doLogin(); });
 
 (async () => {
   show('loading');

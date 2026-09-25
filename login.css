@@ -1,0 +1,20 @@
+/* ============================================================
+   OSPA Compat — login.css
+   Tela de entrada, compartilhada por todas as páginas.
+   Antes cada página tinha sua própria cópia — e elas já haviam
+   divergido entre si.
+   ============================================================ */
+
+#screen-login{display:none;min-height:100vh;align-items:center;justify-content:center;padding:20px}
+#screen-login.on{display:flex}
+.login-box{background:var(--surface);border:1px solid var(--border);padding:40px;width:min(380px,100%)}
+.login-btn:hover{opacity:0.85}
+.login-btn{width:100%;background:var(--text);color:var(--surface);border:none;padding:11px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;margin-top:6px;transition:opacity 0.1s;letter-spacing:0.04em}
+.login-err{font-family:var(--mono);font-size:11px;color:var(--alert);margin-top:10px;display:none}
+.login-field input:focus{border-color:var(--text2)}
+.login-field input{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 12px;font-family:var(--sans);font-size:13px;outline:none;transition:border-color 0.12s}
+.login-field label{display:block;font-family:var(--sans);font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:5px}
+.login-field{margin-bottom:14px}
+.login-logo{height:32px;margin-bottom:28px;display:block}
+.login-sub{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:28px}
+.login-title{font-family:var(--serif);font-size:18px;font-weight:300;color:var(--text);margin-bottom:6px}
