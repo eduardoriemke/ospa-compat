@@ -325,6 +325,7 @@ let DISC = [], USO_DISC = {}, PASTAS = [], CATALOGO = [];
 let PAV = [], USO_PAV = {};
 let MEMBROS = [], CANDIDATOS = [], EMPRESAS = [];
 let BACKUPS = [];
+let DRIVE = null;
 let ABA = 'disciplinas';
 let ORDEM_EDITADA = null;       // pavimentos (de cima para baixo) enquanto você reordena
 let VER_INATIVAS = false, VER_INATIVOS = false, VER_MANTIDAS = false;
@@ -335,7 +336,7 @@ const ABAS = [
   ['pavimentos','Pavimentos', true],
   ['equipe','Equipe', true],
   ['dados','Dados gerais', true],
-  ['drive','Drive', false],
+  ['drive','Drive', true],
   ['backups','Backups', true]
 ];
 
@@ -429,7 +430,7 @@ async function loadApp() {
 }
 
 async function carregarTudo() {
-  const [proj, disc, uso, pastas, cat, pav, usoPav, membros, candidatos, empresas, backups] = await Promise.all([
+  const [proj, disc, uso, pastas, cat, pav, usoPav, membros, candidatos, empresas, backups, drive] = await Promise.all([
     api('GET','projetos',null,'id=eq.'+encodeURIComponent(PROJ_ID)).then(r => r[0]),
     api('GET','disciplinas',null,'projeto_id=eq.'+encodeURIComponent(PROJ_ID)+'&order=sigla.asc'),
     rpc('cfg_uso_disciplinas', { p_projeto: PROJ_ID }),
@@ -440,7 +441,8 @@ async function carregarTudo() {
     rpc('eq_membros',    { p_projeto: PROJ_ID }),
     rpc('eq_candidatos', { p_projeto: PROJ_ID }),
     api('GET','empresas',null,'order=nome.asc'),
-    rpc('bk_listar', { p_projeto: PROJ_ID }).catch(() => [])
+    rpc('bk_listar', { p_projeto: PROJ_ID }).catch(() => []),
+    rpc('varredura_situacao', { p_projeto: PROJ_ID }).catch(() => [])
   ]);
   PROJETO = proj;
   DISC = disc || [];
@@ -453,6 +455,7 @@ async function carregarTudo() {
   CANDIDATOS = candidatos || [];
   EMPRESAS = empresas || [];
   BACKUPS = backups || [];
+  DRIVE = (drive && drive[0]) || null;
   ORDEM_EDITADA = null;
 }
 
@@ -477,6 +480,7 @@ function render() {
                : ABA === 'pavimentos'  ? htmlPavimentos()
                : ABA === 'dados'       ? htmlDados()
                : ABA === 'backups'     ? htmlBackups()
+               : ABA === 'drive'       ? htmlDrive()
                : htmlEquipe();
   ligarEventos();
 }
@@ -825,6 +829,82 @@ function modalAdicionar() {
       }), c.sigla + ' adicionada.');
     };
   });
+}
+
+// ── DRIVE ──
+// A varredura do Drive é feita pelo Apps Script, que lê esta
+// configuração no banco. O botão "Atualizar agora" não chama o Google
+// direto — registra um pedido que a próxima execução atende. Chamar
+// direto exigiria um endereço público do script, aberto a qualquer um.
+
+function htmlDrive() {
+  const d = DRIVE || {};
+  const ativa = !!d.ativa;
+
+  let estado;
+  if (!d.pasta_drive_id) {
+    estado = '<span style="color:var(--text3)">Pasta raiz ainda não definida</span>';
+  } else if (!ativa) {
+    estado = '<span style="color:var(--text3)">Varredura desligada</span>';
+  } else if (d.solicitada_em) {
+    estado = '<span style="color:var(--acento-forte)">Atualização pedida — a próxima execução atende</span>';
+  } else if (d.erro) {
+    estado = '<span style="color:var(--alert)">Última varredura: ' + esc(d.erro) + '</span>';
+  } else if (d.varrida_em) {
+    estado = 'Varrido ' + quando(d.varrida_em) + ' · ' + (d.documentos || 0) + ' documentos';
+  } else {
+    estado = 'Ativa, ainda sem nenhuma varredura';
+  }
+
+  return '<div style="max-width:620px">' +
+    '<div class="cfg-aviso" style="justify-content:space-between">' +
+      '<span class="cfg-aviso-txt">' + estado + '</span>' +
+      (ativa ? '<button class="cfg-btn" id="dv-atualizar">Atualizar agora</button>' : '') +
+    '</div>' +
+
+    '<div class="pfield"><label>Pasta raiz no Drive</label>' +
+      '<input id="dv-pasta" value="' + esc(d.pasta_drive_id || '') + '" placeholder="1wkkyP2Kns...">' +
+      '<div style="font-family:var(--mono);font-size:9.5px;color:var(--text3);margin-top:3px">' +
+      'O identificador da pasta, que aparece no endereço dela: drive.google.com/drive/folders/<b>ISTO</b>. ' +
+      'Cada pasta de primeiro nível dentro dela é tratada como uma disciplina.</div></div>' +
+
+    '<div class="pfield"><label style="display:flex;align-items:center;gap:8px">' +
+      '<input type="checkbox" id="dv-ativa" style="width:auto"' + (ativa ? ' checked' : '') + '>' +
+      'Varredura automática ligada</label>' +
+      '<div style="font-family:var(--mono);font-size:9.5px;color:var(--text3);margin-top:3px">' +
+      'Desligada, o projeto deixa de ser lido — os documentos já registrados permanecem.</div></div>' +
+
+    '<div class="pfield"><label>Etapas válidas</label>' +
+      '<input id="dv-etapas" value="' + esc((d.etapas_validas || []).join(', ')) + '">' +
+      '<div style="font-family:var(--mono);font-size:9.5px;color:var(--text3);margin-top:3px">' +
+      'Separadas por vírgula. É por elas que o sistema reconhece a etapa no nome do arquivo.</div></div>' +
+
+    '<div class="pfield"><label>Pastas a ignorar</label>' +
+      '<input id="dv-ignoradas" value="' + esc((d.pastas_ignoradas || []).join(', ')) + '">' +
+      '<div style="font-family:var(--mono);font-size:9.5px;color:var(--text3);margin-top:3px">' +
+      'Trechos de nome que marcam pasta obsoleta. Os arquivos continuam listados, mas não como vigentes.</div></div>' +
+
+    '<div style="display:flex;gap:8px;margin-top:18px">' +
+      '<button class="cfg-btn pri" id="dv-salvar">Salvar</button>' +
+      '<button class="cfg-btn leve" id="dv-desfazer">Desfazer alterações</button>' +
+    '</div></div>';
+}
+
+function listaDeTexto(valor) {
+  return valor.split(',').map(s => s.trim()).filter(Boolean);
+}
+
+function salvarDrive() {
+  const pasta = document.getElementById('dv-pasta').value.trim();
+  const ativa = document.getElementById('dv-ativa').checked;
+  if (ativa && !pasta) { alert('Informe a pasta raiz antes de ligar a varredura.'); return; }
+  operar(() => rpc('varredura_definir', {
+    p_projeto: PROJ_ID,
+    p_pasta_drive_id: pasta,
+    p_ativa: ativa,
+    p_etapas: listaDeTexto(document.getElementById('dv-etapas').value),
+    p_ignoradas: listaDeTexto(document.getElementById('dv-ignoradas').value).map(s => s.toLowerCase())
+  }), 'Configuração do Drive atualizada.');
 }
 
 // ── BACKUPS ──
@@ -1229,6 +1309,16 @@ function ligarEventos() {
   });
   const addP = document.getElementById('btn-add-pessoa');
   if (addP) addP.onclick = modalAdicionarPessoa;
+
+  // drive
+  const dvSalvar = document.getElementById('dv-salvar');
+  if (dvSalvar) dvSalvar.onclick = salvarDrive;
+  const dvDesfazer = document.getElementById('dv-desfazer');
+  if (dvDesfazer) dvDesfazer.onclick = () => render();
+  const dvAtualizar = document.getElementById('dv-atualizar');
+  if (dvAtualizar) dvAtualizar.onclick = () =>
+    operar(() => rpc('varredura_solicitar', { p_projeto: PROJ_ID }),
+           'Atualização pedida — sai na próxima execução, em poucos minutos.');
 
   // backups
   q('[data-backup]').forEach(b => b.onclick = e => {
