@@ -62,6 +62,9 @@ um HTML com o script embutido, mais arquivos compartilhados.
 9. **3D** — editar nome de usuário
 10. **4A** — dados gerais nas Configurações; home vira leitura; editor deixa de configurar
 11. **4B** — backups ganham aba no projeto; lista de projetos mostra só os de projetos excluídos
+14. **7** — painel na página inicial: o projetista vê o que deve responder e o que
+    chegou nos últimos 7 dias; a coordenação vê a equipe com sinal de situação,
+    pendências por disciplina, mais antiga e último acesso. Sem tabela nova.
 13. **6** — Apps Script lê a configuração do banco: um script para todos os projetos,
     sem planilha; o mapa pasta → disciplina vem do cadastro; aba Drive nas Configurações,
     com "Atualizar agora" (pedido registrado, atendido pelo gatilho)
@@ -80,10 +83,10 @@ diária. Com vários projetos ativos, revisar esse intervalo.
 
 ## Próximas etapas
 
-- **Frente do projetista** — home como painel pessoal: conflitos aguardando a pessoa,
-  novidades desde a última visita, avisos da coordenação; e a visão inversa para
-  quem coordena (quem está devendo resposta, há quanto tempo, por empresa).
-  Depende da estrutura das fases 3 e 6, já pronta.
+- **Avisos escritos com registro de leitura** — por ora, as notas do projeto fazem
+  esse papel. Só implementar se a falta aparecer no uso.
+- **Comentários dirigidos a uma pessoa** — hoje o comentário tem disciplina, não
+  destinatário. Mexeria no relatório, que é a peça mais usada; deixado de fora.
 - **Limpeza** — feita: login, logo e acesso ao banco unificados; modelo do relatório
   separado do editor (277 → 126 KB). As 8 páginas somam 304 KB (eram 389).
 
