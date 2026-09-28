@@ -183,6 +183,7 @@ setLogos(OSPA_LOGO);
 
 function doLogout() {
   SESSION = null; ME = null;
+  USERS = []; ACCESS = []; EMPRESAS = [];
   clearSavedSession();
   show('login');
   document.getElementById('login-password').value = '';
@@ -196,6 +197,9 @@ function show(screen) {
 }
 
 async function loadApp() {
+  // Trocar de usuário na mesma aba não recarrega a página: sem isto,
+  // os dados de quem saiu continuariam em memória.
+  USERS = []; ACCESS = []; EMPRESAS = [];
   show('loading'); setLoadingText('Verificando permissões…');
   try {
     const uid = SESSION.user.id;

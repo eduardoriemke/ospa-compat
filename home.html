@@ -180,6 +180,7 @@ setLogos(OSPA_LOGO);
 
 function doLogout() {
   SESSION = null; USER_PROFILE = null;
+  PAINEL = null; EQUIPE_PAINEL = []; EQUIPE = [];
   clearSavedSession();
   show('login');
   document.getElementById('login-password').value = '';
@@ -280,6 +281,11 @@ async function loadApp() {
     }
 
     renderSidebar();
+    // Trocar de usuário na mesma aba recarrega os dados, mas as variáveis
+    // da sessão anterior continuariam em memória. Limpar aqui evita que a
+    // tabela encontre dados de quem saiu.
+    PAINEL = null; EQUIPE_PAINEL = [];
+
     // Painel: pendências desta pessoa (e da equipe, para a coordenação)
     PAINEL = await rpc('painel_pessoal', { p_projeto: projId }).then(r => (r && r[0]) || null).catch(() => null);
     if (USER_PROFILE && (USER_PROFILE.papel === 'coordenador' || USER_PROFILE.papel === 'admin')) {
@@ -402,7 +408,12 @@ function renderEquipe() {
 
   // Para a coordenação, a mesma tabela ganha três colunas e um sinal
   // que resume a linha. Para os demais, segue como era.
-  const comPainel = EQUIPE_PAINEL.length > 0;
+  // Duas condições, não uma: o papel de quem está olhando E a presença
+  // dos dados. Assim, mesmo que a consulta retornasse algo por engano,
+  // a tela não mostra pendências nem acessos a quem não coordena.
+  const podeVerEquipe = USER_PROFILE &&
+    (USER_PROFILE.papel === 'coordenador' || USER_PROFILE.papel === 'admin');
+  const comPainel = podeVerEquipe && EQUIPE_PAINEL.length > 0;
   const porId = {};
   EQUIPE_PAINEL.forEach(m => { porId[m.usuario_id] = m; });
 

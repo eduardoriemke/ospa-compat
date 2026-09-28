@@ -332,7 +332,7 @@ async function apiAuth(method, table, body, qs) {
   return method === 'DELETE' ? null : r.json();
 }
 function doLogout() {
-  SESSION = null; ME = null; MY_PROJECT_IDS = null; PROJECT_ROLES = null;
+  SESSION = null; ME = null; MY_PROJECT_IDS = null; PROJECT_ROLES = null; PROJETOS = [];
   clearSavedSession();
   document.getElementById('screen-loading').style.display = 'none';
   document.getElementById('screen-projects').style.display = 'none';
@@ -344,6 +344,9 @@ function doLogout() {
 }
 
 async function afterLogin() {
+  // Trocar de usuário na mesma aba não recarrega a página: sem isto,
+  // a lista de projetos de quem saiu continuaria em memória.
+  PROJETOS = [];
   document.getElementById('screen-login').style.display = 'none';
   document.getElementById('screen-loading').style.display = 'flex';
   const lt = document.querySelector('#screen-loading .loading-text');

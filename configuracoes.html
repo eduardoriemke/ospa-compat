@@ -215,6 +215,7 @@ setLogos(OSPA_LOGO);
 
 function doLogout() {
   SESSION = null; USER_PROFILE = null;
+  MEMBROS = []; CANDIDATOS = []; EMPRESAS = []; BACKUPS = []; DRIVE = null; DISC = []; PAV = [];
   clearSavedSession();
   show('login');
   document.getElementById('login-password').value = '';
@@ -281,6 +282,9 @@ async function operar(fn, sucesso) {
 
 // ── CARREGAMENTO ──
 async function loadApp() {
+  // Trocar de usuário na mesma aba não recarrega a página: sem isto,
+  // os dados de quem saiu continuariam em memória.
+  MEMBROS = []; CANDIDATOS = []; EMPRESAS = []; BACKUPS = []; DRIVE = null; DISC = []; PAV = [];
   show('loading');
   setLoadingText('Identificando usuário…');
   const _params = new URLSearchParams(window.location.search);

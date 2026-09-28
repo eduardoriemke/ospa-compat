@@ -123,5 +123,10 @@ diária. Com vários projetos ativos, revisar esse intervalo.
 - Dois arquivos compartilhados não podem declarar o mesmo nome: `const` repetido
   em scripts clássicos quebra a página inteira (aconteceu com o logo, em
   `sidebar.js` e `login.js`).
+- **Trocar de usuário na mesma aba não recarrega a página**: as variáveis da
+  sessão anterior continuam em memória. Todo dado sensível carregado por sessão
+  precisa ser limpo no início do carregamento E na saída — foi assim que o painel
+  da equipe apareceu para um projetista, mesmo com a consulta corretamente
+  bloqueada no banco.
 - Código copiado diverge sozinho: ao unificar o login havia 5 versões de
   `doLogin` e 6 de `api`, todas supostamente iguais.
