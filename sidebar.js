@@ -112,12 +112,19 @@ function ospaRenderSidebar() {
       </a>
       <nav class="sidebar-nav">${navHtml}</nav>
       <div class="sidebar-footer">
+        <a href="#" class="nav-link" id="ospa-senha-link"><i class="ti ti-key" aria-hidden="true"></i>Trocar senha</a>
         <a href="#" class="nav-link" id="ospa-logout-link"><i class="ti ti-logout" aria-hidden="true"></i>Sair</a>
       </div>
     </div>
   `;
 
   // Contrato: cada página que inclui o sidebar define window.ospaLogout = suaFuncaoDeLogout
+  const linkSenha = document.getElementById('ospa-senha-link');
+  if (linkSenha) linkSenha.addEventListener('click', function (e) {
+    e.preventDefault();
+    if (typeof ospaTrocarSenha === 'function') ospaTrocarSenha();
+  });
+
   const logoutLink = document.getElementById('ospa-logout-link');
   if (logoutLink) {
     logoutLink.addEventListener('click', e => {

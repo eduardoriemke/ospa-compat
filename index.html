@@ -82,6 +82,7 @@ body.restricted-coordinator .proj-header button{display:none!important}
   <div class="denied-text">Você não tem permissão de edição em nenhum projeto.</div>
   <button class="login-btn" style="width:auto;padding:8px 20px" onclick="doLogout()">Sair</button>
 </div>
+<button class="logout-corner" id="btn-senha" style="display:none;right:110px" onclick="ospaTrocarSenha()">Senha</button>
 <button class="logout-corner" id="logout-corner" style="display:none" onclick="doLogout()">Sair</button>
 <div id="screen-loading">
   <img id="loading-logo" class="loading-logo" alt="OSPA">
@@ -127,7 +128,7 @@ body.restricted-coordinator .proj-header button{display:none!important}
 <div class="toast" id="toast"></div>
 <script src="auth.js?v=2"></script>
 <script src="dados.js?v=1"></script>
-<script src="login.js?v=1"></script>
+<script src="login.js?v=2"></script>
 <script>
 // Sessão (SB_URL, SB_KEY, SB_AUTH, SESSION, SESSION_KEY, saveSession,
 // loadSavedSession, clearSavedSession, refreshSession, tryRestoreSession
@@ -337,7 +338,8 @@ function doLogout() {
   document.getElementById('screen-loading').style.display = 'none';
   document.getElementById('screen-projects').style.display = 'none';
   document.getElementById('screen-denied').style.display = 'none';
-  document.getElementById('logout-corner').style.display = 'none';
+  document.getElementById('btn-senha').style.display = 'block';
+    document.getElementById('logout-corner').style.display = 'none';
   document.getElementById('screen-login').style.display = 'flex';
   document.getElementById('login-password').value = '';
   document.getElementById('login-btn').textContent = 'Entrar';
@@ -376,6 +378,7 @@ async function afterLogin() {
       access.forEach(a => { PROJECT_ROLES[a.projeto_id] = a.papel; });
     }
 
+    document.getElementById('btn-senha').style.display = 'block';
     document.getElementById('logout-corner').style.display = 'block';
     if (MY_PROJECT_IDS !== null) {
       document.body.classList.add('restricted-coordinator');

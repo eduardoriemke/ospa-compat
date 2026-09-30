@@ -107,3 +107,38 @@ async function doLogin() {
 
 document.addEventListener('DOMContentLoaded', montarLogin);
 montarLogin();   // se o script já roda com a página montada, não espera
+
+
+/* ── TROCAR A PRÓPRIA SENHA ──
+   Usa o caminho oficial do Supabase (PUT /auth/v1/user), que exige
+   estar logado e NÃO depende de envio de e-mail. É por isso que esta
+   parte funciona mesmo com o SMTP ainda pendente.
+
+   Recuperar senha esquecida, sem estar logado, é que precisa do e-mail. */
+
+function ospaTrocarSenha() {
+  if (typeof SESSION === 'undefined' || !SESSION) { alert('Entre no sistema primeiro.'); return; }
+
+  const nova = prompt('Nova senha (mínimo 8 caracteres):');
+  if (nova === null) return;
+  if (!nova || nova.length < 8) { alert('A senha precisa ter ao menos 8 caracteres.'); return; }
+  const conf = prompt('Repita a nova senha:');
+  if (conf === null) return;
+  if (conf !== nova) { alert('As senhas não conferem.'); return; }
+
+  fetch(SB_AUTH + '/user', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer ' + SESSION.access_token
+    },
+    body: JSON.stringify({ password: nova })
+  }).then(async function (r) {
+    if (!r.ok) {
+      const e = await r.json().catch(function(){ return {}; });
+      throw new Error(e.msg || e.message || 'Não foi possível trocar a senha.');
+    }
+    alert('Senha alterada. Ela já vale para os próximos acessos.');
+  }).catch(function (e) { alert(e.message); });
+}

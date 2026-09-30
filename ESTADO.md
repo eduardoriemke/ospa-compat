@@ -62,6 +62,9 @@ um HTML com o script embutido, mais arquivos compartilhados.
 9. **3D** — editar nome de usuário
 10. **4A** — dados gerais nas Configurações; home vira leitura; editor deixa de configurar
 11. **4B** — backups ganham aba no projeto; lista de projetos mostra só os de projetos excluídos
+15. **8** — contas criadas pela plataforma: o admin informa nome e e-mail, o sistema
+    cria a conta e mostra uma senha temporária uma única vez; redefinir senha de
+    alguém e trocar a própria também saíram do painel do Supabase
 14. **7** — painel na página inicial: o projetista vê o que deve responder e o que
     chegou nos últimos 7 dias; a coordenação vê a equipe com sinal de situação,
     pendências por disciplina, mais antiga e último acesso. Sem tabela nova.
@@ -97,7 +100,10 @@ diária. Com vários projetos ativos, revisar esse intervalo.
 - Arquivos de gás moram na pasta do hidrossanitário e aparecem como HID.
 - Backup não cobre `documentos_projeto`, `rodadas_compatibilizacao`,
   `rodada_disciplinas` nem vínculos de usuário.
-- Troca de senha e recuperação por e-mail dependem de SMTP (parado na TI).
+- Só a recuperação de senha esquecida (sem estar logado) ainda depende de SMTP.
+- `usr_criar` e `usr_redefinir_senha` escrevem nas tabelas internas de autenticação
+  do Supabase. Se a estrutura mudar numa atualização, falham com erro claro; a saída
+  temporária é criar pelo painel.
 - RLS continua desligado em todas as tabelas.
 - As telas nunca foram revisadas no celular.
 - Comentários e respostas guardam o nome de quem escreveu na época; renomear

@@ -147,6 +147,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     <div class="header-title"><span class="header-eyebrow">OSPA Compat</span>Administração</div>
     <span class="user-name" id="user-name-badge"></span>
     <a class="logout-btn" href="index.html" style="text-decoration:none">← Projetos</a>
+<button class="logout-btn" id="btn-senha" onclick="ospaTrocarSenha()">Senha</button>
     <button class="logout-btn" onclick="doLogout()">Sair</button>
   </div>
   <div class="tabs">
@@ -165,7 +166,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 <script src="auth.js?v=2"></script>
 <script src="dados.js?v=1"></script>
-<script src="login.js?v=1"></script>
+<script src="login.js?v=2"></script>
 <script src="disciplinas.js?v=1"></script>
 <script>
 
@@ -379,6 +380,11 @@ function renderUsersTab() {
     btnNome.style.marginLeft = 'auto';
     btnNome.onclick = () => editarNomeUsuario(u);
     emp.appendChild(btnNome);
+    const btnSenha = document.createElement('button');
+    btnSenha.className = 'icon-btn';
+    btnSenha.textContent = 'Nova senha';
+    btnSenha.onclick = () => redefinirSenha(u);
+    emp.appendChild(btnSenha);
     body.appendChild(emp);
     if (u.papel_global === 'admin') {
       // acrescenta o aviso — não substitui o conteúdo, que já tem
@@ -441,44 +447,64 @@ function renderAddAccessForm(u) {
 // ── NEW USER TAB ──
 function renderNewUserTab() {
   const el = document.getElementById('tab-novo');
-  el.innerHTML = '';
-  const box = document.createElement('div'); box.className = 'new-user-box';
-  box.innerHTML =
-    '<div class="section-title">Vincular usuário existente do Supabase Auth</div>' +
-    '<div class="form-row">' +
-      '<input type="text" id="new-uuid" placeholder="UUID do usuário (Supabase Auth)">' +
-    '</div>' +
-    '<div class="form-row">' +
-      '<input type="text" id="new-nome" placeholder="Nome completo">' +
-      '<input type="email" id="new-email" placeholder="Email">' +
+  el.innerHTML =
+    '<div class="new-user-box">' +
+      '<div class="section-title">Criar conta de acesso</div>' +
+      '<div class="form-row">' +
+        '<input type="text" id="new-nome" placeholder="Nome completo">' +
+        '<input type="email" id="new-email" placeholder="Email">' +
+      '</div>' +
+      '<button class="primary-btn" id="btn-criar-conta">Criar conta</button>' +
+      '<div class="help-text">O sistema cria a conta e gera uma senha temporária, ' +
+        'mostrada uma única vez para você repassar. Depois, vincule a pessoa ao projeto ' +
+        'em <b>Configurações → Equipe</b>.</div>' +
+      '<div id="senha-nova" style="display:none"></div>' +
     '</div>';
-  const btn = document.createElement('button'); btn.className = 'primary-btn'; btn.textContent = 'Cadastrar';
-  btn.onclick = createUser;
-  box.appendChild(btn);
-  const help = document.createElement('div'); help.className = 'help-text';
-  help.innerHTML = 'Para criar a conta (email + senha), use o painel do Supabase em <b>Authentication → Users → Add user</b> (marque "Auto Confirm User"). Copie o UUID gerado e cole acima para vincular ao sistema. Depois de cadastrado, vá até a aba <b>Usuários</b> para conceder acesso a projetos específicos.';
-  box.appendChild(help);
-  el.appendChild(box);
+  document.getElementById('btn-criar-conta').onclick = criarConta;
 }
 
-async function createUser() {
-  const uuid  = document.getElementById('new-uuid').value.trim();
+// Mostra a senha uma vez. Ela não é gravada em lugar nenhum — nem aqui,
+// nem no pedido: é gerada no servidor e volta só nesta resposta.
+function mostrarSenha(caixa, nome, senha) {
+  caixa.style.display = 'block';
+  caixa.innerHTML =
+    '<div style="margin-top:16px;padding:14px 16px;border:1px solid var(--acento-borda);background:var(--acento-fundo)">' +
+      '<div style="font-family:var(--sans);font-size:12.5px;color:var(--acento-forte)">Conta pronta para <b>' + esc(nome) + '</b></div>' +
+      '<div style="font-family:var(--mono);font-size:18px;letter-spacing:0.06em;color:var(--text);margin:10px 0;user-select:all">' + esc(senha) + '</div>' +
+      '<button class="icon-btn" id="copiar-senha">Copiar</button>' +
+      '<div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:8px;line-height:1.5">' +
+        'Esta senha aparece só agora. Repasse por um canal seguro — e peça que a pessoa ' +
+        'a troque no primeiro acesso, pelo botão <b>Senha</b> no topo do sistema.</div>' +
+    '</div>';
+  const btn = document.getElementById('copiar-senha');
+  btn.onclick = () => {
+    navigator.clipboard.writeText(senha).then(() => { btn.textContent = 'Copiada'; }, () => {});
+  };
+}
+
+async function criarConta() {
   const nome  = document.getElementById('new-nome').value.trim();
   const email = document.getElementById('new-email').value.trim();
-  if (!uuid || !nome || !email) { toast('Preencha todos os campos.'); return; }
-  const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!uuidRe.test(uuid)) { toast('UUID inválido.'); return; }
+  if (nome.length < 2 || !email) { toast('Preencha nome e email.'); return; }
   try {
-    const res = await api('POST','usuarios',{id:uuid, nome, email});
-    USERS.push(res[0]);
-    USERS.sort((a,b) => a.nome.localeCompare(b.nome));
-    toast('Usuário cadastrado');
-    document.getElementById('new-uuid').value = '';
+    const r = await rpc('usr_criar', { p_nome: nome, p_email: email });
+    const criado = Array.isArray(r) ? r[0] : r;
     document.getElementById('new-nome').value = '';
     document.getElementById('new-email').value = '';
-    renderUsersTab();
-    switchTab('usuarios');
-  } catch(e) { toast('Erro: '+e.message); }
+    mostrarSenha(document.getElementById('senha-nova'), nome, criado.senha);
+    await recarregarEmpresas();   // recarrega usuários e empresas
+    toast('Conta criada.');
+  } catch (e) { alert(e.message); }
+}
+
+async function redefinirSenha(u) {
+  if (!confirm('Gerar uma nova senha para ' + (u.nome || u.email) + '?\n\n' +
+               'A senha atual deixa de funcionar imediatamente.')) return;
+  try {
+    const senha = await rpc('usr_redefinir_senha', { p_usuario: u.id });
+    switchTab('novo');
+    mostrarSenha(document.getElementById('senha-nova'), u.nome || u.email, senha);
+  } catch (e) { alert(e.message); }
 }
 
 // ── UTILS ──
