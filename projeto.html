@@ -304,7 +304,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 <div class="toast" id="toast"></div>
 
-<script src="sidebar.js?v=8"></script>
+<script src="sidebar.js?v=9"></script>
 <script src="editor-launcher.js?v=3"></script>
 <script src="auth.js?v=2"></script>
 <script src="dados.js?v=1"></script>
@@ -478,6 +478,9 @@ function renderHeader() {
   document.body.dataset.userName = USER_PROFILE.nome || '';
   document.body.dataset.userRole = USER_PROFILE.papel || 'projetista';
   document.body.dataset.projeto = PROJETO.id || '';
+  // Tipo do projeto: decide quais abas a sidebar mostra (um acompanhamento
+  // não tem a parte de conflitos). Na ausência, compatibilização.
+  document.body.dataset.projetoTipo = (PROJETO && PROJETO.tipo) || 'compatibilizacao';
   document.body.dataset.userDisciplinas = (USER_PROFILE.disciplinas || []).join(',');
   if (typeof ospaRenderSidebar === 'function') ospaRenderSidebar();
 }
@@ -779,7 +782,7 @@ function renderDiscStatusBlock(c) {
 
     const ds = existing.find(x => x.disciplina === d);
     const canEdit = USER_PROFILE.disciplinas.includes(d) ||
-                    ['admin','coordenador'].includes(USER_PROFILE.papel);
+                    ospaPode(USER_PROFILE.papel, 'moderar');
 
     if (canEdit) {
       const sel = document.createElement('select'); sel.className = 'disc-status-select';
@@ -843,7 +846,7 @@ function renderProjSection(c) {
     comments.forEach(cm => {
       const item = document.createElement('div'); item.className = 'comment-item';
       const isAuthor = cm.usuario_id === USER_PROFILE.id;
-      const isModerator = ['admin','coordenador'].includes(USER_PROFILE.papel);
+      const isModerator = ospaPode(USER_PROFILE.papel, 'moderar');
       const header = document.createElement('div'); header.className = 'comment-header';
       header.innerHTML =
         '<span class="comment-author">'+esc(cm.usuario_nome)+'</span>' +

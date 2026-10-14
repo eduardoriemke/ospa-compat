@@ -40,6 +40,13 @@ um HTML com o script embutido, mais arquivos compartilhados.
 - **Toda operação que altera configuração passa por função no banco** (`cfg_*`,
   `eq_*`, `emp_*`, `disc_*`, `proj_*`), que confere a permissão no servidor.
   A tela nunca é a única proteção.
+- **Permissão na tela se pergunta por capacidade, não por papel:**
+  `ospaPode(papel, 'moderar')`, nunca `papel === 'coordenador'`. A tabela
+  papel → capacidades mora só no `sidebar.js`. Papel desconhecido não recebe
+  nada. (Antes eram doze condições escritas à mão em seis páginas; foi assim
+  que o painel da equipe acabou visível para um projetista.)
+- **O tipo do projeto só muda o que aparece**, nunca onde o dado mora — assim
+  um projeto troca de tipo sem migração.
 - **Desativar é o padrão; excluir só quando nada referencia.** Operações em
   cascata criam backup automático antes.
 - **Espelhamento:** as operações de disciplinas e pavimentos atualizam também
@@ -74,6 +81,43 @@ um HTML com o script embutido, mais arquivos compartilhados.
 12. **5** — lista de projetos vira o nível global: usa a sessão do usuário (não mais a chave
     pública), criar/excluir projeto e backups de projetos excluídos exigem admin, e a
     Administração sai da barra lateral e passa a ser alcançada por ali
+16. **9** — capacidades em vez de papéis nas telas; **tipo de projeto**
+    (compatibilização / acompanhamento) decidindo quais abas aparecem
+
+## Papéis e capacidades
+
+| | configurar | fichas | moderar | ver equipe | análise | "no servidor" |
+|---|---|---|---|---|---|---|
+| admin (global) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| coordenador | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| projetista | — | — | — | — | — | — |
+
+**Dois papéis de projeto, e é decisão, não falta de desenho.** Chegou a ser
+desenhado e implementado um terceiro — "coordenador externo", que criaria
+fichas sem entrar nas Configurações, para um arquiteto de fora do escritório —
+e foi removido antes de entrar em uso: dar ao projetista o poder de criar
+apontamentos resolve o mesmo caso sem papel novo. Quem é de fora participa como
+projetista; a coordenação é sempre da casa. Se um dia a necessidade voltar
+(alguém de fora que feche apontamentos de outros e acompanhe quem está
+devendo), o papel volta mexendo na tabela de capacidades — era para isso que
+ela serve.
+
+Os direitos sobre um apontamento virão da **relação**, não do papel: autor
+edita e fecha o seu, destinatário responde e marca como resolvido, coordenação
+mexe em qualquer um. É o que permite o projetista participar sem papel novo.
+
+## Tipo de projeto
+
+`projetos.tipo`: `compatibilizacao` (padrão, tudo aparece) ou `acompanhamento`
+(sem Relatório, Documentos, Monitor, Análise e Editor). Trocado na aba Dados
+gerais, por `proj_tipo()`. A sidebar lê de `body.dataset.projetoTipo`, que cada
+página preenche a partir da linha do projeto; na ausência assume
+compatibilização — esconder aba é apresentação, e cada tela continua conferindo
+permissão por si.
+
+**Hoje um projeto de acompanhamento é quase vazio:** só Página inicial (e
+Configurações, para a coordenação). Ele só fica útil com a página de
+Apontamentos — próxima etapa.
 
 ## Como a varredura funciona hoje
 
@@ -86,10 +130,39 @@ diária. Com vários projetos ativos, revisar esse intervalo.
 
 ## Próximas etapas
 
+- **Apontamentos** (decidido, não implementado) — tabela e página novas, em
+  TODOS os tipos de projeto, e **qualquer projetista cria**. Objeto diferente
+  da ficha de conflito: a ficha
+  nasce da análise da coordenação, de cima para baixo, com disciplinas
+  cruzadas, grau e status por disciplina; o apontamento nasce de quem está
+  trabalhando, tem autor e destinatário e se resolve na conversa. Por isso
+  tabela própria — enfiar os dois na mesma faria a ficha carregar campos que
+  não usa e o apontamento herdar a máquina de status por disciplina.
+  Decidido com o Eduardo: destinatário é **a coordenação ou uma disciplina**
+  (não uma pessoa — evita o apontamento órfão quando alguém sai do projeto);
+  **veem o autor, o destinatário e a coordenação**, e a restrição tem que estar
+  na função do banco, não na tela; aparece nas pendências do painel pessoal e
+  como ponto no ícone da sidebar (mesmo mecanismo do "arquivo novo"), senão o
+  canal apodrece; e a coordenação pode **promover apontamento a ficha**,
+  copiando o conteúdo e guardando a origem — é o que faz a função valer também
+  na compatibilização, onde hoje o que o projetista percebe só chega por
+  WhatsApp.
+  Junto vai a numeração no servidor: o código da ficha (`C-NN`) é calculado no
+  navegador a partir da lista carregada, o que duplica número se duas pessoas
+  criarem ao mesmo tempo.
+- **Bilíngue PT/EN** (decidido, não implementado) — há projeto real em inglês a
+  caminho: coordenação do escritório, e um arquiteto americano participando
+  como projetista, que levanta e responde apontamentos. O caro é
+  extrair os ~700 textos de dentro do código para uma lista de chaves; essa
+  lista é dado puro e serve a qualquer framework depois, então o trabalho não
+  se perde na migração. Escopo menor primeiro: o que o projetista de fora
+  enxerga (login, sidebar, página inicial, apontamentos) — Configurações e
+  Administração podem seguir em português. A página de Apontamentos deve
+  nascer já com o mecanismo de idioma, para não ser traduzida duas vezes.
+  Vocabulário segue o **tipo** do projeto (conflito / apontamento), não cada
+  projeto.
 - **Avisos escritos com registro de leitura** — por ora, as notas do projeto fazem
   esse papel. Só implementar se a falta aparecer no uso.
-- **Comentários dirigidos a uma pessoa** — hoje o comentário tem disciplina, não
-  destinatário. Mexeria no relatório, que é a peça mais usada; deixado de fora.
 - **Limpeza** — feita: login, logo e acesso ao banco unificados; modelo do relatório
   separado do editor (277 → 126 KB). As 8 páginas somam 304 KB (eram 389).
 
@@ -136,3 +209,17 @@ diária. Com vários projetos ativos, revisar esse intervalo.
   bloqueada no banco.
 - Código copiado diverge sozinho: ao unificar o login havia 5 versões de
   `doLogin` e 6 de `api`, todas supostamente iguais.
+- **Tela e banco têm que concordar sobre quem pode o quê.** No papel externo
+  que acabou descartado, a tela liberava o painel da equipe e o banco recusava
+  (`painel_equipe` exigia permissão de *configurar*) — e como a chamada tem
+  `.catch(() => [])`, a tabela apareceria vazia, sem erro e sem explicação. Ao
+  dar uma capacidade nova a um papel, conferir qual função do banco atende
+  aquela tela.
+- **Ideia nova pode dissolver um requisito já aprovado.** O papel externo foi
+  pedido, desenhado e construído; a ideia dos apontamentos, que veio depois,
+  tornou o papel desnecessário — e isso só apareceu quando o Eduardo perguntou.
+  Quando o desenho muda no meio, revisitar o que já foi combinado antes de
+  seguir implementando.
+- Arquivo compartilhado com `</script>` dentro de um comentário não pode ser
+  embutido num `<script>` para teste — encerra o bloco antes da hora. O
+  navegador simulado busca os arquivos de um servidor local (`nav/abrir.js`).

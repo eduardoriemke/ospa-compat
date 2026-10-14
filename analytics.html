@@ -152,7 +152,7 @@ svg text{font-family:var(--mono);fill:var(--text3);font-size:10px}
   </div>
 </div>
 
-<script src="sidebar.js?v=8"></script>
+<script src="sidebar.js?v=9"></script>
 <script src="editor-launcher.js?v=3"></script>
 <script src="auth.js?v=2"></script>
 <script src="dados.js?v=1"></script>
@@ -238,6 +238,9 @@ async function loadApp(){
     document.body.dataset.userName = USER_PROFILE.nome || '';
     document.body.dataset.userRole = USER_PROFILE.papel || 'projetista';
     document.body.dataset.projeto = PROJETO.id || '';
+    // Tipo do projeto: decide quais abas a sidebar mostra (um acompanhamento
+    // não tem a parte de conflitos). Na ausência, compatibilização.
+    document.body.dataset.projetoTipo = (PROJETO && PROJETO.tipo) || 'compatibilizacao';
     document.body.dataset.userDisciplinas = (USER_PROFILE.disciplinas || []).join(',');
     if (typeof ospaRenderSidebar === 'function') ospaRenderSidebar();
 

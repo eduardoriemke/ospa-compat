@@ -195,7 +195,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   </div>
 </div>
 
-<script src="sidebar.js?v=8"></script>
+<script src="sidebar.js?v=9"></script>
 <script src="editor-launcher.js?v=3"></script>
 <script src="auth.js?v=2"></script>
 <script src="dados.js?v=1"></script>
@@ -311,7 +311,7 @@ async function loadApp() {
     }
 
     // A configuração é da coordenação (o banco também confere isso)
-    if (USER_PROFILE.papel !== 'admin' && USER_PROFILE.papel !== 'coordenador') {
+    if (!ospaPode(USER_PROFILE.papel, 'configurar')) {
       setLoadingText('As configurações do projeto são acessíveis apenas à coordenação.');
       return;
     }
@@ -324,6 +324,9 @@ async function loadApp() {
     document.body.dataset.userName = USER_PROFILE.nome || '';
     document.body.dataset.userRole = USER_PROFILE.papel || 'projetista';
     document.body.dataset.projeto = PROJ_ID;
+    // Tipo do projeto: decide quais abas a sidebar mostra (um acompanhamento
+    // não tem a parte de conflitos). Na ausência, compatibilização.
+    document.body.dataset.projetoTipo = (PROJETO && PROJETO.tipo) || 'compatibilizacao';
     document.body.dataset.userDisciplinas = (USER_PROFILE.disciplinas || []).join(',');
     if (typeof ospaRenderSidebar === 'function') ospaRenderSidebar();
     render();
@@ -874,11 +877,44 @@ function campo(id, rotulo, valor, dica) {
          '</div>';
 }
 
+// O tipo decide o que o sistema mostra neste projeto. Fica aqui em cima,
+// antes dos dados, porque é a escolha que muda a cara das outras telas —
+// e tem salvamento próprio, separado do Salvar dos campos de texto:
+// trocar o tipo redesenha a navegação, então é melhor ser um ato
+// deliberado do que um efeito colateral de salvar o endereço.
+const OSPA_TIPOS_PROJETO = [
+  ['compatibilizacao', 'Compatibilização',
+   'Fichas de conflito entre disciplinas, documentos do Drive, monitor e análise.'],
+  ['acompanhamento', 'Acompanhamento',
+   'Sem a parte de conflitos: serve para coordenar e registrar apontamentos.']
+];
+
+function htmlTipo() {
+  const atual = (PROJETO && PROJETO.tipo) || 'compatibilizacao';
+  return '<div class="pfield"><label>Tipo de projeto</label>' +
+    '<select id="dg-tipo" style="width:100%;padding:8px;font-family:var(--sans);font-size:13px;border:1px solid var(--border2);background:var(--bg)">' +
+    OSPA_TIPOS_PROJETO.map(([v, rot]) =>
+      '<option value="' + v + '"' + (atual === v ? ' selected' : '') + '>' + rot + '</option>').join('') +
+    '</select>' +
+    '<div style="font-family:var(--mono);font-size:9.5px;color:var(--text3);margin-top:3px">' +
+    esc((OSPA_TIPOS_PROJETO.find(t => t[0] === atual) || ['', '', ''])[2]) +
+    ' Nenhum dado é apagado ao trocar: só muda o que aparece.</div></div>';
+}
+
+function salvarTipo() {
+  const novo = document.getElementById('dg-tipo').value;
+  const atual = (PROJETO && PROJETO.tipo) || 'compatibilizacao';
+  if (novo === atual) return;
+  operar(() => rpc('proj_tipo', { p_projeto: PROJ_ID, p_tipo: novo }),
+         'Tipo do projeto alterado. A navegação é redesenhada ao recarregar.');
+}
+
 function htmlDados() {
   const p = PROJETO || {};
   return '<div style="max-width:560px">' +
     '<div class="pfield pfield-ro"><label>Código do projeto</label>' +
       '<input value="' + esc(PROJ_ID) + '" disabled></div>' +
+    htmlTipo() +
     campo('dg-nome', 'Nome', p.nome) +
     campo('dg-cliente', 'Cliente', p.cliente) +
     campo('dg-endereco', 'Endereço', p.endereco) +
@@ -948,8 +984,9 @@ function htmlEquipe() {
         '<div style="font-family:var(--mono);font-size:10px;color:var(--text3)">' + esc(m.email || '') + '</div></td>' +
       '<td>' + (m.empresa ? esc(m.empresa) : '<span style="color:var(--text3)">—</span>') + '</td>' +
       '<td><select class="cfg-papel" data-papel="' + m.usuario_id + '">' +
-        ['coordenador','projetista'].map(p =>
-          '<option value="' + p + '"' + (m.papel === p ? ' selected' : '') + '>' + p + '</option>').join('') +
+        OSPA_PAPEIS_EQUIPE.map(p =>
+          '<option value="' + p + '"' + (m.papel === p ? ' selected' : '') + '>' +
+          esc(ospaRotuloPapel(p)) + '</option>').join('') +
       '</select></td>' +
       '<td>' + chips + '</td>' +
       '<td><span class="cfg-uso">' + quando(m.ultimo_acesso) + '</span></td>' +
@@ -1021,7 +1058,9 @@ function modalAdicionarPessoa() {
       '</select></div>' +
     '<div class="pfield"><label>Papel</label>' +
       '<select id="ap-papel" style="width:100%;padding:8px;font-family:var(--sans);font-size:13px;border:1px solid var(--border2);background:var(--bg)">' +
-      '<option value="projetista">projetista</option><option value="coordenador">coordenador</option></select></div>',
+      OSPA_PAPEIS_EQUIPE.map(p =>
+        '<option value="' + p + '">' + esc(ospaRotuloPapel(p)) + '</option>').join('') +
+      '</select></div>',
     'Adicionar', () => {
       operar(() => rpc('eq_adicionar', {
         p_projeto: PROJ_ID,
@@ -1240,6 +1279,8 @@ function ligarEventos() {
   if (btnDados) btnDados.onclick = salvarDados;
   const btnDesfazer = document.getElementById('dg-desfazer');
   if (btnDesfazer) btnDesfazer.onclick = () => render();
+  const selTipo = document.getElementById('dg-tipo');
+  if (selTipo) selTipo.onchange = salvarTipo;
 }
 
 // Aviso antes de sair com a ordem dos pavimentos alterada e não salva

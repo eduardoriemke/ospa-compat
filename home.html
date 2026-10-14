@@ -155,7 +155,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   </div>
 </div>
 
-<script src="sidebar.js?v=8"></script>
+<script src="sidebar.js?v=9"></script>
 <script src="editor-launcher.js?v=3"></script>
 <script src="auth.js?v=2"></script>
 <script src="dados.js?v=1"></script>
@@ -268,14 +268,14 @@ async function loadApp() {
           disciplinas: a.disciplinas || []
         };
       }).sort((a, b) => {
-        // Coordenadores primeiro, depois ordem alfabética
-        const ordem = { coordenador: 0, projetista: 1 };
-        const d = (ordem[a.papel] ?? 9) - (ordem[b.papel] ?? 9);
+        // Quem coordena primeiro, depois ordem alfabética
+        const ordem = p => OSPA_PAPEIS_COORDENACAO.includes(p) ? 0 : 1;
+        const d = ordem(a.papel) - ordem(b.papel);
         return d !== 0 ? d : a.nome.localeCompare(b.nome, 'pt-BR');
       });
 
       COORDENADOR_NOME = EQUIPE
-        .filter(p => p.papel === 'coordenador')
+        .filter(p => OSPA_PAPEIS_COORDENACAO.includes(p.papel))
         .map(p => p.nome)
         .join(', ');
     }
@@ -288,7 +288,7 @@ async function loadApp() {
 
     // Painel: pendências desta pessoa (e da equipe, para a coordenação)
     PAINEL = await rpc('painel_pessoal', { p_projeto: projId }).then(r => (r && r[0]) || null).catch(() => null);
-    if (USER_PROFILE && (USER_PROFILE.papel === 'coordenador' || USER_PROFILE.papel === 'admin')) {
+    if (USER_PROFILE && ospaPode(USER_PROFILE.papel, 'ver_equipe')) {
       EQUIPE_PAINEL = await rpc('painel_equipe', { p_projeto: projId }).catch(() => []);
     }
 
@@ -308,6 +308,9 @@ function renderSidebar() {
   document.body.dataset.userName = USER_PROFILE.nome || '';
   document.body.dataset.userRole = USER_PROFILE.papel || 'projetista';
   document.body.dataset.projeto = PROJETO.id || '';
+  // Tipo do projeto: decide quais abas a sidebar mostra (um acompanhamento
+  // não tem a parte de conflitos). Na ausência, compatibilização.
+  document.body.dataset.projetoTipo = (PROJETO && PROJETO.tipo) || 'compatibilizacao';
   document.body.dataset.userDisciplinas = (USER_PROFILE.disciplinas || []).join(',');
   if (typeof ospaRenderSidebar === 'function') ospaRenderSidebar();
 }
@@ -411,8 +414,7 @@ function renderEquipe() {
   // Duas condições, não uma: o papel de quem está olhando E a presença
   // dos dados. Assim, mesmo que a consulta retornasse algo por engano,
   // a tela não mostra pendências nem acessos a quem não coordena.
-  const podeVerEquipe = USER_PROFILE &&
-    (USER_PROFILE.papel === 'coordenador' || USER_PROFILE.papel === 'admin');
+  const podeVerEquipe = !!USER_PROFILE && ospaPode(USER_PROFILE.papel, 'ver_equipe');
   const comPainel = podeVerEquipe && EQUIPE_PAINEL.length > 0;
   const porId = {};
   EQUIPE_PAINEL.forEach(m => { porId[m.usuario_id] = m; });
@@ -427,7 +429,8 @@ function renderEquipe() {
           '<span class="d-tag d-'+esc(d)+'">'+esc(d)+
           (pend[d] ? ' <span class="pend">'+pend[d]+'</span>' : '')+'</span>').join(' ') + '</div>'
       : '<span style="color:var(--text3)">—</span>';
-    const coordBadge = p.papel === 'coordenador' ? ' <span class="papel-badge p-coordenador">Coordenador</span>' : '';
+    const coordBadge = OSPA_PAPEIS_COORDENACAO.includes(p.papel)
+      ? ' <span class="papel-badge p-coordenador">' + esc(ospaRotuloPapel(p.papel)) + '</span>' : '';
 
     let extras = '';
     let sinal = '';

@@ -411,9 +411,14 @@ function renderUsersTab() {
 function renderAccessRow(u, a) {
   const proj = PROJECTS.find(p => p.id === a.projeto_id);
   const row = document.createElement('div'); row.className = 'proj-access-row';
+  // Esta tela não carrega o sidebar.js, onde mora a lista oficial de papéis.
+  // Então o crachá sai do próprio valor: um papel inesperado aparece legível
+  // em vez de sem estilo nenhum.
+  const papel = a.papel || '';
+  const papelClasse = papel.indexOf('coordenador') === 0 ? 'p-coordenador' : 'p-projetista';
   row.innerHTML =
     '<span class="proj-access-name">'+esc(proj ? proj.nome : a.projeto_id)+'</span>' +
-    '<span class="papel-badge p-'+a.papel+'">'+a.papel+'</span>';
+    '<span class="papel-badge '+papelClasse+'">'+esc(papel.replace(/_/g, ' '))+'</span>';
   const tags = document.createElement('div'); tags.className = 'disc-tags-inline';
   (a.disciplinas||[]).forEach(d => {
     const t = document.createElement('span'); t.className = 'd-tag d-'+d; t.textContent = d;

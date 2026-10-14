@@ -358,7 +358,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   </div>
 </div>
 
-<script src="sidebar.js?v=8"></script>
+<script src="sidebar.js?v=9"></script>
 <script src="editor-launcher.js?v=3"></script>
 <script src="auth.js?v=2"></script>
 <script src="dados.js?v=1"></script>
@@ -514,6 +514,9 @@ function renderHeader() {
   document.body.dataset.userName = USER_PROFILE.nome || '';
   document.body.dataset.userRole = USER_PROFILE.papel || 'projetista';
   document.body.dataset.projeto = PROJETO.id || '';
+  // Tipo do projeto: decide quais abas a sidebar mostra (um acompanhamento
+  // não tem a parte de conflitos). Na ausência, compatibilização.
+  document.body.dataset.projetoTipo = (PROJETO && PROJETO.tipo) || 'compatibilizacao';
   document.body.dataset.userDisciplinas = (USER_PROFILE.disciplinas || []).join(',');
   if (typeof ospaRenderSidebar === 'function') ospaRenderSidebar();
 }
@@ -1404,7 +1407,7 @@ function renderDocs() {
 // O controle "atualizado no servidor" é interno da coordenação —
 // projetistas não veem essa parte do cabeçalho.
 function podeVerServidor() {
-  return USER_PROFILE && (USER_PROFILE.papel === 'admin' || USER_PROFILE.papel === 'coordenador');
+  return !!USER_PROFILE && ospaPode(USER_PROFILE.papel, 'ver_servidor');
 }
 
 // O cabeçalho do grupo é também a linha de resumo da disciplina:

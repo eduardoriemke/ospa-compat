@@ -7,21 +7,98 @@
 
 // O logo vem do login.js, carregado em todas as páginas.
 
+/* ============================================================
+   QUEM PODE O QUÊ
+
+   Antes, cada tela perguntava "é coordenador ou admin?" com a
+   condição escrita à mão — doze lugares, em seis páginas. Uma
+   dessas doze ficou errada e o painel da equipe apareceu para um
+   projetista; com a regra espalhada assim, o erro é questão de
+   tempo, não de descuido.
+
+   Agora a pergunta é outra. Em vez de "qual é o papel dele?", cada
+   tela pergunta "ele pode moderar?", "ele pode configurar?". A
+   resposta mora só aqui, nesta tabela, que dá para conferir de
+   olho — e mudar o que um papel alcança é mexer em uma linha.
+
+   As capacidades:
+     configurar   Configurações do projeto — disciplinas, pavimentos,
+                  equipe, dados gerais, Drive, backups
+     fichas       abrir o Editor e criar/editar/publicar fichas
+     moderar      resolver ficha, mexer no status das disciplinas,
+                  editar e apagar comentário de outra pessoa
+     ver_equipe   painel da equipe: último acesso, o que cada um deve
+     analise      a página Análise
+     ver_servidor "atualizado no servidor" — interno do escritório
+
+   O papel vem do banco (projeto_usuarios_v2.papel) e é sempre por
+   projeto; "admin" é global e tem tudo. Papel desconhecido não
+   recebe nada: um valor estranho fecha a porta, não abre.
+
+   São dois papéis de projeto, e é de propósito. Chegou-se a
+   desenhar um terceiro — um coordenador de fora do escritório, que
+   criaria fichas sem entrar nas Configurações — e ele foi
+   descartado: dar ao projetista o poder de criar apontamentos
+   resolve o mesmo caso sem papel novo. Quem é de fora participa
+   como projetista; a coordenação é sempre da casa.
+   ============================================================ */
+
+const OSPA_CAPACIDADES = {
+  admin:       ['configurar','fichas','moderar','ver_equipe','analise','ver_servidor'],
+  coordenador: ['configurar','fichas','moderar','ver_equipe','analise','ver_servidor'],
+  projetista:  []
+};
+
+const OSPA_PAPEL_ROTULO = {
+  admin:       'Admin',
+  coordenador: 'Coordenador',
+  projetista:  'Projetista'
+};
+
+// Papéis que coordenam o projeto — para rótulo e ordenação, não para permissão.
+const OSPA_PAPEIS_COORDENACAO = ['admin','coordenador'];
+
+// Papéis que se pode atribuir a alguém dentro de um projeto, na ordem em que
+// aparecem nos seletores das Configurações. "admin" não entra: é global, vem
+// do cadastro de usuários, não do projeto. O banco confere a mesma lista.
+const OSPA_PAPEIS_EQUIPE = ['projetista','coordenador'];
+
+// O papel entra explícito, sempre: quem chama já tem o perfil em mão,
+// e assim esta função não depende de nenhuma variável global que possa
+// ter sobrado de outra sessão.
+function ospaPode(papel, acao) {
+  const lista = OSPA_CAPACIDADES[papel];
+  return !!lista && lista.indexOf(acao) !== -1;
+}
+
+function ospaRotuloPapel(papel) {
+  return OSPA_PAPEL_ROTULO[papel] || papel || '';
+}
+
+// Tipo do projeto: "compatibilizacao" (o padrão, tudo aparece) ou
+// "acompanhamento" (sem a parte de conflitos). A página informa pelo
+// body; na ausência, assume compatibilização — esconder aba é só
+// apresentação, e cada tela continua conferindo permissão por si.
+function ospaTipoProjeto() {
+  return document.body.dataset.projetoTipo || 'compatibilizacao';
+}
+
 // Itens de navegação — mudar aqui reflete em TODAS as páginas que incluem este arquivo.
-// "roles" controla quem vê o link (ajustaremos quando entrarmos em permissões).
+//   cap:   capacidade exigida (ausente = todo mundo do projeto vê)
+//   tipos: tipos de projeto em que o item aparece (ausente = todos)
 const OSPA_NAV_ITEMS = [
-  { key: 'inicio',     label: 'Página inicial', href: 'home.html',   icon: 'ti-home',       roles: ['projetista','coordenador','admin'], needsId: true },
-  { key: 'relatorio',  label: 'Relatório',   href: 'projeto.html',    icon: 'ti-file-text',  roles: ['projetista','coordenador','admin'], needsId: true },
-  { key: 'documentos', label: 'Documentos',  href: 'documentos.html', icon: 'ti-folder',      roles: ['projetista','coordenador','admin'], needsId: true },
-  { key: 'analises',   label: 'Monitor de Conflitos', href: 'analytics.html', icon: 'ti-chart-bar',   roles: ['projetista','coordenador','admin'], needsId: true },
+  { key: 'inicio',     label: 'Página inicial', href: 'home.html',   icon: 'ti-home',       needsId: true },
+  { key: 'relatorio',  label: 'Relatório',   href: 'projeto.html',    icon: 'ti-file-text',  needsId: true, tipos: ['compatibilizacao'] },
+  { key: 'documentos', label: 'Documentos',  href: 'documentos.html', icon: 'ti-folder',      needsId: true, tipos: ['compatibilizacao'] },
+  { key: 'analises',   label: 'Monitor de Conflitos', href: 'analytics.html', icon: 'ti-chart-bar',   needsId: true, tipos: ['compatibilizacao'] },
   { key: 'divider' },
-  { key: 'analise',    label: 'Análise',     href: 'analise.html',   icon: 'ti-list-check',  roles: ['coordenador','admin'], needsId: true },
+  { key: 'analise',    label: 'Análise',     href: 'analise.html',   icon: 'ti-list-check',  needsId: true, cap: 'analise', tipos: ['compatibilizacao'] },
   // Editor: continua sendo o "blob" independente que já existe hoje (gerado
   // via editor-launcher.js), sem sidebar, aberto em nova aba. Diferente dos
   // outros itens, não navega — dispara window.ospaOpenEditor() diretamente,
   // então a página precisa incluir <script src="editor-launcher.js"></script>.
-  { key: 'editor',     label: 'Editor',      icon: 'ti-edit',        roles: ['coordenador','admin'], action: 'editor' },
-  { key: 'configuracoes', label: 'Configurações', href: 'configuracoes.html', icon: 'ti-adjustments-horizontal', roles: ['coordenador','admin'], needsId: true },
+  { key: 'editor',     label: 'Editor',      icon: 'ti-edit',        action: 'editor', cap: 'fichas', tipos: ['compatibilizacao'] },
+  { key: 'configuracoes', label: 'Configurações', href: 'configuracoes.html', icon: 'ti-adjustments-horizontal', needsId: true, cap: 'configurar' },
 ];
 
 
@@ -78,9 +155,12 @@ function ospaRenderSidebar() {
     .join('')
     .toUpperCase();
 
+  const tipo = ospaTipoProjeto();
+
   const navHtml = OSPA_NAV_ITEMS.map(item => {
-    if (item.key === 'divider') return '<div class="nav-divider"></div>';
-    if (!item.roles.includes(userRole)) return '';
+    if (item.key === 'divider') return 'divider';
+    if (item.tipos && item.tipos.indexOf(tipo) === -1) return '';
+    if (item.cap && !ospaPode(userRole, item.cap)) return '';
     const active = item.key === currentPage ? ' active' : '';
     if (item.action) {
       return `<a href="#" class="nav-link${active}" data-action="${item.action}"><i class="ti ${ospaIcone(item, !!active)}" aria-hidden="true"></i>${item.label}</a>`;
@@ -91,7 +171,16 @@ function ospaRenderSidebar() {
     if (item.needsId && projeto && projeto !== '—') queryParts.push('id=' + encodeURIComponent(projeto));
     const href = queryParts.length ? `${item.href}?${queryParts.join('&')}` : item.href;
     return `<a href="${href}" class="nav-link${active}"${target}><i class="ti ${ospaIcone(item, !!active)}" aria-hidden="true"></i>${item.label}</a>`;
-  }).join('');
+  })
+  // Com itens escondidos (papel sem permissão, ou tipo de projeto sem a
+  // parte de conflitos), o separador pode ficar sobrando no começo, no
+  // fim ou grudado em outro. Só sobrevive o que separa dois grupos.
+  .filter(Boolean)
+  .filter((linha, i, lista) =>
+    linha !== 'divider' ||
+    (i > 0 && i < lista.length - 1 && lista[i - 1] !== 'divider'))
+  .map(linha => linha === 'divider' ? '<div class="nav-divider"></div>' : linha)
+  .join('');
 
   mount.innerHTML = `
     <div class="sidebar-logo">
@@ -286,6 +375,7 @@ function ospaIniciarOndas() {
   if (menosMovimento) return;
 
   const ctx = cv.getContext('2d');
+  if (!ctx) return;   // sem contexto de desenho, a faixa fica lisa — e nada quebra
   const dpr = window.devicePixelRatio || 1;
   let L = 0, A = 0, cx = 0, cy = 0, raioMax = 1;
 

@@ -185,7 +185,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 <div class="toast" id="toast"></div>
 
-<script src="sidebar.js?v=8"></script>
+<script src="sidebar.js?v=9"></script>
 <script src="editor-launcher.js?v=3"></script>
 <script src="auth.js?v=2"></script>
 <script src="dados.js?v=1"></script>
@@ -261,7 +261,7 @@ async function loadApp() {
       USER_PROFILE = { id: uid, email: me.email, nome: me.nome, papel: perfis[0].papel, disciplinas: perfis[0].disciplinas || [] };
     }
 
-    if (USER_PROFILE.papel !== 'admin' && USER_PROFILE.papel !== 'coordenador') {
+    if (!ospaPode(USER_PROFILE.papel, 'analise')) {
       show('denied');
       return;
     }
@@ -316,6 +316,9 @@ function renderHeader() {
   document.body.dataset.userName = USER_PROFILE.nome || '';
   document.body.dataset.userRole = USER_PROFILE.papel || 'projetista';
   document.body.dataset.projeto = PROJETO.id || '';
+  // Tipo do projeto: decide quais abas a sidebar mostra (um acompanhamento
+  // não tem a parte de conflitos). Na ausência, compatibilização.
+  document.body.dataset.projetoTipo = (PROJETO && PROJETO.tipo) || 'compatibilizacao';
   document.body.dataset.userDisciplinas = (USER_PROFILE.disciplinas || []).join(',');
   if (typeof ospaRenderSidebar === 'function') ospaRenderSidebar();
 }
