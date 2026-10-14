@@ -133,6 +133,12 @@ Separados, o fluxo de compatibilização em produção não foi tocado.
   `ap_listar` — a tela nunca recebe o que não deveria.
 - **Quem fecha:** autor, destino ou coordenação (`ap_pode_resolver`).
 - **Quem exclui:** o autor enquanto ninguém respondeu; depois, só a coordenação.
+- **Editar** (autor ou coordenação): título, descrição e imagens — acrescentar e
+  remover. O destino não muda; para trocá-lo, outro apontamento. No
+  `ap_editar`, `p_imagens` null **não mexe** nas imagens e `[]` remove todas:
+  se a tela errar e mandar vazio, o pior que acontece é nada. Imagens de um
+  apontamento já promovido não acompanham a ficha — foram copiadas na promoção,
+  e o modal avisa isso.
 - **Numeração:** `A-01`, gerada no servidor por um contador guardado
   (`apontamento_seq`) que **não volta** — se fosse "maior + 1", apagar o A-02
   faria o próximo nascer A-02 e um código citado em reunião passaria a apontar

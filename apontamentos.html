@@ -92,7 +92,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .anexo-btn{background:none;border:1px dashed var(--border2);color:var(--text3);font-family:var(--mono);font-size:9px;padding:5px 9px;cursor:pointer;border-radius:2px;white-space:nowrap}
 .anexo-btn:hover{border-color:var(--text2);color:var(--text2)}
 .anexo-prev{display:flex;align-items:center;gap:4px}
-.anexo-prev img{width:32px;height:24px;object-fit:cover;border:1px solid var(--border)}
+.anexo-prev img{width:52px;height:40px;object-fit:cover;border:1px solid var(--border);cursor:pointer}
 .anexo-x{background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:0 3px;line-height:1}
 .anexo-x:hover{color:var(--alert)}
 
@@ -721,15 +721,38 @@ function modalEditar(a) {
   corpo.style.cssText = 'display:flex;flex-direction:column;gap:14px';
   corpo.appendChild(campoTexto('ed-titulo', t('ap.campo_titulo'), a.titulo, '', 0));
   corpo.appendChild(campoTexto('ed-desc', t('ap.campo_desc'), a.descricao || '', '', 4));
-  const d = document.createElement('div'); d.className = 'dica';
-  d.textContent = t('ap.editar_dica');
-  corpo.appendChild(d);
+
+  // As imagens que já estão lá entram na mesma fila das novas: a lista
+  // parte das atuais, o × tira e o botão acrescenta. O que for salvo é
+  // exatamente o que ficou na fila.
+  const pend = (a.imagens || []).slice();
+  const aw = document.createElement('div'); aw.className = 'pfield';
+  const al = document.createElement('label'); al.textContent = t('ap.campo_imagens');
+  const row = document.createElement('div'); row.className = 'anexo-row';
+  const input = criarEntradaImagem(pend, () => desenharAnexos(row, pend, input));
+  desenharAnexos(row, pend, input);
+  const ad = document.createElement('div'); ad.className = 'dica';
+  ad.textContent = t('ap.editar_imagens_dica');
+  aw.appendChild(al); aw.appendChild(row); aw.appendChild(ad);
+  corpo.appendChild(aw);
+
+  // Se o apontamento já virou ficha, as imagens foram COPIADAS para ela
+  // na promoção: mexer aqui não mexe lá. Melhor avisar do que a pessoa
+  // descobrir depois, abrindo o relatório.
+  if (a.ficha_id) {
+    const av = document.createElement('div'); av.className = 'dica';
+    av.textContent = t('ap.editar_aviso_ficha', { codigo: a.ficha_codigo || '' });
+    corpo.appendChild(av);
+  }
 
   abrirModal(t('ap.editar_titulo', { codigo: a.codigo }), corpo, t('g.salvar'), async () => {
+    const titulo = document.getElementById('ed-titulo').value.trim();
+    if (titulo.length < 3) throw new Error(t('ap.titulo_curto'));
     await rpc('ap_editar', {
       p_apontamento: a.id,
-      p_titulo: document.getElementById('ed-titulo').value,
-      p_descricao: document.getElementById('ed-desc').value
+      p_titulo: titulo,
+      p_descricao: document.getElementById('ed-desc').value,
+      p_imagens: pend          // lista vazia = remover todas
     });
     toast(t('ap.atualizado'));
     await recarregar();
