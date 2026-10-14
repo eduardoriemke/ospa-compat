@@ -126,6 +126,7 @@ body.restricted-coordinator .proj-header button{display:none!important}
 </div>
 
 <div class="toast" id="toast"></div>
+<script src="idioma.js?v=1"></script>
 <script src="auth.js?v=2"></script>
 <script src="dados.js?v=1"></script>
 <script src="login.js?v=2"></script>
@@ -358,6 +359,7 @@ async function afterLogin() {
     const meArr = await apiAuth('GET','usuarios',null,'id=eq.'+uid);
     if (!meArr.length) { showDenied(); return; }
     ME = meArr[0];
+    ospaIdiomaDaSessao(ME.idioma);   // vale para a tela de entrada e a troca de senha
     // Criar e excluir projeto, e backups de projetos excluídos, são
     // de administrador — o banco confere, isto só evita botão inútil.
     if (ME.papel_global === 'admin') {

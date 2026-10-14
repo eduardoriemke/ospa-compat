@@ -31,6 +31,7 @@ um HTML com o script embutido, mais arquivos compartilhados.
 | `sidebar.js` / `sidebar.css` | Navegação, ondas do topo, registro de acesso |
 | `disciplinas.js` | Cores das disciplinas, vindas do banco |
 | `tokens.css` | Cor de acento do sistema (ardósia `#5F7684`) |
+| `idioma.js` | Dicionário PT/EN e `t()`, `tn()`, `tQuando()`, `tData()` |
 | `login.js` / `login.css` | Tela de entrada e o logo — compartilhados pelas 8 páginas |
 | `dados.js` | Acesso ao banco: `api`, `apiTodos`, `rpc`, `setLoadingText` |
 | `viewer-modelo.json` | Modelo do relatório exportado; buscado só na exportação |
@@ -87,6 +88,36 @@ um HTML com o script embutido, mais arquivos compartilhados.
 17. **10** — apontamentos: qualquer pessoa do projeto abre, dirigido à
     coordenação ou a uma disciplina, com imagem; conversa com resposta e
     imagem; a coordenação pode promover a ficha de conflito
+18. **11** — bilíngue PT/EN: textos viram dados num dicionário de chaves,
+    idioma por pessoa (`usuarios.idioma`), seletor no pé da barra lateral
+
+## Bilíngue (fase 11)
+
+Os textos saíram do código e viraram DADOS, no `idioma.js`: ~140 chaves, cada
+uma com a versão em cada idioma. Essa lista é um arquivo de dados comum, do
+formato que qualquer framework consome — o trabalho de extrair não se perde na
+migração; só a peça que lê a lista será trocada.
+
+- `t('chave')` texto simples, com `%{nome}` interpolado; `tn('chave', n)`
+  escolhe singular ou plural; `tQuando()` e `tData()` dão tempo relativo e data
+  no idioma certo.
+- Chave inexistente volta como a própria chave, **visível na tela** — erro de
+  digitação aparece em vez de quebrar. Idioma sem tradução cai no português,
+  então traduzir aos poucos é seguro.
+- **Idioma é da pessoa, não do projeto** (`usuarios.idioma`, `usr_idioma()`):
+  na mesma obra, um lê em inglês e outro em português, sobre os mesmos dados.
+  Guardado no cadastro para acompanhar a pessoa em qualquer computador; o
+  `localStorage` tem uma cópia só para a primeira pintura da tela.
+- As telas chamam `ospaIdiomaDaSessao(me.idioma)` **antes** do primeiro render:
+  a tela nasce no idioma certo, sem recarregar nem piscar em português. O
+  seletor PT/EN (pé da barra) grava e recarrega — a página inteira volta no
+  idioma novo, em vez de metade traduzida.
+- **Traduzidos:** entrada, barra lateral, página inicial e apontamentos — o que
+  alguém de fora do escritório enxerga. Configurações e Administração seguem em
+  português de propósito: quem entra ali é a coordenação da casa.
+- **O conteúdo não é traduzido** e não deve ser: títulos de apontamento,
+  descrições de ficha, nomes de arquivo, comentários. Foi escrito por pessoas e
+  fica como foi escrito.
 
 ## Apontamentos (fase 10)
 
@@ -175,17 +206,11 @@ diária. Com vários projetos ativos, revisar esse intervalo.
   tem pasta do Drive, em vez de depender do tipo. Em compatibilização nada
   muda; no acompanhamento aparece quando houver pasta. Sem disciplinas, a
   listagem cai toda como pasta avulsa. Aguardando decisão.
-- **Bilíngue PT/EN** (decidido, não implementado) — há projeto real em inglês a
-  caminho: coordenação do escritório, e um arquiteto americano participando
-  como projetista, que levanta e responde apontamentos. O caro é
-  extrair os ~700 textos de dentro do código para uma lista de chaves; essa
-  lista é dado puro e serve a qualquer framework depois, então o trabalho não
-  se perde na migração. Escopo menor primeiro: o que o projetista de fora
-  enxerga (login, sidebar, página inicial, apontamentos) — Configurações e
-  Administração podem seguir em português. A página de Apontamentos deve
-  nascer já com o mecanismo de idioma, para não ser traduzida duas vezes.
-  Vocabulário segue o **tipo** do projeto (conflito / apontamento), não cada
-  projeto.
+- **Traduzir o resto** — relatório, documentos, monitor, análise. Hoje quem
+  está em inglês vê essas telas em português (no projeto de acompanhamento elas
+  nem aparecem). O mecanismo está pronto: é acrescentar chaves ao `idioma.js` e
+  trocar os textos por `t()`. Fazer quando houver projeto em inglês com
+  compatibilização de verdade.
 - **Avisos escritos com registro de leitura** — por ora, as notas do projeto fazem
   esse papel. Só implementar se a falta aparecer no uso.
 - **Limpeza** — feita: login, logo e acesso ao banco unificados; modelo do relatório
@@ -248,3 +273,9 @@ diária. Com vários projetos ativos, revisar esse intervalo.
 - Arquivo compartilhado com `</script>` dentro de um comentário não pode ser
   embutido num `<script>` para teste — encerra o bloco antes da hora. O
   navegador simulado busca os arquivos de um servidor local (`nav/abrir.js`).
+- **`t` é o nome da função de tradução E o nome favorito de variável local**
+  ao criar elementos (`const t = document.createElement(...)`). Dentro de uma
+  função que declare isso, qualquer `t()` quebra com *"Cannot access 't' before
+  initialization"* — e a tela para de desenhar no meio, sem erro visível para
+  quem usa. Aconteceu na primeira tradução dos apontamentos. Se esse erro
+  aparecer, procure a variável chamada `t`.

@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=IBM+Plex+Serif:wght@300;400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
-<link rel="stylesheet" href="sidebar.css?v=4">
+<link rel="stylesheet" href="sidebar.css?v=5">
 <link rel="stylesheet" href="tokens.css?v=1">
 <link rel="stylesheet" href="login.css?v=1">
 <style>
@@ -185,7 +185,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 <div class="toast" id="toast"></div>
 
-<script src="sidebar.js?v=10"></script>
+<script src="idioma.js?v=1"></script>
+<script src="sidebar.js?v=11"></script>
 <script src="editor-launcher.js?v=4"></script>
 <script src="auth.js?v=2"></script>
 <script src="dados.js?v=1"></script>
@@ -252,6 +253,10 @@ async function loadApp() {
     const meArr = await api('GET','usuarios',null,'id=eq.'+uid);
     if (!meArr || !meArr.length) { setLoadingText('Usuário não cadastrado no sistema.'); return; }
     const me = meArr[0];
+
+    // Idioma de quem está entrando: a barra lateral é compartilhada e
+    // traduzida, então vale também nas telas que seguem em português.
+    ospaIdiomaDaSessao(me.idioma);
 
     if (me.papel_global === 'admin') {
       USER_PROFILE = { id: uid, email: me.email, nome: me.nome, papel: 'admin', disciplinas: [] };

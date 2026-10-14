@@ -65,3 +65,17 @@
   width:7px;height:7px;border-radius:50%;
   background:var(--acento);border:1.5px solid var(--surface);
 }
+
+/* Seletor de idioma, no pé da barra. Discreto: é escolha que se faz
+   uma vez, não um controle de uso diário. */
+.sidebar-idioma{display:flex;gap:4px;padding:8px 10px 0}
+.idioma-btn{
+  font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:0.08em;
+  padding:3px 7px;border-radius:2px;cursor:pointer;
+  background:transparent;border:1px solid var(--border2);color:var(--text3);
+}
+.idioma-btn:hover{border-color:var(--text2);color:var(--text2)}
+.idioma-btn.on{
+  background:var(--acento-fundo);border-color:var(--acento-borda);
+  color:var(--acento-forte);cursor:default;
+}

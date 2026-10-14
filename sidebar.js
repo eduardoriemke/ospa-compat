@@ -49,10 +49,12 @@ const OSPA_CAPACIDADES = {
   projetista:  []
 };
 
+// Rótulo do papel: chave do dicionário, para aparecer no idioma de quem
+// está olhando (idioma.js).
 const OSPA_PAPEL_ROTULO = {
-  admin:       'Admin',
-  coordenador: 'Coordenador',
-  projetista:  'Projetista'
+  admin:       'home.admin',
+  coordenador: 'home.coordenador',
+  projetista:  'home.projetista'
 };
 
 // Papéis que coordenam o projeto — para rótulo e ordenação, não para permissão.
@@ -72,7 +74,8 @@ function ospaPode(papel, acao) {
 }
 
 function ospaRotuloPapel(papel) {
-  return OSPA_PAPEL_ROTULO[papel] || papel || '';
+  const chave = OSPA_PAPEL_ROTULO[papel];
+  return chave ? t(chave) : (papel || '');
 }
 
 // Tipo do projeto: "compatibilizacao" (o padrão, tudo aparece) ou
@@ -86,23 +89,26 @@ function ospaTipoProjeto() {
 // Itens de navegação — mudar aqui reflete em TODAS as páginas que incluem este arquivo.
 //   cap:   capacidade exigida (ausente = todo mundo do projeto vê)
 //   tipos: tipos de projeto em que o item aparece (ausente = todos)
+// O rótulo é uma CHAVE do dicionário (idioma.js), resolvida na hora de
+// desenhar — não aqui, porque o idioma da pessoa só é conhecido depois
+// de a sessão carregar.
 const OSPA_NAV_ITEMS = [
-  { key: 'inicio',     label: 'Página inicial', href: 'home.html',   icon: 'ti-home',       needsId: true },
-  { key: 'relatorio',  label: 'Relatório',   href: 'projeto.html',    icon: 'ti-file-text',  needsId: true, tipos: ['compatibilizacao'] },
+  { key: 'inicio',     rotulo: 'nav.inicio',    href: 'home.html',   icon: 'ti-home',       needsId: true },
+  { key: 'relatorio',  rotulo: 'nav.relatorio', href: 'projeto.html',    icon: 'ti-file-text',  needsId: true, tipos: ['compatibilizacao'] },
   // Apontamentos vale nos dois tipos de projeto: é o caminho de baixo para
   // cima, que na compatibilização não existia — o que o projetista percebia
   // só chegava à coordenação por fora do sistema.
-  { key: 'apontamentos', label: 'Apontamentos', href: 'apontamentos.html', icon: 'ti-message-2', needsId: true },
-  { key: 'documentos', label: 'Documentos',  href: 'documentos.html', icon: 'ti-folder',      needsId: true, tipos: ['compatibilizacao'] },
-  { key: 'analises',   label: 'Monitor de Conflitos', href: 'analytics.html', icon: 'ti-chart-bar',   needsId: true, tipos: ['compatibilizacao'] },
+  { key: 'apontamentos', rotulo: 'nav.apontamentos', href: 'apontamentos.html', icon: 'ti-message-2', needsId: true },
+  { key: 'documentos', rotulo: 'nav.documentos', href: 'documentos.html', icon: 'ti-folder',      needsId: true, tipos: ['compatibilizacao'] },
+  { key: 'analises',   rotulo: 'nav.monitor',    href: 'analytics.html', icon: 'ti-chart-bar',   needsId: true, tipos: ['compatibilizacao'] },
   { key: 'divider' },
-  { key: 'analise',    label: 'Análise',     href: 'analise.html',   icon: 'ti-list-check',  needsId: true, cap: 'analise', tipos: ['compatibilizacao'] },
+  { key: 'analise',    rotulo: 'nav.analise',    href: 'analise.html',   icon: 'ti-list-check',  needsId: true, cap: 'analise', tipos: ['compatibilizacao'] },
   // Editor: continua sendo o "blob" independente que já existe hoje (gerado
   // via editor-launcher.js), sem sidebar, aberto em nova aba. Diferente dos
   // outros itens, não navega — dispara window.ospaOpenEditor() diretamente,
   // então a página precisa incluir <script src="editor-launcher.js"></script>.
-  { key: 'editor',     label: 'Editor',      icon: 'ti-edit',        action: 'editor', cap: 'fichas', tipos: ['compatibilizacao'] },
-  { key: 'configuracoes', label: 'Configurações', href: 'configuracoes.html', icon: 'ti-adjustments-horizontal', needsId: true, cap: 'configurar' },
+  { key: 'editor',     rotulo: 'nav.editor', icon: 'ti-edit',        action: 'editor', cap: 'fichas', tipos: ['compatibilizacao'] },
+  { key: 'configuracoes', rotulo: 'nav.configuracoes', href: 'configuracoes.html', icon: 'ti-adjustments-horizontal', needsId: true, cap: 'configurar' },
 ];
 
 
@@ -167,14 +173,14 @@ function ospaRenderSidebar() {
     if (item.cap && !ospaPode(userRole, item.cap)) return '';
     const active = item.key === currentPage ? ' active' : '';
     if (item.action) {
-      return `<a href="#" class="nav-link${active}" data-action="${item.action}"><i class="ti ${ospaIcone(item, !!active)}" aria-hidden="true"></i>${item.label}</a>`;
+      return `<a href="#" class="nav-link${active}" data-action="${item.action}"><i class="ti ${ospaIcone(item, !!active)}" aria-hidden="true"></i>${t(item.rotulo)}</a>`;
     }
     const target = item.target ? ` target="${item.target}" rel="noopener"` : '';
     const queryParts = [];
     if (item.extraQuery) queryParts.push(item.extraQuery);
     if (item.needsId && projeto && projeto !== '—') queryParts.push('id=' + encodeURIComponent(projeto));
     const href = queryParts.length ? `${item.href}?${queryParts.join('&')}` : item.href;
-    return `<a href="${href}" class="nav-link${active}"${target}><i class="ti ${ospaIcone(item, !!active)}" aria-hidden="true"></i>${item.label}</a>`;
+    return `<a href="${href}" class="nav-link${active}"${target}><i class="ti ${ospaIcone(item, !!active)}" aria-hidden="true"></i>${t(item.rotulo)}</a>`;
   })
   // Com itens escondidos (papel sem permissão, ou tipo de projeto sem a
   // parte de conflitos), o separador pode ficar sobrando no começo, no
@@ -205,8 +211,11 @@ function ospaRenderSidebar() {
       </a>
       <nav class="sidebar-nav">${navHtml}</nav>
       <div class="sidebar-footer">
-        <a href="#" class="nav-link" id="ospa-senha-link"><i class="ti ti-key" aria-hidden="true"></i>Trocar senha</a>
-        <a href="#" class="nav-link" id="ospa-logout-link"><i class="ti ti-logout" aria-hidden="true"></i>Sair</a>
+        <a href="#" class="nav-link" id="ospa-senha-link"><i class="ti ti-key" aria-hidden="true"></i>${t('nav.senha')}</a>
+        <a href="#" class="nav-link" id="ospa-logout-link"><i class="ti ti-logout" aria-hidden="true"></i>${t('nav.sair')}</a>
+        <div class="sidebar-idioma">${OSPA_IDIOMAS.map(i =>
+          `<button type="button" class="idioma-btn${i === ospaIdioma() ? ' on' : ''}" data-idioma="${i}">${i.toUpperCase()}</button>`
+        ).join('')}</div>
       </div>
     </div>
   `;
@@ -216,6 +225,16 @@ function ospaRenderSidebar() {
   if (linkSenha) linkSenha.addEventListener('click', function (e) {
     e.preventDefault();
     if (typeof ospaTrocarSenha === 'function') ospaTrocarSenha();
+  });
+
+  // Seletor de idioma: guarda no cadastro da pessoa e recarrega, para a
+  // tela inteira vir no idioma novo em vez de metade traduzida.
+  mount.querySelectorAll('.idioma-btn').forEach(function (b) {
+    b.addEventListener('click', function (e) {
+      e.preventDefault();
+      if (b.classList.contains('on')) return;
+      ospaTrocarIdioma(b.dataset.idioma);
+    });
   });
 
   const logoutLink = document.getElementById('ospa-logout-link');
@@ -236,13 +255,13 @@ function ospaRenderSidebar() {
       e.preventDefault();
       if (editorLink.dataset.loading === '1') return;
       if (typeof window.ospaOpenEditor !== 'function') {
-        alert('Editor não disponível nesta página ainda.');
+        alert(t('nav.editor_falta'));
         console.error('ospaOpenEditor não está disponível — inclua editor-launcher.js nesta página.');
         return;
       }
       editorLink.dataset.loading = '1';
       const originalHtml = editorLink.innerHTML;
-      editorLink.innerHTML = '<i class="ti ti-loader-2" aria-hidden="true"></i>Abrindo…';
+      editorLink.innerHTML = '<i class="ti ti-loader-2" aria-hidden="true"></i>' + t('nav.abrindo');
       editorLink.style.pointerEvents = 'none';
       try {
         await window.ospaOpenEditor(projeto, userRole);
@@ -318,7 +337,7 @@ async function ospaIndicarNovos(projeto) {
     if (!link || link.querySelector('.nav-ponto')) return;
     const ponto = document.createElement('span');
     ponto.className = 'nav-ponto';
-    ponto.title = novos.length >= 100 ? '100+ arquivos novos' : novos.length + ' arquivo(s) novo(s)';
+    ponto.title = novos.length >= 100 ? t('nav.arquivos_100') : tn('nav.arquivos_novos', novos.length);
     link.appendChild(ponto);
   } catch (e) {
     // sem conexão ou tabela indisponível: apenas não mostra o indicador
@@ -348,8 +367,7 @@ async function ospaIndicarApontamentos(projeto) {
     if (!link || link.querySelector('.nav-ponto')) return;
     const ponto = document.createElement('span');
     ponto.className = 'nav-ponto';
-    ponto.title = n === 1 ? '1 apontamento esperando você'
-                          : n + ' apontamentos esperando você';
+    ponto.title = tn('nav.ap_esperando', n);
     link.appendChild(ponto);
   } catch (e) {
     // função ainda não aplicada no banco, ou sem conexão: só não mostra o ponto
@@ -448,7 +466,7 @@ function ospaIniciarOndas() {
   medir();
   window.addEventListener('resize', medir);
 
-  let t = 0, rodando = true;
+  let tempo = 0, rodando = true;
   const controle = { parar() { rodando = false; } };
   _ondasAtivas = controle;
 
@@ -457,12 +475,12 @@ function ospaIniciarOndas() {
     if (!cv.isConnected) { rodando = false; return; }
     if (!L) { medir(); }
 
-    t += 0.02;
+    tempo += 0.02;
     ctx.clearRect(0, 0, L, A);
 
     for (let n = 0; n < ONDAS; n++) {
       // cada anel percorre 0→1 defasado dos demais
-      const avanco = ((t * 0.10) + n / ONDAS) % 1;
+      const avanco = ((tempo * 0.10) + n / ONDAS) % 1;
       const raio = avanco * raioMax;
       if (raio < 2) continue;
 
@@ -479,13 +497,13 @@ function ospaIniciarOndas() {
         let desvio = 0;
         for (let o = 0; o < obst.length; o++) {
           const ob = obst[o];
-          const ox = ob.x + Math.sin(t * 0.5 + ob.fase) * 6;
-          const oy = ob.y + Math.cos(t * 0.5 + ob.fase) * 6;
+          const ox = ob.x + Math.sin(tempo * 0.5 + ob.fase) * 6;
+          const oy = ob.y + Math.cos(tempo * 0.5 + ob.fase) * 6;
           const dist = Math.hypot(x - ox, y - oy);
           const alcance = ob.r * 3.5;
           if (dist < alcance) {
             const inf = 1 - dist / alcance;
-            desvio += Math.sin(t * 1.2 + dist * 0.35) * inf * ob.forca * 2.2;
+            desvio += Math.sin(tempo * 1.2 + dist * 0.35) * inf * ob.forca * 2.2;
           }
         }
 

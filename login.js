@@ -39,8 +39,13 @@ function montarLogin() {
   const box = document.getElementById('screen-login');
   if (!box || box.dataset.pronto) return;
 
-  const titulo = box.dataset.titulo || 'OSPA Compat';
-  const sub    = box.dataset.sub    || 'Acesso restrito';
+  // A página pode dar o título pronto (data-titulo) ou uma chave do
+  // dicionário (data-titulo-chave), para a tela de entrada também
+  // aparecer no idioma de quem está chegando.
+  const titulo = box.dataset.tituloChave ? t(box.dataset.tituloChave)
+                                         : (box.dataset.titulo || 'OSPA Compat');
+  const sub    = box.dataset.subChave ? t(box.dataset.subChave)
+                                      : (box.dataset.sub || t('login.restrito'));
 
   box.innerHTML =
     '<div class="login-box">' +
@@ -50,14 +55,14 @@ function montarLogin() {
       // onsubmit inline: garante que um erro de script NUNCA envie o
       // formulário pela URL, expondo email e senha no endereço.
       '<form id="login-form" autocomplete="on" onsubmit="return false" action="javascript:void(0)" method="post">' +
-        '<div class="login-field"><label>Email</label>' +
+        '<div class="login-field"><label>' + t('login.email') + '</label>' +
           '<input type="email" id="login-email" name="email" placeholder="seu@email.com" autocomplete="username"></div>' +
-        '<div class="login-field"><label>Senha</label>' +
+        '<div class="login-field"><label>' + t('login.senha') + '</label>' +
           '<input type="password" id="login-password" name="password" placeholder="••••••••" autocomplete="current-password"></div>' +
-        '<button type="submit" class="login-btn" id="login-btn">Entrar</button>' +
+        '<button type="submit" class="login-btn" id="login-btn">' + t('login.entrar') + '</button>' +
         '<div class="login-err" id="login-err"></div>' +
         '<div style="font-family:var(--mono,monospace);font-size:9.5px;line-height:1.5;color:var(--text3,#999);margin-top:14px">' +
-          'Os acessos ao sistema são registrados para fins de coordenação do projeto.</div>' +
+          t('login.aviso_registro') + '</div>' +
       '</form>' +
     '</div>';
 
@@ -77,10 +82,10 @@ async function doLogin() {
   const err   = document.getElementById('login-err');
   err.style.display = 'none';
 
-  if (!email || !pass) { showLoginErr('Preencha email e senha.'); return; }
+  if (!email || !pass) { showLoginErr(t('login.preencha')); return; }
 
   btn.disabled = true;
-  btn.textContent = 'Entrando…';
+  btn.textContent = t('login.entrando');
 
   try {
     const r = await fetch(SB_AUTH + '/token?grant_type=password', {
@@ -89,7 +94,7 @@ async function doLogin() {
       body: JSON.stringify({ email: email, password: pass })
     });
     const data = await r.json();
-    if (!r.ok) throw new Error(data.error_description || data.msg || 'Email ou senha inválidos.');
+    if (!r.ok) throw new Error(data.error_description || data.msg || t('login.invalido'));
 
     SESSION = data;
     saveSession(data);
@@ -101,7 +106,7 @@ async function doLogin() {
     showLoginErr(e.message);
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Entrar';
+    btn.textContent = t('login.entrar');
   }
 }
 
@@ -117,14 +122,14 @@ montarLogin();   // se o script já roda com a página montada, não espera
    Recuperar senha esquecida, sem estar logado, é que precisa do e-mail. */
 
 function ospaTrocarSenha() {
-  if (typeof SESSION === 'undefined' || !SESSION) { alert('Entre no sistema primeiro.'); return; }
+  if (typeof SESSION === 'undefined' || !SESSION) { alert(t('senha.entre_antes')); return; }
 
-  const nova = prompt('Nova senha (mínimo 8 caracteres):');
+  const nova = prompt(t('senha.nova'));
   if (nova === null) return;
-  if (!nova || nova.length < 8) { alert('A senha precisa ter ao menos 8 caracteres.'); return; }
-  const conf = prompt('Repita a nova senha:');
+  if (!nova || nova.length < 8) { alert(t('senha.curta')); return; }
+  const conf = prompt(t('senha.repita'));
   if (conf === null) return;
-  if (conf !== nova) { alert('As senhas não conferem.'); return; }
+  if (conf !== nova) { alert(t('senha.difere')); return; }
 
   fetch(SB_AUTH + '/user', {
     method: 'PUT',
@@ -137,8 +142,8 @@ function ospaTrocarSenha() {
   }).then(async function (r) {
     if (!r.ok) {
       const e = await r.json().catch(function(){ return {}; });
-      throw new Error(e.msg || e.message || 'Não foi possível trocar a senha.');
+      throw new Error(e.msg || e.message || t('senha.falhou'));
     }
-    alert('Senha alterada. Ela já vale para os próximos acessos.');
+    alert(t('senha.trocada'));
   }).catch(function (e) { alert(e.message); });
 }

@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=IBM+Plex+Serif:wght@300;400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
-<link rel="stylesheet" href="sidebar.css?v=4">
+<link rel="stylesheet" href="sidebar.css?v=5">
 <link rel="stylesheet" href="tokens.css?v=1">
 <link rel="stylesheet" href="login.css?v=1">
 <style>
@@ -114,12 +114,12 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <div class="shell-content">
 
 <!-- LOGIN -->
-<div id="screen-login" data-titulo="Página Inicial do Projeto" data-sub="Acesso restrito"></div>
+<div id="screen-login" data-titulo-chave="login.titulo_home"></div>
 
 <!-- LOADING -->
 <div id="screen-loading">
   <img id="loading-logo" class="loading-logo" alt="OSPA">
-  <div class="loading-text" id="loading-text">Carregando…</div>
+  <div class="loading-text" id="loading-text" data-t="g.carregando"></div>
 </div>
 
 <!-- APP -->
@@ -141,12 +141,12 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
       <!-- Notas: só aparece se houver conteúdo (editado nas Configurações) -->
       <div class="bloco" id="bloco-notas" style="display:none">
-        <div class="bloco-label">Notas</div>
+        <div class="bloco-label" data-t="home.notas_label"></div>
         <div class="notas-texto" id="notas-texto"></div>
       </div>
 
       <div class="bloco">
-        <div class="bloco-label">Equipe</div>
+        <div class="bloco-label" data-t="home.equipe_label"></div>
         <div id="equipe-wrap"></div>
       </div>
   </div>
@@ -155,7 +155,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   </div>
 </div>
 
-<script src="sidebar.js?v=10"></script>
+<script src="idioma.js?v=1"></script>
+<script src="sidebar.js?v=11"></script>
 <script src="editor-launcher.js?v=4"></script>
 <script src="auth.js?v=2"></script>
 <script src="dados.js?v=1"></script>
@@ -195,13 +196,13 @@ function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replac
 // ── LOAD APP ──
 async function loadApp() {
   show('loading');
-  setLoadingText('Identificando usuário…');
+  setLoadingText(t('g.identificando'));
 
   const params = new URLSearchParams(window.location.search);
   const projId = params.get('id');
 
   if (!projId) {
-    setLoadingText('Nenhum projeto especificado. Use ?id=CODIGO na URL.');
+    setLoadingText(t('g.sem_projeto'));
     return;
   }
 
@@ -211,10 +212,14 @@ async function loadApp() {
     const uid = SESSION.user.id;
     const meArr = await api('GET','usuarios',null,'id=eq.'+uid);
     if (!meArr || !meArr.length) {
-      setLoadingText('Usuário não cadastrado no sistema.');
+      setLoadingText(t('g.sem_cadastro'));
       return;
     }
     const me = meArr[0];
+
+    // O idioma da pessoa entra ANTES de qualquer render: a tela nasce no
+    // idioma certo, sem recarregar nem piscar em português.
+    ospaIdiomaDaSessao(me.idioma);
 
     if (me.papel_global === 'admin') {
       USER_PROFILE = { id: uid, email: me.email, nome: me.nome, papel: 'admin', disciplinas: [] };
@@ -222,7 +227,7 @@ async function loadApp() {
       const perfis = await api('GET','projeto_usuarios_v2',null,
         'usuario_id=eq.'+uid+'&projeto_id=eq.'+projId);
       if (!perfis || !perfis.length) {
-        setLoadingText('Você não tem acesso a este projeto.');
+        setLoadingText(t('g.sem_acesso'));
         return;
       }
       USER_PROFILE = {
@@ -231,7 +236,7 @@ async function loadApp() {
       };
     }
 
-    setLoadingText('Carregando projeto…');
+    setLoadingText(t('home.carregando_projeto'));
 
     const [proj, cfg, acessos] = await Promise.all([
       api('GET','projetos',null,'id=eq.'+projId).then(r=>r[0]),
@@ -301,7 +306,7 @@ async function loadApp() {
     show('app');
 
   } catch(e) {
-    setLoadingText('Erro: ' + e.message);
+    setLoadingText(t('g.erro', { msg: e.message }));
     console.error(e);
   }
 }
@@ -346,10 +351,9 @@ function cartaoApontamentos() {
   if (!paraMim) return '';
   return '<a class="painel-cartao' + (semResp ? ' pendente' : '') + '" href="' + apontamentosUrl() + '">' +
     '<div class="painel-num">' + paraMim + '</div>' +
-    '<div class="painel-rot">' +
-      (paraMim == 1 ? 'apontamento dirigido a você' : 'apontamentos dirigidos a você') + '</div>' +
-    (semResp ? '<div class="painel-nota painel-alerta">' + semResp +
-               (semResp == 1 ? ' sem nenhuma resposta' : ' sem nenhuma resposta') + '</div>' : '') +
+    '<div class="painel-rot">' + tn('home.ap_dirigidos', paraMim) + '</div>' +
+    (semResp ? '<div class="painel-nota painel-alerta">' +
+               t('home.ap_sem_resposta', { n: semResp }) + '</div>' : '') +
     '</a>';
 }
 
@@ -364,17 +368,19 @@ function renderPainel() {
   const p = PAINEL;
   const discs = p.disciplinas || [];
   const recente = [];
-  if (temConflitos && p.fichas_recentes) recente.push('<b>' + p.fichas_recentes + '</b> ' + (p.fichas_recentes == 1 ? 'ficha nova' : 'fichas novas'));
-  if (p.arquivos_recentes)    recente.push('<b>' + p.arquivos_recentes + '</b> ' + (p.arquivos_recentes == 1 ? 'arquivo' : 'arquivos'));
-  if (p.comentarios_recentes) recente.push('<b>' + p.comentarios_recentes + '</b> ' + (p.comentarios_recentes == 1 ? 'comentário' : 'comentários'));
+  // "<b>3</b> fichas novas": o número em negrito vai dentro da própria
+  // tradução, porque a ordem das palavras muda de idioma.
+  const emNegrito = (chave, n) => tn(chave, n, { n: '<b>' + n + '</b>' });
+  if (temConflitos && p.fichas_recentes) recente.push(emNegrito('home.fichas_novas', p.fichas_recentes));
+  if (p.arquivos_recentes)    recente.push(emNegrito('home.arquivos', p.arquivos_recentes));
+  if (p.comentarios_recentes) recente.push(emNegrito('home.comentarios', p.comentarios_recentes));
   if (AP_RESUMO && Number(AP_RESUMO.recentes || 0)) {
-    const n = Number(AP_RESUMO.recentes);
-    recente.push('<b>' + n + '</b> ' + (n == 1 ? 'apontamento' : 'apontamentos'));
+    recente.push(emNegrito('home.apontamentos', Number(AP_RESUMO.recentes)));
   }
 
   let h = '';
   if (recente.length) {
-    h += '<div class="painel-recente">Nos últimos 7 dias: ' + recente.join(' · ') + '</div>';
+    h += '<div class="painel-recente">' + t('home.recente', { itens: recente.join(' · ') }) + '</div>';
   }
 
   h += '<div class="painel-cartoes">';
@@ -388,16 +394,16 @@ function renderPainel() {
   if (p.sem_resposta > 0) {
     h += '<a class="painel-cartao pendente" href="' + relatorioComDiscs(discs) + '">' +
          '<div class="painel-num">' + p.sem_resposta + '</div>' +
-         '<div class="painel-rot">' + (p.sem_resposta == 1 ? 'ficha aguardando sua resposta' : 'fichas aguardando sua resposta') + '</div>' +
-         (p.mais_antiga_dias ? '<div class="painel-nota">a mais antiga há ' + p.mais_antiga_dias + ' dias</div>' : '') +
+         '<div class="painel-rot">' + tn('home.aguardando', p.sem_resposta) + '</div>' +
+         (p.mais_antiga_dias ? '<div class="painel-nota">' + t('home.mais_antiga', { n: p.mais_antiga_dias }) + '</div>' : '') +
          '</a>';
   }
   h += '<a class="painel-cartao" href="' + relatorioComDiscs(discs) + '">' +
        '<div class="painel-num">' + p.abertos + '</div>' +
-       '<div class="painel-rot">' + (p.abertos == 1 ? 'conflito aberto' : 'conflitos abertos') +
-       (discs.length && discs.length <= 4 ? ' em ' + discs.join(', ') : '') + '</div>' +
-       (p.criticos ? '<div class="painel-nota painel-alerta">' + p.criticos +
-                     (p.criticos == 1 ? ' marcado como crítico' : ' marcados como críticos') + '</div>' : '') +
+       '<div class="painel-rot">' + tn('home.abertos', p.abertos) +
+       (discs.length && discs.length <= 4 ? t('home.abertos_em', { discs: discs.join(', ') }) : '') + '</div>' +
+       (p.criticos ? '<div class="painel-nota painel-alerta">' + p.criticos + ' ' +
+                     tn('home.criticos', p.criticos) + '</div>' : '') +
        '</a>';
   h += '</div>';
 
@@ -407,18 +413,13 @@ function renderPainel() {
 
 // Sinal que resume a linha da pessoa na tabela da equipe
 function sinalEquipe(m) {
-  if (!m.ultimo_acesso || m.mais_antiga_dias > 7) return ['var(--alert)', 'crítico'];
-  if (m.devendo > 0) return ['#A35A00', 'atenção'];
-  return ['var(--resol)', 'em dia'];
+  if (!m.ultimo_acesso || m.mais_antiga_dias > 7) return ['var(--alert)', t('home.critico')];
+  if (m.devendo > 0) return ['#A35A00', t('home.atencao')];
+  return ['var(--resol)', t('home.em_dia')];
 }
 
 function quandoAcesso(iso) {
-  if (!iso) return 'nunca';
-  const dias = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
-  if (dias <= 0) return 'hoje';
-  if (dias === 1) return 'ontem';
-  if (dias < 30) return 'há ' + dias + ' dias';
-  return new Date(iso).toLocaleDateString('pt-BR');
+  return iso ? tQuando(iso) : t('g.nunca');
 }
 
 function renderPage() {
@@ -426,7 +427,8 @@ function renderPage() {
   document.getElementById('hero-name').textContent = PROJETO.nome || '';
   document.getElementById('hero-sub').textContent = PROJETO.cliente || '';
   document.getElementById('hero-endereco').textContent = PROJETO.endereco || '';
-  document.getElementById('hero-responsavel').textContent = PROJETO.responsavel ? 'Responsável técnico: ' + PROJETO.responsavel : '';
+  document.getElementById('hero-responsavel').textContent =
+    PROJETO.responsavel ? t('home.responsavel', { nome: PROJETO.responsavel }) : '';
 
   // Notas — bloco só existe se houver conteúdo (evita caixa vazia na tela)
   const notas = (PROJETO.notas || '').trim();
@@ -445,7 +447,7 @@ function renderEquipe() {
   const wrap = document.getElementById('equipe-wrap');
 
   if (!EQUIPE.length) {
-    wrap.innerHTML = '<div class="equipe-vazio">Nenhum usuário vinculado a este projeto.</div>';
+    wrap.innerHTML = '<div class="equipe-vazio">' + t('home.equipe_vazia') + '</div>';
     return;
   }
 
@@ -471,6 +473,7 @@ function renderEquipe() {
       : '<span style="color:var(--text3)">—</span>';
     const coordBadge = OSPA_PAPEIS_COORDENACAO.includes(p.papel)
       ? ' <span class="papel-badge p-coordenador">' + esc(ospaRotuloPapel(p.papel)) + '</span>' : '';
+    // (o rótulo do papel vem traduzido do sidebar.js)
 
     let extras = '';
     let sinal = '';
@@ -496,7 +499,8 @@ function renderEquipe() {
   }).join('');
 
   const cabecalho = comPainel
-    ? '<thead><tr>' + ['','Pessoa','Empresa','Disciplinas','Devendo','Mais antiga','Último acesso']
+    ? '<thead><tr>' + ['', t('home.col_pessoa'), t('home.col_empresa'), t('home.col_disc'),
+                        t('home.col_devendo'), t('home.col_antiga'), t('home.col_acesso')]
         .map(h => '<th style="text-align:left;font-family:var(--sans);font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);padding:8px 14px">'+h+'</th>').join('') +
       '</tr></thead>'
     : '';
@@ -520,7 +524,7 @@ function show(screen) {
 
 (async () => {
   show('loading');
-  setLoadingText('Restaurando sessão…');
+  setLoadingText(t('g.restaurando'));
   const restored = await tryRestoreSession();
   if (restored) {
     await loadApp();

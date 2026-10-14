@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=IBM+Plex+Serif:wght@300;400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
-<link rel="stylesheet" href="sidebar.css?v=4">
+<link rel="stylesheet" href="sidebar.css?v=5">
 <link rel="stylesheet" href="tokens.css?v=1">
 <link rel="stylesheet" href="login.css?v=1">
 <style>
@@ -144,11 +144,11 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <div id="ospa-sidebar"></div>
   <div class="shell-content">
 
-<div id="screen-login" data-titulo="Apontamentos" data-sub="Acesso restrito"></div>
+<div id="screen-login" data-titulo-chave="login.titulo_apontamentos"></div>
 
 <div id="screen-loading">
   <img id="loading-logo" class="loading-logo" alt="OSPA">
-  <div class="loading-text" id="loading-text">Carregando…</div>
+  <div class="loading-text" id="loading-text" data-t="g.carregando"></div>
 </div>
 
 <div id="screen-app">
@@ -168,8 +168,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     <div class="modal-hdr" id="modal-titulo"></div>
     <div class="modal-body" id="modal-corpo"></div>
     <div class="modal-foot">
-      <button class="ap-btn" id="modal-cancelar">Cancelar</button>
-      <button class="ap-btn pri" id="modal-ok">Confirmar</button>
+      <button class="ap-btn" id="modal-cancelar" data-t="g.cancelar"></button>
+      <button class="ap-btn pri" id="modal-ok" data-t="g.confirmar"></button>
     </div>
   </div>
 </div>
@@ -186,7 +186,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 <div class="toast" id="toast"></div>
 
-<script src="sidebar.js?v=10"></script>
+<script src="idioma.js?v=1"></script>
+<script src="sidebar.js?v=11"></script>
 <script src="editor-launcher.js?v=4"></script>
 <script src="auth.js?v=2"></script>
 <script src="dados.js?v=1"></script>
@@ -258,10 +259,10 @@ function renderSidebar() {
 // ── CARREGAR ──
 async function loadApp() {
   show('loading');
-  setLoadingText('Identificando usuário…');
+  setLoadingText(t('g.identificando'));
 
   if (!PROJ_ID) {
-    setLoadingText('Nenhum projeto especificado. Use ?id=CODIGO na URL.');
+    setLoadingText(t('g.sem_projeto'));
     return;
   }
 
@@ -271,20 +272,24 @@ async function loadApp() {
   try {
     const uid = SESSION.user.id;
     const meArr = await api('GET','usuarios',null,'id=eq.'+uid);
-    if (!meArr || !meArr.length) { setLoadingText('Usuário não cadastrado no sistema.'); return; }
+    if (!meArr || !meArr.length) { setLoadingText(t('g.sem_cadastro')); return; }
     const me = meArr[0];
+
+    // O idioma da pessoa entra ANTES de qualquer render: assim a tela
+    // nasce no idioma certo, sem recarregar nem piscar em português.
+    ospaIdiomaDaSessao(me.idioma);
 
     if (me.papel_global === 'admin') {
       USER_PROFILE = { id: uid, email: me.email, nome: me.nome, papel: 'admin', disciplinas: [] };
     } else {
       const perfis = await api('GET','projeto_usuarios_v2',null,
         'usuario_id=eq.'+uid+'&projeto_id=eq.'+encodeURIComponent(PROJ_ID));
-      if (!perfis || !perfis.length) { setLoadingText('Você não tem acesso a este projeto.'); return; }
+      if (!perfis || !perfis.length) { setLoadingText(t('g.sem_acesso')); return; }
       USER_PROFILE = { id: uid, email: me.email, nome: me.nome,
                        papel: perfis[0].papel, disciplinas: perfis[0].disciplinas || [] };
     }
 
-    setLoadingText('Carregando apontamentos…');
+    setLoadingText(t('ap.carregando'));
     const [proj, disc, lista, resumo] = await Promise.all([
       api('GET','projetos',null,'id=eq.'+encodeURIComponent(PROJ_ID)).then(r => r[0]),
       api('GET','disciplinas',null,'projeto_id=eq.'+encodeURIComponent(PROJ_ID)+'&ativa=is.true&order=sigla.asc').catch(() => []),
@@ -303,7 +308,7 @@ async function loadApp() {
     show('app');
 
   } catch (e) {
-    setLoadingText('Erro: ' + e.message);
+    setLoadingText(t('g.erro', { msg: e.message }));
   }
 }
 
@@ -312,9 +317,13 @@ function podeCoordenar() {
   return !!USER_PROFILE && ospaPode(USER_PROFILE.papel, 'configurar');
 }
 
+function temCompatibilizacao() {
+  return ((PROJETO && PROJETO.tipo) || 'compatibilizacao') === 'compatibilizacao';
+}
+
 function render() {
   document.getElementById('summary').innerHTML =
-    esc((PROJETO && PROJETO.nome) ? PROJETO.nome + ' · ' : '') + esc(PROJ_ID) + ' · APONTAMENTOS';
+    esc((PROJETO && PROJETO.nome) ? PROJETO.nome + ' · ' : '') + esc(PROJ_ID) + ' · ' + t('ap.titulo_tela');
 
   renderFiltros();
 
@@ -327,8 +336,7 @@ function render() {
 
   const abertos = LISTA.filter(a => a.status === 'ABERTO').length;
   document.getElementById('main-hdr').textContent =
-    vis.length + (vis.length === 1 ? ' apontamento' : ' apontamentos') +
-    ' · ' + abertos + ' em aberto no projeto';
+    tn('ap.contagem', vis.length) + ' · ' + t('ap.abertos_projeto', { n: abertos });
 
   const alvo = document.getElementById('lista');
   alvo.innerHTML = '';
@@ -337,10 +345,8 @@ function render() {
     const d = document.createElement('div');
     d.className = 'vazio';
     d.innerHTML = LISTA.length
-      ? 'Nenhum apontamento com esse filtro.'
-      : 'Nenhum apontamento neste projeto ainda.<br>' +
-        'Use <b>+ Novo apontamento</b> para registrar uma dúvida ou um pedido —<br>' +
-        'dirigido à coordenação ou a uma disciplina, com imagem se ajudar.';
+      ? t('ap.vazio_filtro')
+      : t('ap.vazio_titulo') + '<br>' + t('ap.vazio_dica');
     alvo.appendChild(d);
     return;
   }
@@ -358,13 +364,13 @@ function renderFiltros() {
   f.innerHTML = '';
   const row = document.createElement('div'); row.className = 'filter-row';
 
-  const lbl = document.createElement('span'); lbl.className = 'f-lbl'; lbl.textContent = 'Mostrar';
+  const lbl = document.createElement('span'); lbl.className = 'f-lbl'; lbl.textContent = t('ap.mostrar');
   row.appendChild(lbl);
 
-  [['ABERTO','Em aberto'],['RESOLVIDO','Resolvidos'],['TODOS','Todos']].forEach(([v,t]) => {
+  [['ABERTO','ap.em_aberto'],['RESOLVIDO','ap.resolvidos'],['TODOS','ap.todos']].forEach(([v,chave]) => {
     const c = document.createElement('button');
     c.className = 'chip' + (FILTRO.status === v ? ' on' : '');
-    c.textContent = t;
+    c.textContent = t(chave);
     c.onclick = () => { FILTRO.status = v; render(); };
     row.appendChild(c);
   });
@@ -374,50 +380,40 @@ function renderFiltros() {
   const paraMim = document.createElement('button');
   paraMim.className = 'chip' + (FILTRO.so_para_mim ? ' on' : '');
   const nPara = RESUMO ? Number(RESUMO.para_mim || 0) : 0;
-  paraMim.textContent = 'Para mim' + (nPara ? ' (' + nPara + ')' : '');
+  paraMim.textContent = t('ap.para_mim') + (nPara ? ' (' + nPara + ')' : '');
   paraMim.onclick = () => { FILTRO.so_para_mim = !FILTRO.so_para_mim; render(); };
   row.appendChild(paraMim);
 
   const meus = document.createElement('button');
   meus.className = 'chip' + (FILTRO.so_meus ? ' on' : '');
-  meus.textContent = 'Que eu abri';
+  meus.textContent = t('ap.que_eu_abri');
   meus.onclick = () => { FILTRO.so_meus = !FILTRO.so_meus; render(); };
   row.appendChild(meus);
 
   const sp = document.createElement('span'); sp.className = 'spacer'; row.appendChild(sp);
 
   const novo = document.createElement('button');
-  novo.className = 'btn-novo'; novo.textContent = '+ Novo apontamento';
+  novo.className = 'btn-novo'; novo.textContent = t('ap.novo');
   novo.onclick = modalNovo;
   row.appendChild(novo);
 
   f.appendChild(row);
 }
 
-function quando(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  const dias = Math.floor((Date.now() - d.getTime()) / 86400000);
-  if (dias <= 0) return 'hoje';
-  if (dias === 1) return 'ontem';
-  if (dias < 30) return 'há ' + dias + ' dias';
-  return d.toLocaleDateString('pt-BR');
-}
-
 function crachaDestino(a) {
   if (a.destino_tipo === 'coordenacao') {
     const s = document.createElement('span');
-    s.className = 'ap-destino'; s.textContent = '→ Coordenação';
+    s.className = 'ap-destino'; s.textContent = t('ap.para_coordenacao');
     return s;
   }
   const w = document.createElement('span');
   w.className = 'ap-destino';
   w.style.cssText = 'display:inline-flex;align-items:center;gap:5px';
   w.appendChild(document.createTextNode('→'));
-  const t = document.createElement('span');
-  t.className = 'd-tag d-' + a.destino_disciplina;
-  t.textContent = a.destino_disciplina;
-  w.appendChild(t);
+  const tag = document.createElement('span');
+  tag.className = 'd-tag d-' + a.destino_disciplina;
+  tag.textContent = a.destino_disciplina;
+  w.appendChild(tag);
   return w;
 }
 
@@ -431,19 +427,19 @@ function cartao(a) {
   h.appendChild(cod);
   const st = document.createElement('span');
   st.className = 'badge-status s-' + a.status;
-  st.textContent = a.status === 'ABERTO' ? 'Em aberto' : 'Resolvido';
+  st.textContent = a.status === 'ABERTO' ? t('ap.status_aberto') : t('ap.status_resolvido');
   h.appendChild(st);
   h.appendChild(crachaDestino(a));
   const sp = document.createElement('span'); sp.className = 'spacer'; h.appendChild(sp);
   const meta = document.createElement('span'); meta.className = 'ap-meta';
-  meta.textContent = a.autor_nome + ' · ' + quando(a.created_at);
+  meta.textContent = a.autor_nome + ' · ' + tQuando(a.created_at);
   h.appendChild(meta);
   el.appendChild(h);
 
   // corpo
   const b = document.createElement('div'); b.className = 'ap-body';
-  const t = document.createElement('div'); t.className = 'ap-titulo'; t.textContent = a.titulo;
-  b.appendChild(t);
+  const tit = document.createElement('div'); tit.className = 'ap-titulo'; tit.textContent = a.titulo;
+  b.appendChild(tit);
   if (a.descricao) {
     const d = document.createElement('div'); d.className = 'ap-desc'; d.textContent = a.descricao;
     b.appendChild(d);
@@ -460,7 +456,7 @@ function cartao(a) {
   }
   if (a.ficha_id) {
     const f = document.createElement('div'); f.className = 'ap-ficha';
-    f.textContent = '✓ Virou a ficha ' + (a.ficha_codigo || '') + ' no relatório de conflitos';
+    f.textContent = t('ap.virou_ficha', { codigo: a.ficha_codigo || '' });
     b.appendChild(f);
   }
 
@@ -470,38 +466,40 @@ function cartao(a) {
   const verBtn = document.createElement('button');
   verBtn.className = 'ap-btn';
   const n = Number(a.respostas || 0);
-  verBtn.textContent = ABERTOS[a.id]
-    ? 'Fechar conversa'
-    : (n ? n + (n === 1 ? ' resposta' : ' respostas') : 'Responder');
+  verBtn.textContent = ABERTOS[a.id] ? t('ap.fechar_conversa')
+                      : (n ? tn('ap.respostas', n) : t('ap.responder'));
   verBtn.onclick = () => alternarConversa(a);
   ac.appendChild(verBtn);
 
   if (podeResolver(a)) {
     const r = document.createElement('button');
     r.className = 'ap-btn' + (a.status === 'ABERTO' ? ' pri' : '');
-    r.textContent = a.status === 'ABERTO' ? 'Marcar resolvido' : 'Reabrir';
+    r.textContent = a.status === 'ABERTO' ? t('ap.marcar_resolvido') : t('ap.reabrir');
     r.onclick = () => resolver(a, a.status === 'ABERTO');
     ac.appendChild(r);
   }
 
   if (a.sou_autor || podeCoordenar()) {
     const e = document.createElement('button');
-    e.className = 'ap-btn'; e.textContent = 'Editar';
+    e.className = 'ap-btn'; e.textContent = t('g.editar');
     e.onclick = () => modalEditar(a);
     ac.appendChild(e);
   }
 
-  if (podeCoordenar() && !a.ficha_id) {
+  // Virar ficha só existe onde existem fichas: num projeto de
+  // acompanhamento não há relatório de conflitos para a ficha ir.
+  // (O banco também recusa — ver ap_promover.)
+  if (podeCoordenar() && !a.ficha_id && temCompatibilizacao()) {
     const p = document.createElement('button');
-    p.className = 'ap-btn'; p.textContent = '↑ Virar ficha';
-    p.title = 'Cria uma ficha de conflito no relatório com este conteúdo';
+    p.className = 'ap-btn'; p.textContent = t('ap.virar_ficha');
+    p.title = t('ap.virar_ficha_dica');
     p.onclick = () => modalPromover(a);
     ac.appendChild(p);
   }
 
   if (podeCoordenar() || (a.sou_autor && !Number(a.respostas || 0))) {
     const x = document.createElement('button');
-    x.className = 'ap-btn perigo'; x.textContent = 'Excluir';
+    x.className = 'ap-btn perigo'; x.textContent = t('g.excluir');
     x.onclick = () => excluir(a);
     ac.appendChild(x);
   }
@@ -525,7 +523,7 @@ function conversa(a) {
 
   if (!respostas.length) {
     const v = document.createElement('div'); v.className = 'sem-resp';
-    v.textContent = 'Nenhuma resposta ainda.';
+    v.textContent = t('ap.sem_respostas');
     c.appendChild(v);
   }
 
@@ -535,7 +533,7 @@ function conversa(a) {
     const h = document.createElement('div'); h.className = 'resp-head';
     const au = document.createElement('span'); au.className = 'resp-autor'; au.textContent = r.usuario_nome;
     const ho = document.createElement('span'); ho.className = 'resp-hora';
-    ho.textContent = new Date(r.created_at).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    ho.textContent = tDataHora(r.created_at);
     h.appendChild(au); h.appendChild(ho);
     it.appendChild(h);
     if (r.texto) {
@@ -557,9 +555,9 @@ function conversa(a) {
   const pend = [];
   const form = document.createElement('div'); form.className = 'form-resp';
   const ta = document.createElement('textarea');
-  ta.className = 'campo'; ta.placeholder = 'Responder…'; ta.rows = 2;
+  ta.className = 'campo'; ta.placeholder = t('ap.responder_ph'); ta.rows = 2;
   const env = document.createElement('button');
-  env.className = 'ap-btn pri'; env.textContent = 'Enviar';
+  env.className = 'ap-btn pri'; env.textContent = t('g.enviar');
   form.appendChild(ta); form.appendChild(env);
 
   const anexoRow = document.createElement('div'); anexoRow.className = 'anexo-row';
@@ -568,17 +566,17 @@ function conversa(a) {
 
   env.onclick = async () => {
     const texto = ta.value.trim();
-    if (!texto && !pend.length) { toast('Escreva algo ou anexe uma imagem.'); return; }
-    env.disabled = true; env.textContent = 'Enviando…';
+    if (!texto && !pend.length) { toast(t('ap.escreva_algo')); return; }
+    env.disabled = true; env.textContent = t('ap.enviando');
     try {
       await rpc('ap_responder', { p_apontamento: a.id, p_texto: texto, p_imagens: pend.length ? pend : null });
       ABERTOS[a.id] = await rpc('ap_respostas', { p_apontamento: a.id });
       a.respostas = ABERTOS[a.id].length;
-      toast('Resposta enviada.');
+      toast(t('ap.resposta_enviada'));
       render();
     } catch (e) {
-      toast('Erro: ' + e.message);
-      env.disabled = false; env.textContent = 'Enviar';
+      toast(t('g.erro', { msg: e.message }));
+      env.disabled = false; env.textContent = t('g.enviar');
     }
   };
 
@@ -592,7 +590,7 @@ async function alternarConversa(a) {
   try {
     ABERTOS[a.id] = await rpc('ap_respostas', { p_apontamento: a.id }) || [];
     render();
-  } catch (e) { toast('Erro: ' + e.message); }
+  } catch (e) { toast(t('g.erro', { msg: e.message })); }
 }
 
 // ── ANEXOS ──
@@ -636,7 +634,7 @@ function desenharAnexos(row, pend, input) {
   });
   const btn = document.createElement('button');
   btn.className = 'anexo-btn';
-  btn.textContent = pend.length ? '+ Outra imagem' : '+ Anexar imagem';
+  btn.textContent = pend.length ? t('ap.anexar_outra') : t('ap.anexar');
   btn.onclick = () => input.click();
   row.appendChild(btn);
   row.appendChild(input);
@@ -650,9 +648,9 @@ function abrirModal(titulo, corpoEl, rotuloOk, aoConfirmar) {
   const ok = document.getElementById('modal-ok');
   ok.textContent = rotuloOk; ok.disabled = false;
   ok.onclick = async () => {
-    ok.disabled = true; const antes = ok.textContent; ok.textContent = 'Aguarde…';
+    ok.disabled = true; const antes = ok.textContent; ok.textContent = t('g.aguarde');
     try { await aoConfirmar(); fecharModal(); }
-    catch (e) { toast('Erro: ' + e.message); ok.disabled = false; ok.textContent = antes; }
+    catch (e) { toast(t('g.erro', { msg: e.message })); ok.disabled = false; ok.textContent = antes; }
   };
   document.getElementById('modal-cancelar').onclick = fecharModal;
   document.getElementById('modal-bg').classList.add('open');
@@ -675,13 +673,13 @@ function modalNovo() {
   const corpo = document.createElement('div');
   corpo.style.cssText = 'display:flex;flex-direction:column;gap:14px';
 
-  corpo.appendChild(campoTexto('ap-titulo', 'Título', '', 'Em uma linha: do que se trata', 0));
-  corpo.appendChild(campoTexto('ap-desc', 'Descrição', '', 'O que você observou, onde, e o que precisa ser decidido', 4));
+  corpo.appendChild(campoTexto('ap-titulo', t('ap.campo_titulo'), '', t('ap.campo_titulo_ph'), 0));
+  corpo.appendChild(campoTexto('ap-desc', t('ap.campo_desc'), '', t('ap.campo_desc_ph'), 4));
 
   const dw = document.createElement('div'); dw.className = 'pfield';
-  const dl = document.createElement('label'); dl.textContent = 'Dirigido a';
+  const dl = document.createElement('label'); dl.textContent = t('ap.campo_destino');
   const sel = document.createElement('select'); sel.id = 'ap-destino';
-  const o1 = document.createElement('option'); o1.value = 'coordenacao'; o1.textContent = 'Coordenação';
+  const o1 = document.createElement('option'); o1.value = 'coordenacao'; o1.textContent = t('ap.destino_coord');
   sel.appendChild(o1);
   DISC.forEach(d => {
     const o = document.createElement('option');
@@ -690,32 +688,30 @@ function modalNovo() {
     sel.appendChild(o);
   });
   const dica = document.createElement('div'); dica.className = 'dica';
-  dica.textContent = DISC.length
-    ? 'Quem recebe vê o apontamento e pode responder. A coordenação vê todos.'
-    : 'Este projeto não tem disciplinas cadastradas, então o destino é a coordenação.';
+  dica.textContent = DISC.length ? t('ap.destino_dica') : t('ap.destino_dica_sem');
   dw.appendChild(dl); dw.appendChild(sel); dw.appendChild(dica);
   corpo.appendChild(dw);
 
   const aw = document.createElement('div'); aw.className = 'pfield';
-  const al = document.createElement('label'); al.textContent = 'Imagens';
+  const al = document.createElement('label'); al.textContent = t('ap.campo_imagens');
   const row = document.createElement('div'); row.className = 'anexo-row';
   const input = criarEntradaImagem(pend, () => desenharAnexos(row, pend, input));
   desenharAnexos(row, pend, input);
   aw.appendChild(al); aw.appendChild(row);
   corpo.appendChild(aw);
 
-  abrirModal('Novo apontamento', corpo, 'Registrar', async () => {
+  abrirModal(t('ap.novo_titulo'), corpo, t('ap.registrar'), async () => {
     const titulo = document.getElementById('ap-titulo').value.trim();
     const desc   = document.getElementById('ap-desc').value;
     const destino = document.getElementById('ap-destino').value;
-    if (titulo.length < 3) throw new Error('Escreva um título com ao menos 3 letras.');
+    if (titulo.length < 3) throw new Error(t('ap.titulo_curto'));
     const [tipo, sigla] = destino.split(':');
     await rpc('ap_criar', {
       p_projeto: PROJ_ID, p_titulo: titulo, p_descricao: desc,
       p_destino_tipo: tipo, p_destino_disciplina: sigla || null,
       p_imagens: pend.length ? pend : null
     });
-    toast('Apontamento registrado.');
+    toast(t('ap.registrado'));
     await recarregar();
   });
 }
@@ -723,19 +719,19 @@ function modalNovo() {
 function modalEditar(a) {
   const corpo = document.createElement('div');
   corpo.style.cssText = 'display:flex;flex-direction:column;gap:14px';
-  corpo.appendChild(campoTexto('ed-titulo', 'Título', a.titulo, '', 0));
-  corpo.appendChild(campoTexto('ed-desc', 'Descrição', a.descricao || '', '', 4));
+  corpo.appendChild(campoTexto('ed-titulo', t('ap.campo_titulo'), a.titulo, '', 0));
+  corpo.appendChild(campoTexto('ed-desc', t('ap.campo_desc'), a.descricao || '', '', 4));
   const d = document.createElement('div'); d.className = 'dica';
-  d.textContent = 'O destino e as imagens não mudam aqui — se precisar trocar, registre outro apontamento.';
+  d.textContent = t('ap.editar_dica');
   corpo.appendChild(d);
 
-  abrirModal('Editar ' + a.codigo, corpo, 'Salvar', async () => {
+  abrirModal(t('ap.editar_titulo', { codigo: a.codigo }), corpo, t('g.salvar'), async () => {
     await rpc('ap_editar', {
       p_apontamento: a.id,
       p_titulo: document.getElementById('ed-titulo').value,
       p_descricao: document.getElementById('ed-desc').value
     });
-    toast('Apontamento atualizado.');
+    toast(t('ap.atualizado'));
     await recarregar();
   });
 }
@@ -745,18 +741,17 @@ function modalPromover(a) {
   corpo.style.cssText = 'display:flex;flex-direction:column;gap:14px';
 
   const aviso = document.createElement('div'); aviso.className = 'dica';
-  aviso.innerHTML = 'Cria uma ficha de conflito no relatório com o texto e as imagens deste apontamento, ' +
-    'como <b>rascunho não publicado</b> — você revisa e publica pelo Editor. A origem fica registrada na ficha.';
+  aviso.innerHTML = t('ap.promover_aviso');
   corpo.appendChild(aviso);
 
   const dw = document.createElement('div'); dw.className = 'pfield';
-  const dl = document.createElement('label'); dl.textContent = 'Disciplinas da ficha';
+  const dl = document.createElement('label'); dl.textContent = t('ap.promover_disc');
   const box = document.createElement('div');
   box.style.cssText = 'display:flex;gap:5px;flex-wrap:wrap;padding:8px;border:1px solid var(--border2);background:var(--bg)';
   const escolhidas = new Set(a.destino_disciplina ? [a.destino_disciplina] : []);
   if (!DISC.length) {
     const v = document.createElement('span'); v.className = 'dica';
-    v.textContent = 'Nenhuma disciplina ativa cadastrada neste projeto.';
+    v.textContent = t('ap.promover_sem_disc');
     box.appendChild(v);
   }
   DISC.forEach(d => {
@@ -772,16 +767,16 @@ function modalPromover(a) {
   dw.appendChild(dl); dw.appendChild(box);
   corpo.appendChild(dw);
 
-  corpo.appendChild(campoTexto('pr-local', 'Pavimento', '', 'Sigla do pavimento, se já souber (ex: TER)', 0));
+  corpo.appendChild(campoTexto('pr-local', t('ap.promover_pav'), '', t('ap.promover_pav_ph'), 0));
 
-  abrirModal('Virar ficha — ' + a.codigo, corpo, 'Criar ficha', async () => {
-    if (!escolhidas.size) throw new Error('Escolha ao menos uma disciplina para a ficha.');
+  abrirModal(t('ap.promover_titulo', { codigo: a.codigo }), corpo, t('ap.promover_ok'), async () => {
+    if (!escolhidas.size) throw new Error(t('ap.promover_escolha'));
     await rpc('ap_promover', {
       p_apontamento: a.id,
       p_disciplinas: Array.from(escolhidas),
       p_local: document.getElementById('pr-local').value
     });
-    toast('Ficha criada como rascunho. Revise e publique pelo Editor.');
+    toast(t('ap.promovido'));
     await recarregar();
   });
 }
@@ -790,19 +785,19 @@ function modalPromover(a) {
 async function resolver(a, resolvido) {
   try {
     await rpc('ap_resolver', { p_apontamento: a.id, p_resolvido: resolvido });
-    toast(resolvido ? 'Marcado como resolvido.' : 'Apontamento reaberto.');
+    toast(resolvido ? t('ap.resolvido_ok') : t('ap.reaberto'));
     await recarregar();
-  } catch (e) { toast('Erro: ' + e.message); }
+  } catch (e) { toast(t('g.erro', { msg: e.message })); }
 }
 
 async function excluir(a) {
-  if (!confirm('Excluir o apontamento ' + a.codigo + '? Isso apaga também as respostas.')) return;
+  if (!confirm(t('ap.excluir_conf', { codigo: a.codigo }))) return;
   try {
     await rpc('ap_excluir', { p_apontamento: a.id });
     delete ABERTOS[a.id];
-    toast('Apontamento excluído.');
+    toast(t('ap.excluido'));
     await recarregar();
-  } catch (e) { toast('Erro: ' + e.message); }
+  } catch (e) { toast(t('g.erro', { msg: e.message })); }
 }
 
 async function recarregar() {
@@ -846,7 +841,7 @@ document.getElementById('modal-bg').addEventListener('click', e => {
 // ── INÍCIO ──
 (async () => {
   show('loading');
-  setLoadingText('Restaurando sessão…');
+  setLoadingText(t('g.restaurando'));
   const ok = await tryRestoreSession();
   if (ok) await loadApp(); else show('login');
 })();

@@ -164,6 +164,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 <div class="toast" id="toast"></div>
 
+<script src="idioma.js?v=1"></script>
 <script src="auth.js?v=2"></script>
 <script src="dados.js?v=1"></script>
 <script src="login.js?v=2"></script>
@@ -207,6 +208,7 @@ async function loadApp() {
     const meArr = await api('GET','usuarios',null,'id=eq.'+uid);
     if (!meArr.length || meArr[0].papel_global !== 'admin') { show('denied'); return; }
     ME = meArr[0];
+    ospaIdiomaDaSessao(ME.idioma);   // vale para a tela de entrada e para a troca de senha
 
     setLoadingText('Carregando dados…');
     const [users, access, projects, empresas] = await Promise.all([
