@@ -89,6 +89,10 @@ function ospaTipoProjeto() {
 const OSPA_NAV_ITEMS = [
   { key: 'inicio',     label: 'Página inicial', href: 'home.html',   icon: 'ti-home',       needsId: true },
   { key: 'relatorio',  label: 'Relatório',   href: 'projeto.html',    icon: 'ti-file-text',  needsId: true, tipos: ['compatibilizacao'] },
+  // Apontamentos vale nos dois tipos de projeto: é o caminho de baixo para
+  // cima, que na compatibilização não existia — o que o projetista percebia
+  // só chegava à coordenação por fora do sistema.
+  { key: 'apontamentos', label: 'Apontamentos', href: 'apontamentos.html', icon: 'ti-message-2', needsId: true },
   { key: 'documentos', label: 'Documentos',  href: 'documentos.html', icon: 'ti-folder',      needsId: true, tipos: ['compatibilizacao'] },
   { key: 'analises',   label: 'Monitor de Conflitos', href: 'analytics.html', icon: 'ti-chart-bar',   needsId: true, tipos: ['compatibilizacao'] },
   { key: 'divider' },
@@ -252,6 +256,7 @@ function ospaRenderSidebar() {
 
   ospaIniciarOndas();   // o canvas é recriado a cada redesenho
   ospaIndicarNovos(projeto);
+  ospaIndicarApontamentos(projeto);
   ospaRegistrarAcesso(projeto);
 }
 
@@ -317,6 +322,37 @@ async function ospaIndicarNovos(projeto) {
     link.appendChild(ponto);
   } catch (e) {
     // sem conexão ou tabela indisponível: apenas não mostra o indicador
+  }
+}
+
+/* ============================================================
+   APONTAMENTOS ESPERANDO ESTA PESSOA
+
+   Um ponto no ícone de Apontamentos enquanto houver apontamento
+   aberto dirigido a ela (ou à coordenação, se ela coordena) que
+   ninguém respondeu ainda.
+
+   Diferente do ponto de "arquivo novo", que é novidade e se apaga
+   ao ver: este é pendência e some quando alguém responde. Um canal
+   que ninguém olha apodrece — e aí ninguém mais confia nele.
+   ============================================================ */
+
+async function ospaIndicarApontamentos(projeto) {
+  if (!projeto || typeof rpc !== 'function') return;
+  try {
+    const r = await rpc('ap_meu_resumo', { p_projeto: projeto });
+    const n = r && r[0] ? Number(r[0].para_mim_sem_resposta || 0) : 0;
+    if (!n) return;
+
+    const link = document.querySelector('.nav-link[href^="apontamentos.html"]');
+    if (!link || link.querySelector('.nav-ponto')) return;
+    const ponto = document.createElement('span');
+    ponto.className = 'nav-ponto';
+    ponto.title = n === 1 ? '1 apontamento esperando você'
+                          : n + ' apontamentos esperando você';
+    link.appendChild(ponto);
+  } catch (e) {
+    // função ainda não aplicada no banco, ou sem conexão: só não mostra o ponto
   }
 }
 

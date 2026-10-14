@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSPA — Apontamentos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=IBM+Plex+Serif:wght@300;400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="sidebar.css?v=4">
+<link rel="stylesheet" href="tokens.css?v=1">
+<link rel="stylesheet" href="login.css?v=1">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F8F8F8;--surface:#FFF;--surface2:#F6F5F3;--surface3:#E5E4E1;
+  --border:#E5E4E1;--border2:#CCC8C4;
+  --text:#191919;--text2:#727272;--text3:#B5B5B5;
+  --pend:#7A5200;--resol:#1A6B48;--alert:#C42828;
+  --sans:'Manrope',sans-serif;--serif:'IBM Plex Serif',serif;--mono:'IBM Plex Mono',monospace;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh}
+
+#screen-loading{display:none;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:12px}
+.loading-logo{height:36px;opacity:0.6}
+.loading-text{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:0.12em}
+
+.app-shell{display:flex;min-height:100vh}
+.shell-content{flex:1;min-width:0;display:flex;flex-direction:column}
+#screen-app{display:none}
+
+.summary{background:var(--surface);border-bottom:1px solid var(--border);padding:8px 40px;display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.08em}
+
+/* ── BARRA DE FILTROS ── */
+.filters{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:1px solid var(--border);box-shadow:0 2px 8px rgba(25,25,25,0.05)}
+.filter-row{padding:8px 40px;display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.f-lbl{font-size:9px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:var(--text3);white-space:nowrap;margin-right:2px}
+.chip{font-family:var(--mono);font-size:10px;font-weight:500;padding:3px 9px;border-radius:2px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;white-space:nowrap;user-select:none}
+.chip:hover{border-color:var(--text2);color:var(--text2)}
+.chip.on{background:var(--acento-fundo);border-color:var(--acento-borda);color:var(--acento-forte);font-weight:600}
+.spacer{flex:1}
+.btn-novo{background:var(--text);color:var(--surface);border:none;padding:7px 14px;font-family:var(--sans);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn-novo:hover{opacity:0.85}
+
+.main{padding:24px 40px 80px;max-width:900px}
+.main-hdr{font-size:9px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--text3);margin-bottom:16px}
+.vazio{font-family:var(--mono);font-size:11px;color:var(--text3);line-height:1.8;border:1px dashed var(--border2);padding:22px;text-align:center}
+
+/* ── CARTÃO DO APONTAMENTO ── */
+.ap{background:var(--surface);border:1px solid var(--border);margin-bottom:14px;position:relative}
+.ap::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:transparent}
+.ap.para-mim::before{background:var(--acento)}
+.ap.s-RESOLVIDO{opacity:0.55}
+.ap-head{padding:10px 14px 9px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);background:var(--surface2);flex-wrap:wrap}
+.ap-code{font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:0.04em}
+.badge-status{font-family:var(--mono);font-size:9px;font-weight:500;padding:2px 8px;border-radius:2px;letter-spacing:0.08em;text-transform:uppercase}
+.badge-status.s-ABERTO{background:rgba(122,82,0,0.08);color:var(--pend);border:1px solid rgba(122,82,0,0.2)}
+.badge-status.s-RESOLVIDO{background:rgba(26,107,72,0.08);color:var(--resol);border:1px solid rgba(26,107,72,0.2)}
+.ap-destino{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:2px;border:1px solid var(--border2);background:var(--surface);color:var(--text2)}
+.ap-body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:9px}
+.ap-titulo{font-size:14px;font-weight:600;line-height:1.45}
+.ap-desc{font-size:12.5px;color:var(--text2);line-height:1.65;white-space:pre-wrap}
+.ap-meta{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:0.06em}
+.ap-ficha{font-family:var(--mono);font-size:9.5px;color:var(--resol);background:rgba(26,107,72,0.07);border:1px solid rgba(26,107,72,0.2);padding:4px 8px;border-radius:2px}
+
+.ap-imgs{display:flex;gap:5px;flex-wrap:wrap}
+.thumb{width:84px;height:62px;object-fit:cover;border:1px solid var(--border);cursor:pointer;display:block}
+.thumb:hover{outline:1px solid var(--text2)}
+
+.ap-acoes{display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:10px;align-items:center}
+.ap-btn{background:none;border:1px solid var(--border2);color:var(--text2);font-family:var(--mono);font-size:9.5px;padding:5px 10px;cursor:pointer;border-radius:2px;white-space:nowrap}
+.ap-btn:hover{border-color:var(--text2);color:var(--text)}
+.ap-btn.pri{background:var(--text);border-color:var(--text);color:var(--surface)}
+.ap-btn.pri:hover{opacity:0.85}
+.ap-btn.perigo:hover{border-color:var(--alert);color:var(--alert)}
+
+/* ── CONVERSA ── */
+.conversa{border-top:1px solid var(--border);padding:12px 14px;background:var(--surface2);display:flex;flex-direction:column;gap:8px}
+.resp{background:var(--surface);padding:8px 10px;border-left:2px solid var(--border2)}
+.resp.minha{border-left-color:var(--acento)}
+.resp-head{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.resp-autor{font-size:10px;font-weight:600}
+.resp-hora{font-family:var(--mono);font-size:9px;color:var(--text3);margin-left:auto}
+.resp-texto{font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap}
+.resp-img{width:64px;height:48px;object-fit:cover;border:1px solid var(--border);cursor:pointer;display:inline-block;margin:6px 4px 0 0}
+.sem-resp{font-family:var(--mono);font-size:10px;color:var(--text3);font-style:italic}
+
+.form-resp{display:flex;gap:6px;margin-top:2px}
+.campo{flex:1;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:7px 10px;font-family:var(--sans);font-size:12px;outline:none;resize:vertical;min-height:34px;width:100%}
+.campo:focus{border-color:var(--text2)}
+.anexo-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px}
+.anexo-btn{background:none;border:1px dashed var(--border2);color:var(--text3);font-family:var(--mono);font-size:9px;padding:5px 9px;cursor:pointer;border-radius:2px;white-space:nowrap}
+.anexo-btn:hover{border-color:var(--text2);color:var(--text2)}
+.anexo-prev{display:flex;align-items:center;gap:4px}
+.anexo-prev img{width:32px;height:24px;object-fit:cover;border:1px solid var(--border)}
+.anexo-x{background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:0 3px;line-height:1}
+.anexo-x:hover{color:var(--alert)}
+
+/* ── MODAL ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(25,25,25,0.45);z-index:800;align-items:center;justify-content:center;padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);width:100%;max-width:560px;max-height:88vh;overflow-y:auto}
+.modal-hdr{padding:14px 18px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600}
+.modal-body{padding:16px 18px;display:flex;flex-direction:column;gap:14px}
+.modal-foot{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.pfield{display:flex;flex-direction:column;gap:4px}
+.pfield label{font-size:9px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--text3)}
+.pfield select{padding:8px;font-family:var(--sans);font-size:13px;border:1px solid var(--border2);background:var(--bg);color:var(--text)}
+.dica{font-family:var(--mono);font-size:9.5px;color:var(--text3);line-height:1.6}
+
+/* ── LIGHTBOX ── */
+.lightbox{display:none;position:fixed;inset:0;background:rgba(25,25,25,0.92);z-index:900;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+.lightbox.open{display:flex}
+.lb-img{max-width:90vw;max-height:80vh;object-fit:contain}
+.lb-nav{display:flex;gap:10px;align-items:center}
+.lb-btn{background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.85);padding:10px 20px;cursor:pointer;font-family:var(--mono);font-size:15px;border-radius:2px;min-width:44px}
+.lb-ctr{color:rgba(255,255,255,0.4);font-family:var(--mono);font-size:11px;min-width:50px;text-align:center}
+.lb-close{position:fixed;top:18px;right:22px;background:none;border:none;color:rgba(255,255,255,0.5);font-size:26px;cursor:pointer;line-height:1}
+
+.toast{position:fixed;bottom:20px;right:20px;background:var(--text);color:var(--surface);font-family:var(--mono);font-size:11px;padding:9px 15px;opacity:0;transition:opacity 0.2s;pointer-events:none;z-index:999}
+.toast.show{opacity:1}
+
+/* Crachás de disciplina: cores de reserva; disciplinas.js sobrepõe com
+   as cores do banco. Sem isto, uma falha de consulta deixaria tudo cinza. */
+.d-tag{font-family:var(--mono);font-size:9px;font-weight:500;padding:2px 6px;border-radius:2px;background:var(--surface2);color:var(--text2);border:1px solid var(--border2)}
+.d-tag.d-ARQ{background:#EBF2F6;color:#2A6080;border-color:#C4D8E4}
+.d-tag.d-HID{background:#E8F0F8;color:#1A5A8A;border-color:#B8D0E8}
+.d-tag.d-EST{background:#F6EEE2;color:#7A4E14;border-color:#E4D0B0}
+.d-tag.d-INT{background:#EEE8F6;color:#5A3490;border-color:#D4C0E8}
+.d-tag.d-CLI{background:#E4F2EE;color:#166050;border-color:#B0D8CC}
+.d-tag.d-ELE{background:#F4F4E0;color:#606000;border-color:#D8D890}
+
+@media (max-width: 720px) {
+  .summary{padding:8px 16px;overflow-x:auto}
+  .filter-row{padding:8px 16px;gap:4px}
+  .main{padding:14px 16px 60px}
+  .sidebar{display:none}
+}
+</style>
+</head>
+<body data-page="apontamentos">
+
+<div class="app-shell">
+  <div id="ospa-sidebar"></div>
+  <div class="shell-content">
+
+<div id="screen-login" data-titulo="Apontamentos" data-sub="Acesso restrito"></div>
+
+<div id="screen-loading">
+  <img id="loading-logo" class="loading-logo" alt="OSPA">
+  <div class="loading-text" id="loading-text">Carregando…</div>
+</div>
+
+<div id="screen-app">
+  <div class="summary" id="summary"></div>
+  <div class="filters" id="filters"></div>
+  <div class="main">
+    <div class="main-hdr" id="main-hdr"></div>
+    <div id="lista"></div>
+  </div>
+</div>
+
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-bg">
+  <div class="modal">
+    <div class="modal-hdr" id="modal-titulo"></div>
+    <div class="modal-body" id="modal-corpo"></div>
+    <div class="modal-foot">
+      <button class="ap-btn" id="modal-cancelar">Cancelar</button>
+      <button class="ap-btn pri" id="modal-ok">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox">
+  <button class="lb-close" onclick="lbClose()">×</button>
+  <img class="lb-img" id="lb-img" src="" alt="">
+  <div class="lb-nav">
+    <button class="lb-btn" onclick="lbNav(-1)">‹</button>
+    <span class="lb-ctr" id="lb-ctr"></span>
+    <button class="lb-btn" onclick="lbNav(1)">›</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="sidebar.js?v=10"></script>
+<script src="editor-launcher.js?v=4"></script>
+<script src="auth.js?v=2"></script>
+<script src="dados.js?v=1"></script>
+<script src="login.js?v=2"></script>
+<script src="disciplinas.js?v=1"></script>
+<script>
+/* ============================================================
+   APONTAMENTOS
+
+   O caminho inverso da ficha de conflito. A ficha nasce da análise
+   da coordenação e desce para as disciplinas; o apontamento nasce
+   de quem está trabalhando e sobe. Qualquer pessoa do projeto abre
+   um, dirigido à coordenação ou a uma disciplina, com imagem para
+   mostrar do que está falando.
+
+   Quem vê o quê é decidido NO BANCO (ap_listar, ap_respostas): esta
+   tela nunca recebe um apontamento que não seja do seu autor, do
+   seu destino ou da coordenação. A conferência aqui é só de
+   apresentação — mostrar ou esconder um botão.
+   ============================================================ */
+
+let PROJ_ID = null, PROJETO = null, USER_PROFILE = null;
+let DISC = [];        // disciplinas ativas do projeto
+let LISTA = [];       // apontamentos visíveis
+let RESUMO = null;
+let ABERTOS = {};     // id → respostas carregadas (conversa expandida)
+let FILTRO = { status: 'ABERTO', so_meus: false, so_para_mim: false };
+
+PROJ_ID = new URLSearchParams(window.location.search).get('id');
+document.body.dataset.projeto = PROJ_ID || '';
+
+setLogos(OSPA_LOGO);
+
+function show(tela) {
+  ['login','loading','app'].forEach(s => {
+    const el = document.getElementById('screen-' + s);
+    if (el) el.style.display = (s !== tela) ? 'none' : (s === 'app' ? 'block' : 'flex');
+  });
+  const sb = document.getElementById('ospa-sidebar');
+  if (sb) sb.style.display = (tela === 'login') ? 'none' : '';
+}
+
+function esc(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function doLogout() {
+  SESSION = null; USER_PROFILE = null;
+  // Trocar de usuário na mesma aba não recarrega a página: sem limpar, a
+  // lista da sessão anterior continuaria em memória. Já aconteceu de um
+  // painel da coordenação aparecer para um projetista por causa disso.
+  LISTA = []; RESUMO = null; ABERTOS = {}; DISC = []; PROJETO = null;
+  clearSavedSession();
+  show('login');
+  const p = document.getElementById('login-password'); if (p) p.value = '';
+  const b = document.getElementById('login-btn'); if (b) b.textContent = 'Entrar';
+}
+window.ospaLogout = doLogout;
+
+function renderSidebar() {
+  document.body.dataset.userName = USER_PROFILE.nome || '';
+  document.body.dataset.userRole = USER_PROFILE.papel || 'projetista';
+  document.body.dataset.projeto = PROJ_ID || '';
+  document.body.dataset.projetoTipo = (PROJETO && PROJETO.tipo) || 'compatibilizacao';
+  document.body.dataset.userDisciplinas = (USER_PROFILE.disciplinas || []).join(',');
+  if (typeof ospaRenderSidebar === 'function') ospaRenderSidebar();
+}
+
+// ── CARREGAR ──
+async function loadApp() {
+  show('loading');
+  setLoadingText('Identificando usuário…');
+
+  if (!PROJ_ID) {
+    setLoadingText('Nenhum projeto especificado. Use ?id=CODIGO na URL.');
+    return;
+  }
+
+  // Limpa antes de carregar: ver doLogout
+  LISTA = []; RESUMO = null; ABERTOS = {}; DISC = []; PROJETO = null;
+
+  try {
+    const uid = SESSION.user.id;
+    const meArr = await api('GET','usuarios',null,'id=eq.'+uid);
+    if (!meArr || !meArr.length) { setLoadingText('Usuário não cadastrado no sistema.'); return; }
+    const me = meArr[0];
+
+    if (me.papel_global === 'admin') {
+      USER_PROFILE = { id: uid, email: me.email, nome: me.nome, papel: 'admin', disciplinas: [] };
+    } else {
+      const perfis = await api('GET','projeto_usuarios_v2',null,
+        'usuario_id=eq.'+uid+'&projeto_id=eq.'+encodeURIComponent(PROJ_ID));
+      if (!perfis || !perfis.length) { setLoadingText('Você não tem acesso a este projeto.'); return; }
+      USER_PROFILE = { id: uid, email: me.email, nome: me.nome,
+                       papel: perfis[0].papel, disciplinas: perfis[0].disciplinas || [] };
+    }
+
+    setLoadingText('Carregando apontamentos…');
+    const [proj, disc, lista, resumo] = await Promise.all([
+      api('GET','projetos',null,'id=eq.'+encodeURIComponent(PROJ_ID)).then(r => r[0]),
+      api('GET','disciplinas',null,'projeto_id=eq.'+encodeURIComponent(PROJ_ID)+'&ativa=is.true&order=sigla.asc').catch(() => []),
+      rpc('ap_listar', { p_projeto: PROJ_ID }),
+      rpc('ap_meu_resumo', { p_projeto: PROJ_ID }).then(r => (r && r[0]) || null).catch(() => null)
+    ]);
+
+    PROJETO = proj || {};
+    DISC = disc || [];
+    LISTA = lista || [];
+    RESUMO = resumo;
+
+    renderSidebar();
+    await ospaCarregarCores(PROJ_ID);
+    render();
+    show('app');
+
+  } catch (e) {
+    setLoadingText('Erro: ' + e.message);
+  }
+}
+
+// ── RENDER ──
+function podeCoordenar() {
+  return !!USER_PROFILE && ospaPode(USER_PROFILE.papel, 'configurar');
+}
+
+function render() {
+  document.getElementById('summary').innerHTML =
+    esc((PROJETO && PROJETO.nome) ? PROJETO.nome + ' · ' : '') + esc(PROJ_ID) + ' · APONTAMENTOS';
+
+  renderFiltros();
+
+  const vis = LISTA.filter(a => {
+    if (FILTRO.status !== 'TODOS' && a.status !== FILTRO.status) return false;
+    if (FILTRO.so_meus && !a.sou_autor) return false;
+    if (FILTRO.so_para_mim && !ehParaMim(a)) return false;
+    return true;
+  });
+
+  const abertos = LISTA.filter(a => a.status === 'ABERTO').length;
+  document.getElementById('main-hdr').textContent =
+    vis.length + (vis.length === 1 ? ' apontamento' : ' apontamentos') +
+    ' · ' + abertos + ' em aberto no projeto';
+
+  const alvo = document.getElementById('lista');
+  alvo.innerHTML = '';
+
+  if (!vis.length) {
+    const d = document.createElement('div');
+    d.className = 'vazio';
+    d.innerHTML = LISTA.length
+      ? 'Nenhum apontamento com esse filtro.'
+      : 'Nenhum apontamento neste projeto ainda.<br>' +
+        'Use <b>+ Novo apontamento</b> para registrar uma dúvida ou um pedido —<br>' +
+        'dirigido à coordenação ou a uma disciplina, com imagem se ajudar.';
+    alvo.appendChild(d);
+    return;
+  }
+
+  vis.forEach(a => alvo.appendChild(cartao(a)));
+}
+
+function ehParaMim(a) {
+  if (a.sou_destino) return true;
+  return a.destino_tipo === 'coordenacao' && podeCoordenar();
+}
+
+function renderFiltros() {
+  const f = document.getElementById('filters');
+  f.innerHTML = '';
+  const row = document.createElement('div'); row.className = 'filter-row';
+
+  const lbl = document.createElement('span'); lbl.className = 'f-lbl'; lbl.textContent = 'Mostrar';
+  row.appendChild(lbl);
+
+  [['ABERTO','Em aberto'],['RESOLVIDO','Resolvidos'],['TODOS','Todos']].forEach(([v,t]) => {
+    const c = document.createElement('button');
+    c.className = 'chip' + (FILTRO.status === v ? ' on' : '');
+    c.textContent = t;
+    c.onclick = () => { FILTRO.status = v; render(); };
+    row.appendChild(c);
+  });
+
+  const sep = document.createElement('span'); sep.style.cssText = 'width:10px'; row.appendChild(sep);
+
+  const paraMim = document.createElement('button');
+  paraMim.className = 'chip' + (FILTRO.so_para_mim ? ' on' : '');
+  const nPara = RESUMO ? Number(RESUMO.para_mim || 0) : 0;
+  paraMim.textContent = 'Para mim' + (nPara ? ' (' + nPara + ')' : '');
+  paraMim.onclick = () => { FILTRO.so_para_mim = !FILTRO.so_para_mim; render(); };
+  row.appendChild(paraMim);
+
+  const meus = document.createElement('button');
+  meus.className = 'chip' + (FILTRO.so_meus ? ' on' : '');
+  meus.textContent = 'Que eu abri';
+  meus.onclick = () => { FILTRO.so_meus = !FILTRO.so_meus; render(); };
+  row.appendChild(meus);
+
+  const sp = document.createElement('span'); sp.className = 'spacer'; row.appendChild(sp);
+
+  const novo = document.createElement('button');
+  novo.className = 'btn-novo'; novo.textContent = '+ Novo apontamento';
+  novo.onclick = modalNovo;
+  row.appendChild(novo);
+
+  f.appendChild(row);
+}
+
+function quando(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const dias = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (dias <= 0) return 'hoje';
+  if (dias === 1) return 'ontem';
+  if (dias < 30) return 'há ' + dias + ' dias';
+  return d.toLocaleDateString('pt-BR');
+}
+
+function crachaDestino(a) {
+  if (a.destino_tipo === 'coordenacao') {
+    const s = document.createElement('span');
+    s.className = 'ap-destino'; s.textContent = '→ Coordenação';
+    return s;
+  }
+  const w = document.createElement('span');
+  w.className = 'ap-destino';
+  w.style.cssText = 'display:inline-flex;align-items:center;gap:5px';
+  w.appendChild(document.createTextNode('→'));
+  const t = document.createElement('span');
+  t.className = 'd-tag d-' + a.destino_disciplina;
+  t.textContent = a.destino_disciplina;
+  w.appendChild(t);
+  return w;
+}
+
+function cartao(a) {
+  const el = document.createElement('div');
+  el.className = 'ap s-' + a.status + (ehParaMim(a) && a.status === 'ABERTO' ? ' para-mim' : '');
+
+  // cabeçalho
+  const h = document.createElement('div'); h.className = 'ap-head';
+  const cod = document.createElement('span'); cod.className = 'ap-code'; cod.textContent = a.codigo;
+  h.appendChild(cod);
+  const st = document.createElement('span');
+  st.className = 'badge-status s-' + a.status;
+  st.textContent = a.status === 'ABERTO' ? 'Em aberto' : 'Resolvido';
+  h.appendChild(st);
+  h.appendChild(crachaDestino(a));
+  const sp = document.createElement('span'); sp.className = 'spacer'; h.appendChild(sp);
+  const meta = document.createElement('span'); meta.className = 'ap-meta';
+  meta.textContent = a.autor_nome + ' · ' + quando(a.created_at);
+  h.appendChild(meta);
+  el.appendChild(h);
+
+  // corpo
+  const b = document.createElement('div'); b.className = 'ap-body';
+  const t = document.createElement('div'); t.className = 'ap-titulo'; t.textContent = a.titulo;
+  b.appendChild(t);
+  if (a.descricao) {
+    const d = document.createElement('div'); d.className = 'ap-desc'; d.textContent = a.descricao;
+    b.appendChild(d);
+  }
+  if (a.imagens && a.imagens.length) {
+    const row = document.createElement('div'); row.className = 'ap-imgs';
+    a.imagens.forEach((src, i) => {
+      const img = document.createElement('img');
+      img.className = 'thumb'; img.src = src; img.alt = 'anexo ' + (i+1);
+      img.onclick = () => lbOpen(a.imagens, i);
+      row.appendChild(img);
+    });
+    b.appendChild(row);
+  }
+  if (a.ficha_id) {
+    const f = document.createElement('div'); f.className = 'ap-ficha';
+    f.textContent = '✓ Virou a ficha ' + (a.ficha_codigo || '') + ' no relatório de conflitos';
+    b.appendChild(f);
+  }
+
+  // ações
+  const ac = document.createElement('div'); ac.className = 'ap-acoes';
+
+  const verBtn = document.createElement('button');
+  verBtn.className = 'ap-btn';
+  const n = Number(a.respostas || 0);
+  verBtn.textContent = ABERTOS[a.id]
+    ? 'Fechar conversa'
+    : (n ? n + (n === 1 ? ' resposta' : ' respostas') : 'Responder');
+  verBtn.onclick = () => alternarConversa(a);
+  ac.appendChild(verBtn);
+
+  if (podeResolver(a)) {
+    const r = document.createElement('button');
+    r.className = 'ap-btn' + (a.status === 'ABERTO' ? ' pri' : '');
+    r.textContent = a.status === 'ABERTO' ? 'Marcar resolvido' : 'Reabrir';
+    r.onclick = () => resolver(a, a.status === 'ABERTO');
+    ac.appendChild(r);
+  }
+
+  if (a.sou_autor || podeCoordenar()) {
+    const e = document.createElement('button');
+    e.className = 'ap-btn'; e.textContent = 'Editar';
+    e.onclick = () => modalEditar(a);
+    ac.appendChild(e);
+  }
+
+  if (podeCoordenar() && !a.ficha_id) {
+    const p = document.createElement('button');
+    p.className = 'ap-btn'; p.textContent = '↑ Virar ficha';
+    p.title = 'Cria uma ficha de conflito no relatório com este conteúdo';
+    p.onclick = () => modalPromover(a);
+    ac.appendChild(p);
+  }
+
+  if (podeCoordenar() || (a.sou_autor && !Number(a.respostas || 0))) {
+    const x = document.createElement('button');
+    x.className = 'ap-btn perigo'; x.textContent = 'Excluir';
+    x.onclick = () => excluir(a);
+    ac.appendChild(x);
+  }
+
+  b.appendChild(ac);
+  el.appendChild(b);
+
+  if (ABERTOS[a.id]) el.appendChild(conversa(a));
+  return el;
+}
+
+function podeResolver(a) {
+  return a.sou_autor || a.sou_destino || podeCoordenar() ||
+         (a.destino_tipo === 'coordenacao' && podeCoordenar());
+}
+
+// ── CONVERSA ──
+function conversa(a) {
+  const c = document.createElement('div'); c.className = 'conversa';
+  const respostas = ABERTOS[a.id] || [];
+
+  if (!respostas.length) {
+    const v = document.createElement('div'); v.className = 'sem-resp';
+    v.textContent = 'Nenhuma resposta ainda.';
+    c.appendChild(v);
+  }
+
+  respostas.forEach(r => {
+    const it = document.createElement('div');
+    it.className = 'resp' + (r.sou_autor ? ' minha' : '');
+    const h = document.createElement('div'); h.className = 'resp-head';
+    const au = document.createElement('span'); au.className = 'resp-autor'; au.textContent = r.usuario_nome;
+    const ho = document.createElement('span'); ho.className = 'resp-hora';
+    ho.textContent = new Date(r.created_at).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    h.appendChild(au); h.appendChild(ho);
+    it.appendChild(h);
+    if (r.texto) {
+      const tx = document.createElement('div'); tx.className = 'resp-texto'; tx.textContent = r.texto;
+      it.appendChild(tx);
+    }
+    if (r.imagens && r.imagens.length) {
+      r.imagens.forEach((src, i) => {
+        const img = document.createElement('img');
+        img.className = 'resp-img'; img.src = src; img.alt = 'anexo';
+        img.onclick = () => lbOpen(r.imagens, i);
+        it.appendChild(img);
+      });
+    }
+    c.appendChild(it);
+  });
+
+  // formulário de resposta, com anexo — o mesmo gesto do comentário da ficha
+  const pend = [];
+  const form = document.createElement('div'); form.className = 'form-resp';
+  const ta = document.createElement('textarea');
+  ta.className = 'campo'; ta.placeholder = 'Responder…'; ta.rows = 2;
+  const env = document.createElement('button');
+  env.className = 'ap-btn pri'; env.textContent = 'Enviar';
+  form.appendChild(ta); form.appendChild(env);
+
+  const anexoRow = document.createElement('div'); anexoRow.className = 'anexo-row';
+  const fileInput = criarEntradaImagem(pend, () => desenharAnexos(anexoRow, pend, fileInput));
+  desenharAnexos(anexoRow, pend, fileInput);
+
+  env.onclick = async () => {
+    const texto = ta.value.trim();
+    if (!texto && !pend.length) { toast('Escreva algo ou anexe uma imagem.'); return; }
+    env.disabled = true; env.textContent = 'Enviando…';
+    try {
+      await rpc('ap_responder', { p_apontamento: a.id, p_texto: texto, p_imagens: pend.length ? pend : null });
+      ABERTOS[a.id] = await rpc('ap_respostas', { p_apontamento: a.id });
+      a.respostas = ABERTOS[a.id].length;
+      toast('Resposta enviada.');
+      render();
+    } catch (e) {
+      toast('Erro: ' + e.message);
+      env.disabled = false; env.textContent = 'Enviar';
+    }
+  };
+
+  c.appendChild(form);
+  c.appendChild(anexoRow);
+  return c;
+}
+
+async function alternarConversa(a) {
+  if (ABERTOS[a.id]) { delete ABERTOS[a.id]; render(); return; }
+  try {
+    ABERTOS[a.id] = await rpc('ap_respostas', { p_apontamento: a.id }) || [];
+    render();
+  } catch (e) { toast('Erro: ' + e.message); }
+}
+
+// ── ANEXOS ──
+// Mesma redução do comentário da ficha: no máximo 1200px e JPEG 0.75.
+// Sem isso, uma foto de celular viraria vários megabytes de base64 no banco.
+function criarEntradaImagem(destino, aoMudar) {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*'; input.multiple = true; input.style.display = 'none';
+  input.onchange = e => {
+    Array.from(e.target.files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const img = new Image();
+        img.onload = () => {
+          const MAX = 1200;
+          let w = img.width, h = img.height;
+          if (Math.max(w, h) > MAX) { const s = MAX / Math.max(w, h); w = Math.round(w*s); h = Math.round(h*s); }
+          const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+          cv.getContext('2d').drawImage(img, 0, 0, w, h);
+          destino.push(cv.toDataURL('image/jpeg', 0.75));
+          aoMudar();
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+    input.value = '';
+  };
+  return input;
+}
+
+function desenharAnexos(row, pend, input) {
+  row.innerHTML = '';
+  pend.forEach((src, i) => {
+    const p = document.createElement('span'); p.className = 'anexo-prev';
+    const im = document.createElement('img'); im.src = src;
+    const x = document.createElement('button'); x.className = 'anexo-x'; x.textContent = '×';
+    x.onclick = () => { pend.splice(i, 1); desenharAnexos(row, pend, input); };
+    p.appendChild(im); p.appendChild(x);
+    row.appendChild(p);
+  });
+  const btn = document.createElement('button');
+  btn.className = 'anexo-btn';
+  btn.textContent = pend.length ? '+ Outra imagem' : '+ Anexar imagem';
+  btn.onclick = () => input.click();
+  row.appendChild(btn);
+  row.appendChild(input);
+}
+
+// ── MODAL ──
+function abrirModal(titulo, corpoEl, rotuloOk, aoConfirmar) {
+  document.getElementById('modal-titulo').textContent = titulo;
+  const corpo = document.getElementById('modal-corpo');
+  corpo.innerHTML = ''; corpo.appendChild(corpoEl);
+  const ok = document.getElementById('modal-ok');
+  ok.textContent = rotuloOk; ok.disabled = false;
+  ok.onclick = async () => {
+    ok.disabled = true; const antes = ok.textContent; ok.textContent = 'Aguarde…';
+    try { await aoConfirmar(); fecharModal(); }
+    catch (e) { toast('Erro: ' + e.message); ok.disabled = false; ok.textContent = antes; }
+  };
+  document.getElementById('modal-cancelar').onclick = fecharModal;
+  document.getElementById('modal-bg').classList.add('open');
+}
+function fecharModal() { document.getElementById('modal-bg').classList.remove('open'); }
+
+function campoTexto(id, rotulo, valor, placeholder, linhas) {
+  const w = document.createElement('div'); w.className = 'pfield';
+  const l = document.createElement('label'); l.textContent = rotulo;
+  const c = linhas ? document.createElement('textarea') : document.createElement('input');
+  c.id = id; c.className = 'campo'; c.value = valor || '';
+  if (placeholder) c.placeholder = placeholder;
+  if (linhas) c.rows = linhas;
+  w.appendChild(l); w.appendChild(c);
+  return w;
+}
+
+function modalNovo() {
+  const pend = [];
+  const corpo = document.createElement('div');
+  corpo.style.cssText = 'display:flex;flex-direction:column;gap:14px';
+
+  corpo.appendChild(campoTexto('ap-titulo', 'Título', '', 'Em uma linha: do que se trata', 0));
+  corpo.appendChild(campoTexto('ap-desc', 'Descrição', '', 'O que você observou, onde, e o que precisa ser decidido', 4));
+
+  const dw = document.createElement('div'); dw.className = 'pfield';
+  const dl = document.createElement('label'); dl.textContent = 'Dirigido a';
+  const sel = document.createElement('select'); sel.id = 'ap-destino';
+  const o1 = document.createElement('option'); o1.value = 'coordenacao'; o1.textContent = 'Coordenação';
+  sel.appendChild(o1);
+  DISC.forEach(d => {
+    const o = document.createElement('option');
+    o.value = 'disciplina:' + d.sigla;
+    o.textContent = d.sigla + (d.nome ? ' — ' + d.nome : '');
+    sel.appendChild(o);
+  });
+  const dica = document.createElement('div'); dica.className = 'dica';
+  dica.textContent = DISC.length
+    ? 'Quem recebe vê o apontamento e pode responder. A coordenação vê todos.'
+    : 'Este projeto não tem disciplinas cadastradas, então o destino é a coordenação.';
+  dw.appendChild(dl); dw.appendChild(sel); dw.appendChild(dica);
+  corpo.appendChild(dw);
+
+  const aw = document.createElement('div'); aw.className = 'pfield';
+  const al = document.createElement('label'); al.textContent = 'Imagens';
+  const row = document.createElement('div'); row.className = 'anexo-row';
+  const input = criarEntradaImagem(pend, () => desenharAnexos(row, pend, input));
+  desenharAnexos(row, pend, input);
+  aw.appendChild(al); aw.appendChild(row);
+  corpo.appendChild(aw);
+
+  abrirModal('Novo apontamento', corpo, 'Registrar', async () => {
+    const titulo = document.getElementById('ap-titulo').value.trim();
+    const desc   = document.getElementById('ap-desc').value;
+    const destino = document.getElementById('ap-destino').value;
+    if (titulo.length < 3) throw new Error('Escreva um título com ao menos 3 letras.');
+    const [tipo, sigla] = destino.split(':');
+    await rpc('ap_criar', {
+      p_projeto: PROJ_ID, p_titulo: titulo, p_descricao: desc,
+      p_destino_tipo: tipo, p_destino_disciplina: sigla || null,
+      p_imagens: pend.length ? pend : null
+    });
+    toast('Apontamento registrado.');
+    await recarregar();
+  });
+}
+
+function modalEditar(a) {
+  const corpo = document.createElement('div');
+  corpo.style.cssText = 'display:flex;flex-direction:column;gap:14px';
+  corpo.appendChild(campoTexto('ed-titulo', 'Título', a.titulo, '', 0));
+  corpo.appendChild(campoTexto('ed-desc', 'Descrição', a.descricao || '', '', 4));
+  const d = document.createElement('div'); d.className = 'dica';
+  d.textContent = 'O destino e as imagens não mudam aqui — se precisar trocar, registre outro apontamento.';
+  corpo.appendChild(d);
+
+  abrirModal('Editar ' + a.codigo, corpo, 'Salvar', async () => {
+    await rpc('ap_editar', {
+      p_apontamento: a.id,
+      p_titulo: document.getElementById('ed-titulo').value,
+      p_descricao: document.getElementById('ed-desc').value
+    });
+    toast('Apontamento atualizado.');
+    await recarregar();
+  });
+}
+
+function modalPromover(a) {
+  const corpo = document.createElement('div');
+  corpo.style.cssText = 'display:flex;flex-direction:column;gap:14px';
+
+  const aviso = document.createElement('div'); aviso.className = 'dica';
+  aviso.innerHTML = 'Cria uma ficha de conflito no relatório com o texto e as imagens deste apontamento, ' +
+    'como <b>rascunho não publicado</b> — você revisa e publica pelo Editor. A origem fica registrada na ficha.';
+  corpo.appendChild(aviso);
+
+  const dw = document.createElement('div'); dw.className = 'pfield';
+  const dl = document.createElement('label'); dl.textContent = 'Disciplinas da ficha';
+  const box = document.createElement('div');
+  box.style.cssText = 'display:flex;gap:5px;flex-wrap:wrap;padding:8px;border:1px solid var(--border2);background:var(--bg)';
+  const escolhidas = new Set(a.destino_disciplina ? [a.destino_disciplina] : []);
+  if (!DISC.length) {
+    const v = document.createElement('span'); v.className = 'dica';
+    v.textContent = 'Nenhuma disciplina ativa cadastrada neste projeto.';
+    box.appendChild(v);
+  }
+  DISC.forEach(d => {
+    const c = document.createElement('button');
+    c.className = 'chip' + (escolhidas.has(d.sigla) ? ' on' : '');
+    c.textContent = d.sigla;
+    c.onclick = () => {
+      if (escolhidas.has(d.sigla)) { escolhidas.delete(d.sigla); c.classList.remove('on'); }
+      else { escolhidas.add(d.sigla); c.classList.add('on'); }
+    };
+    box.appendChild(c);
+  });
+  dw.appendChild(dl); dw.appendChild(box);
+  corpo.appendChild(dw);
+
+  corpo.appendChild(campoTexto('pr-local', 'Pavimento', '', 'Sigla do pavimento, se já souber (ex: TER)', 0));
+
+  abrirModal('Virar ficha — ' + a.codigo, corpo, 'Criar ficha', async () => {
+    if (!escolhidas.size) throw new Error('Escolha ao menos uma disciplina para a ficha.');
+    await rpc('ap_promover', {
+      p_apontamento: a.id,
+      p_disciplinas: Array.from(escolhidas),
+      p_local: document.getElementById('pr-local').value
+    });
+    toast('Ficha criada como rascunho. Revise e publique pelo Editor.');
+    await recarregar();
+  });
+}
+
+// ── AÇÕES ──
+async function resolver(a, resolvido) {
+  try {
+    await rpc('ap_resolver', { p_apontamento: a.id, p_resolvido: resolvido });
+    toast(resolvido ? 'Marcado como resolvido.' : 'Apontamento reaberto.');
+    await recarregar();
+  } catch (e) { toast('Erro: ' + e.message); }
+}
+
+async function excluir(a) {
+  if (!confirm('Excluir o apontamento ' + a.codigo + '? Isso apaga também as respostas.')) return;
+  try {
+    await rpc('ap_excluir', { p_apontamento: a.id });
+    delete ABERTOS[a.id];
+    toast('Apontamento excluído.');
+    await recarregar();
+  } catch (e) { toast('Erro: ' + e.message); }
+}
+
+async function recarregar() {
+  const [lista, resumo] = await Promise.all([
+    rpc('ap_listar', { p_projeto: PROJ_ID }),
+    rpc('ap_meu_resumo', { p_projeto: PROJ_ID }).then(r => (r && r[0]) || null).catch(() => null)
+  ]);
+  LISTA = lista || [];
+  RESUMO = resumo;
+  render();
+}
+
+// ── LIGHTBOX / TOAST ──
+let LB = [], LB_I = 0;
+function lbOpen(imgs, i) {
+  LB = imgs; LB_I = i; lbRender();
+  document.querySelector('.lb-nav').style.display = imgs.length > 1 ? 'flex' : 'none';
+  document.getElementById('lightbox').classList.add('open');
+}
+function lbClose() { document.getElementById('lightbox').classList.remove('open'); }
+function lbNav(d) { LB_I = (LB_I + d + LB.length) % LB.length; lbRender(); }
+function lbRender() {
+  document.getElementById('lb-img').src = LB[LB_I];
+  document.getElementById('lb-ctr').textContent = (LB_I + 1) + '/' + LB.length;
+}
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (document.getElementById('lightbox').classList.contains('open')) { lbClose(); return; }
+  if (document.getElementById('modal-bg').classList.contains('open')) fecharModal();
+});
+document.getElementById('modal-bg').addEventListener('click', e => {
+  if (e.target.id === 'modal-bg') fecharModal();
+});
+
+// ── INÍCIO ──
+(async () => {
+  show('loading');
+  setLoadingText('Restaurando sessão…');
+  const ok = await tryRestoreSession();
+  if (ok) await loadApp(); else show('login');
+})();
+</script>
+</body>
+</html>

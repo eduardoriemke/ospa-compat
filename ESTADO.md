@@ -19,6 +19,7 @@ um HTML com o script embutido, mais arquivos compartilhados.
 | `index.html` | Lista de projetos, backups, criar/excluir projeto |
 | `home.html` | Página inicial do projeto — **somente leitura** |
 | `projeto.html` | Relatório de conflitos (é o que o projetista usa) |
+| `apontamentos.html` | Apontamentos — o caminho de baixo para cima |
 | `documentos.html` | Documentos do Drive, gerador de nomenclatura, comparador |
 | `analytics.html` | Monitor de conflitos |
 | `analise.html` | Rodadas de compatibilização |
@@ -83,6 +84,41 @@ um HTML com o script embutido, mais arquivos compartilhados.
     Administração sai da barra lateral e passa a ser alcançada por ali
 16. **9** — capacidades em vez de papéis nas telas; **tipo de projeto**
     (compatibilização / acompanhamento) decidindo quais abas aparecem
+17. **10** — apontamentos: qualquer pessoa do projeto abre, dirigido à
+    coordenação ou a uma disciplina, com imagem; conversa com resposta e
+    imagem; a coordenação pode promover a ficha de conflito
+
+## Apontamentos (fase 10)
+
+Duas tabelas (`apontamentos`, `apontamento_respostas`) e as funções `ap_*`.
+Objeto diferente da ficha, de propósito: a ficha nasce da análise da
+coordenação e desce para as disciplinas; o apontamento nasce de quem está
+trabalhando e sobe. Na mesma tabela, a ficha ganharia campos que não usa e o
+apontamento herdaria o status por disciplina, que não tem a quem perguntar.
+Separados, o fluxo de compatibilização em produção não foi tocado.
+
+- **Quem vê:** autor, destino (coordenação ou quem responde pela disciplina) e
+  a coordenação, que vê tudo. Decidido no banco, em `ap_pode_ver` e dentro do
+  `ap_listar` — a tela nunca recebe o que não deveria.
+- **Quem fecha:** autor, destino ou coordenação (`ap_pode_resolver`).
+- **Quem exclui:** o autor enquanto ninguém respondeu; depois, só a coordenação.
+- **Numeração:** `A-01`, gerada no servidor por um contador guardado
+  (`apontamento_seq`) que **não volta** — se fosse "maior + 1", apagar o A-02
+  faria o próximo nascer A-02 e um código citado em reunião passaria a apontar
+  para outra coisa.
+- **Promover a ficha** (`ap_promover`, só coordenação): cria a ficha como
+  rascunho não publicado, com o texto e as imagens, registra a origem na
+  observação e guarda o vínculo em `apontamentos.ficha_id`. É o que faz a
+  função valer também na compatibilização — antes, o que o projetista percebia
+  só chegava por WhatsApp.
+- **Aparece onde a pessoa já olha:** cartão no painel da página inicial e ponto
+  no ícone da barra lateral. O ponto é **pendência**, não novidade: fica
+  enquanto houver apontamento dirigido a ela sem nenhuma resposta, e não se
+  apaga só por ter sido visto.
+- **Imagens** em coluna `jsonb`, como `comentarios.imagens`: data URL de JPEG
+  reduzido a 1200px pelo navegador. Mesma dívida de sempre — base64 dentro do
+  banco, que já estourou um backup; tirar imagem do banco é uma migração só,
+  que depois atende fichas, comentários e apontamentos juntos.
 
 ## Papéis e capacidades
 
@@ -130,26 +166,15 @@ diária. Com vários projetos ativos, revisar esse intervalo.
 
 ## Próximas etapas
 
-- **Apontamentos** (decidido, não implementado) — tabela e página novas, em
-  TODOS os tipos de projeto, e **qualquer projetista cria**. Objeto diferente
-  da ficha de conflito: a ficha
-  nasce da análise da coordenação, de cima para baixo, com disciplinas
-  cruzadas, grau e status por disciplina; o apontamento nasce de quem está
-  trabalhando, tem autor e destinatário e se resolve na conversa. Por isso
-  tabela própria — enfiar os dois na mesma faria a ficha carregar campos que
-  não usa e o apontamento herdar a máquina de status por disciplina.
-  Decidido com o Eduardo: destinatário é **a coordenação ou uma disciplina**
-  (não uma pessoa — evita o apontamento órfão quando alguém sai do projeto);
-  **veem o autor, o destinatário e a coordenação**, e a restrição tem que estar
-  na função do banco, não na tela; aparece nas pendências do painel pessoal e
-  como ponto no ícone da sidebar (mesmo mecanismo do "arquivo novo"), senão o
-  canal apodrece; e a coordenação pode **promover apontamento a ficha**,
-  copiando o conteúdo e guardando a origem — é o que faz a função valer também
-  na compatibilização, onde hoje o que o projetista percebe só chega por
-  WhatsApp.
-  Junto vai a numeração no servidor: o código da ficha (`C-NN`) é calculado no
-  navegador a partir da lista carregada, o que duplica número se duas pessoas
-  criarem ao mesmo tempo.
+- **Código da ficha no servidor** — o `C-NN` ainda é calculado no navegador, a
+  partir da lista que aquele navegador carregou: duas pessoas criando ficha ao
+  mesmo tempo geram o mesmo número, sem erro e sem aviso. A promoção de
+  apontamento a ficha (`ap_promover`) já gera com trava no servidor; falta o
+  editor. Vale junto da próxima mexida no editor.
+- **Documentos no acompanhamento** — proposto: mostrar a aba quando o projeto
+  tem pasta do Drive, em vez de depender do tipo. Em compatibilização nada
+  muda; no acompanhamento aparece quando houver pasta. Sem disciplinas, a
+  listagem cai toda como pasta avulsa. Aguardando decisão.
 - **Bilíngue PT/EN** (decidido, não implementado) — há projeto real em inglês a
   caminho: coordenação do escritório, e um arquiteto americano participando
   como projetista, que levanta e responde apontamentos. O caro é

@@ -155,8 +155,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   </div>
 </div>
 
-<script src="sidebar.js?v=9"></script>
-<script src="editor-launcher.js?v=3"></script>
+<script src="sidebar.js?v=10"></script>
+<script src="editor-launcher.js?v=4"></script>
 <script src="auth.js?v=2"></script>
 <script src="dados.js?v=1"></script>
 <script src="login.js?v=2"></script>
@@ -180,7 +180,7 @@ setLogos(OSPA_LOGO);
 
 function doLogout() {
   SESSION = null; USER_PROFILE = null;
-  PAINEL = null; EQUIPE_PAINEL = []; EQUIPE = [];
+  PAINEL = null; EQUIPE_PAINEL = []; EQUIPE = []; AP_RESUMO = null;
   clearSavedSession();
   show('login');
   document.getElementById('login-password').value = '';
@@ -284,10 +284,13 @@ async function loadApp() {
     // Trocar de usuário na mesma aba recarrega os dados, mas as variáveis
     // da sessão anterior continuariam em memória. Limpar aqui evita que a
     // tabela encontre dados de quem saiu.
-    PAINEL = null; EQUIPE_PAINEL = [];
+    PAINEL = null; EQUIPE_PAINEL = []; AP_RESUMO = null;
 
     // Painel: pendências desta pessoa (e da equipe, para a coordenação)
     PAINEL = await rpc('painel_pessoal', { p_projeto: projId }).then(r => (r && r[0]) || null).catch(() => null);
+    // Apontamentos esperando esta pessoa. O catch cobre o banco ainda sem a
+    // fase 10 aplicada: o painel simplesmente não mostra o cartão.
+    AP_RESUMO = await rpc('ap_meu_resumo', { p_projeto: projId }).then(r => (r && r[0]) || null).catch(() => null);
     if (USER_PROFILE && ospaPode(USER_PROFILE.papel, 'ver_equipe')) {
       EQUIPE_PAINEL = await rpc('painel_equipe', { p_projeto: projId }).catch(() => []);
     }
@@ -320,7 +323,7 @@ function renderSidebar() {
 // Sai todo de consultas sobre dados que já existem — nenhuma tabela
 // nova, nenhum estado a manter em dia.
 
-let PAINEL = null, EQUIPE_PAINEL = [];
+let PAINEL = null, EQUIPE_PAINEL = [], AP_RESUMO = null;
 
 function relatorioComDiscs(discs) {
   // leva ao relatório já filtrado pelas disciplinas da pessoa
@@ -328,16 +331,46 @@ function relatorioComDiscs(discs) {
   return 'projeto.html?id=' + encodeURIComponent(PROJETO.id) + q;
 }
 
+function apontamentosUrl() {
+  return 'apontamentos.html?id=' + encodeURIComponent(PROJETO.id);
+}
+
+// O cartão dos apontamentos dirigidos a esta pessoa. Fica junto das
+// pendências de ficha de propósito: um canal que só existe na sua
+// própria tela ninguém olha, e aí deixa de servir para qualquer coisa.
+function cartaoApontamentos() {
+  const r = AP_RESUMO;
+  if (!r) return '';
+  const paraMim = Number(r.para_mim || 0);
+  const semResp = Number(r.para_mim_sem_resposta || 0);
+  if (!paraMim) return '';
+  return '<a class="painel-cartao' + (semResp ? ' pendente' : '') + '" href="' + apontamentosUrl() + '">' +
+    '<div class="painel-num">' + paraMim + '</div>' +
+    '<div class="painel-rot">' +
+      (paraMim == 1 ? 'apontamento dirigido a você' : 'apontamentos dirigidos a você') + '</div>' +
+    (semResp ? '<div class="painel-nota painel-alerta">' + semResp +
+               (semResp == 1 ? ' sem nenhuma resposta' : ' sem nenhuma resposta') + '</div>' : '') +
+    '</a>';
+}
+
 function renderPainel() {
   const el = document.getElementById('painel');
   if (!PAINEL) { el.style.display = 'none'; return; }
 
+  // Num projeto de acompanhamento não existem fichas de conflito: mostrar
+  // "0 conflitos abertos" seria ruído.
+  const temConflitos = ((PROJETO && PROJETO.tipo) || 'compatibilizacao') === 'compatibilizacao';
+
   const p = PAINEL;
   const discs = p.disciplinas || [];
   const recente = [];
-  if (p.fichas_recentes)      recente.push('<b>' + p.fichas_recentes + '</b> ' + (p.fichas_recentes == 1 ? 'ficha nova' : 'fichas novas'));
+  if (temConflitos && p.fichas_recentes) recente.push('<b>' + p.fichas_recentes + '</b> ' + (p.fichas_recentes == 1 ? 'ficha nova' : 'fichas novas'));
   if (p.arquivos_recentes)    recente.push('<b>' + p.arquivos_recentes + '</b> ' + (p.arquivos_recentes == 1 ? 'arquivo' : 'arquivos'));
   if (p.comentarios_recentes) recente.push('<b>' + p.comentarios_recentes + '</b> ' + (p.comentarios_recentes == 1 ? 'comentário' : 'comentários'));
+  if (AP_RESUMO && Number(AP_RESUMO.recentes || 0)) {
+    const n = Number(AP_RESUMO.recentes);
+    recente.push('<b>' + n + '</b> ' + (n == 1 ? 'apontamento' : 'apontamentos'));
+  }
 
   let h = '';
   if (recente.length) {
@@ -345,6 +378,13 @@ function renderPainel() {
   }
 
   h += '<div class="painel-cartoes">';
+  h += cartaoApontamentos();
+  if (!temConflitos) {
+    h += '</div>';
+    el.innerHTML = h;
+    el.style.display = (recente.length || AP_RESUMO && Number(AP_RESUMO.para_mim || 0)) ? 'block' : 'none';
+    return;
+  }
   if (p.sem_resposta > 0) {
     h += '<a class="painel-cartao pendente" href="' + relatorioComDiscs(discs) + '">' +
          '<div class="painel-num">' + p.sem_resposta + '</div>' +

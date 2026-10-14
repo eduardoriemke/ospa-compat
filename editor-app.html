@@ -469,10 +469,6 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .btn-ghost:hover{border-color:var(--text2);color:var(--text)}
 .btn-export{background:var(--surface2);border:1px solid var(--border2);color:var(--text);width:100%;padding:11px;font-size:13px;font-family:var(--sans);letter-spacing:0.04em;text-align:left}
 .btn-export:hover{background:var(--surface3);border-color:var(--text2)}
-.tag-list{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
-.tag-item{font-family:var(--mono);font-size:10px;padding:2px 6px 2px 8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);display:flex;align-items:center;gap:4px}
-.tag-x{background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;line-height:1;padding:0}
-.tag-x:hover{color:var(--alert)}
 .tag-add-row{display:flex;gap:6px}
 .tag-add-row input{flex:1;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:6px 8px;font-family:var(--mono);font-size:11px;outline:none}
 .tag-add-row input:focus{border-color:var(--text2)}
@@ -1278,28 +1274,8 @@ function renderEditorPanel() {
     pubAllBtn.textContent = '\u25cf Publicar todas as fichas';
     pubAllBtn.onclick = () => { publishAll(); renderEditorPanel(); };
     db.appendChild(pubAllBtn);
-    // Disciplinas e pavimentos passaram a ser configurados na tela
-    // "Configurações do projeto". Aqui ficam só para consulta — editar
-    // em dois lugares faria um sobrescrever o outro.
-    db.insertAdjacentHTML('beforeend','<div class="sec-lbl">Disciplinas</div>');
-    const dt = document.createElement('div'); dt.className = 'tag-list';
-    CONFIG.disciplines.forEach(d => {
-      const item = document.createElement('div'); item.className = 'tag-item'; item.textContent = d;
-      dt.appendChild(item);
-    });
-    db.appendChild(dt);
 
-    db.insertAdjacentHTML('beforeend','<div class="sec-lbl">Pavimentos</div>');
-    const lt = document.createElement('div'); lt.className = 'tag-list';
-    CONFIG.locations.forEach(l => {
-      const item = document.createElement('div'); item.className = 'tag-item'; item.textContent = l;
-      lt.appendChild(item);
-    });
-    db.appendChild(lt);
-
-    db.insertAdjacentHTML('beforeend',
-      '<div style="font-family:var(--mono);font-size:10px;color:var(--text3);line-height:1.5;margin-top:10px">' +
-      'Para incluir, remover ou reordenar, use <b>Configurações</b> na barra lateral do projeto.</div>');
+    // Disciplinas e pavimentos ficam na tela "Configurações do projeto".
 
   } else if (edTab === 'exportar') {
     const optRow = document.createElement('div'); optRow.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:14px';
