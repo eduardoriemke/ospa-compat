@@ -112,6 +112,11 @@ async function ospaOpenEditor(id, papel) {
     // caminhos relativos não resolvem: injetamos o endereço completo.
     html = html.replace('/*__VIEWER_URL__*/', new URL('viewer-modelo.json', location.href).href);
 
+    // Pelo mesmo motivo (blob), o editor não sabe em que ambiente está:
+    // herda o Supabase escolhido pelo auth.js desta página (local ou produção).
+    html = html.replace(/const SB_URL = "[^"]*";/, 'const SB_URL = ' + JSON.stringify(SB_URL) + ';')
+               .replace(/const SB_KEY = "[^"]*";/, 'const SB_KEY = ' + JSON.stringify(SB_KEY) + ';');
+
     // Cores das disciplinas: entram por último no <head> e têm prioridade
     // sobre as fixas do editor. O relatório exportado herda daqui.
     var coresCss = (typeof ospaCssDeLista === 'function') ? ospaCssDeLista(cores) : '';

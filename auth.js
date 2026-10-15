@@ -21,8 +21,18 @@
 // se a pessoa está mesmo na versão mais recente ("que versão aparece aí?").
 const OSPA_VERSAO = 'v2026.08.24';
 
-const SB_URL  = "https://jxezjuovrxajjleyjdcs.supabase.co";
-const SB_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4ZXpqdW92cnhhampsZXlqZGNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MDcwNTksImV4cCI6MjA5NjA4MzA1OX0.vaHfGesmDhZVeDMl_GSQYyIhN7E0EvRvV1vMy2vRYZY";
+// ── AMBIENTE ──
+// Aberto em localhost/127.0.0.1 → Supabase local (`supabase start`),
+// nunca produção. Em qualquer outro endereço → produção.
+const SB_LOCAL = ['localhost', '127.0.0.1'].includes(location.hostname);
+
+const SB_URL  = SB_LOCAL
+  ? "http://127.0.0.1:54321"
+  : "https://jxezjuovrxajjleyjdcs.supabase.co";
+const SB_KEY  = SB_LOCAL
+  // chave anon padrão do Supabase local (mesma em toda instalação da CLI)
+  ? "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
+  : "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4ZXpqdW92cnhhampsZXlqZGNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MDcwNTksImV4cCI6MjA5NjA4MzA1OX0.vaHfGesmDhZVeDMl_GSQYyIhN7E0EvRvV1vMy2vRYZY";
 const SB_AUTH = SB_URL + "/auth/v1";
 
 const SESSION_KEY = 'ospa_session';
