@@ -24,7 +24,8 @@ um HTML com o script embutido, mais arquivos compartilhados.
 | `analytics.html` | Monitor de conflitos |
 | `analise.html` | Rodadas de compatibilização |
 | `configuracoes.html` | Configurações do projeto (coordenação) |
-| `admin.html` | Contas, empresas, consulta de vínculos |
+| `admin.html` | Contas, empresas, consulta de vínculos, solicitações de acesso |
+| `acesso.html` | Formulário aberto "Solicitar acesso" (link da tela de entrada) |
 | `editor-app.html` | Editor de fichas (abre em aba própria) |
 | `editor-launcher.js` | Busca o editor sob demanda e injeta os dados |
 | `auth.js` | Sessão, `sbFetch`, renovação de token |
@@ -97,6 +98,10 @@ um HTML com o script embutido, mais arquivos compartilhados.
     reduzida no navegador a 1600 px). Coordenação troca em Configurações → Dados gerais;
     aparece no cartão da lista e no alto da página inicial. Primeira tabela fechada de
     verdade: leitura para quem está logado, escrita só pela função `proj_foto`
+21. **13** — solicitação de acesso: `acesso.html` (aberta, sem login) grava em
+    `solicitacoes_acesso` pela função `acesso_solicitar`; o admin vê em
+    Administração → Solicitações e cria a conta com o `usr_criar` de sempre.
+    Sem e-mail ainda: nem aviso ao admin, nem resposta à pessoa
 
 ## Bilíngue (fase 11)
 

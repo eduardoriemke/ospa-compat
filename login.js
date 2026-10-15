@@ -41,8 +41,6 @@ function montarLogin() {
 
   // A mesma tela em todas as páginas (o data-titulo de cada uma não
   // aparece mais): a identidade é a da plataforma, igual à do briefing.
-  const pedir = 'mailto:' + OSPA_PEDIR_ACESSO + '?subject=' + encodeURIComponent(t('login.pedir_assunto'));
-
   box.innerHTML =
     '<div class="login-fundo"></div>' +
     '<div class="login-wrap"><div class="login-box">' +
@@ -64,7 +62,7 @@ function montarLogin() {
         '<div class="login-err" id="login-err"></div>' +
         '<button type="submit" class="login-btn" id="login-btn">' + t('login.entrar') + '</button>' +
       '</form>' +
-      '<a class="login-pedir" href="' + pedir + '">' + t('login.pedir') + '</a>' +
+      '<a class="login-pedir" href="acesso.html">' + t('login.pedir') + '</a>' +
     '</div></div>';
 
   box.dataset.pronto = '1';
@@ -85,8 +83,6 @@ function montarLogin() {
    O botão só aparece se o provedor Google estiver ativo no Supabase
    (GET /auth/v1/settings). Assim a tela já está pronta, e o botão surge
    sozinho no dia em que o Google for ligado — sem nova publicação. */
-
-const OSPA_PEDIR_ACESSO = 'eduardo.riemke@ospa.com.br';
 
 const GOOGLE_G = '<svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">' +
   '<path fill="#4285F4" d="M45 24c0-1.6-.15-3.15-.42-4.64H24v8.78h11.77c-.5 2.7-2.04 4.99-4.34 6.52v5.42h7.02C42.6 36.2 45 30.6 45 24z"/>' +

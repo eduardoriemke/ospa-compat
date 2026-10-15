@@ -98,9 +98,24 @@ const OSPA_TEXTOS = {
                          en: 'Design coordination and communication between consultants.' },
   'login.google':      { pt: 'Entrar com o e-mail OSPA', en: 'Sign in with OSPA email' },
   'login.ou':          { pt: 'ou',                       en: 'or' },
-  'login.pedir':       { pt: 'Não tem acesso? Peça o seu.', en: 'No access? Request it.' },
-  'login.pedir_assunto': { pt: 'Acesso à Plataforma de compatibilização',
-                           en: 'Access to the Design coordination platform' },
+  'login.pedir':       { pt: 'Não tem acesso? Solicite.', en: 'No access? Request it.' },
+
+  // ── solicitação de acesso (acesso.html) ──
+  'acesso.titulo':     { pt: 'Solicitar <b>acesso</b>', en: 'Request <b>access</b>' },
+  'acesso.descricao':  { pt: 'A plataforma reúne a compatibilização dos projetos da OSPA. O acesso é liberado por projeto, então informe de qual você participa.',
+                         en: 'The platform brings together the design coordination of OSPA projects. Access is granted per project, so tell us which one you work on.' },
+  'acesso.email':      { pt: 'Seu e-mail',               en: 'Your email' },
+  'acesso.nome':       { pt: 'Seu nome',                 en: 'Your name' },
+  'acesso.empresa':    { pt: 'Sua empresa',              en: 'Your company' },
+  'acesso.projeto':    { pt: 'De qual projeto você participa', en: 'Which project you work on' },
+  'acesso.projeto_ph': { pt: 'Nome do empreendimento',   en: 'Development name' },
+  'acesso.enviar':     { pt: 'Solicitar acesso',         en: 'Request access' },
+  'acesso.enviando':   { pt: 'Enviando…',                en: 'Sending…' },
+  'acesso.enviado':    { pt: 'Pedido enviado. A OSPA vai analisar e entrar em contato pelo e-mail informado.',
+                         en: 'Request sent. OSPA will review it and contact you at the email provided.' },
+  'acesso.falhou':     { pt: 'Não foi possível enviar. Tente de novo.', en: 'Could not send. Please try again.' },
+  'acesso.ja_tem':     { pt: 'Já tem acesso?',           en: 'Already have access?' },
+  'acesso.entrar':     { pt: 'Entrar',                   en: 'Sign in' },
 
   // ── troca de senha ──
   'senha.entre_antes': { pt: 'Entre no sistema primeiro.', en: 'Sign in first.' },

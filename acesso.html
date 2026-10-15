@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSPA — Solicitar acesso</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css?v=1">
+<link rel="stylesheet" href="login.css?v=3">
+<style>
+:root{--bg:#F8F8F8;--surface:#FFF;--border:#E5E4E1;--border2:#CCC8C4;--text:#191919;--text2:#727272;--text3:#B5B5B5;--alert:#C42828;--sans:'Manrope',sans-serif;--mono:'IBM Plex Mono',monospace;}
+*{box-sizing:border-box}
+body{margin:0;background:#fff}
+</style>
+</head>
+<body>
+
+<!-- Solicitação de acesso: aberta, sem login. Grava pelo acesso_solicitar
+     (fase 13); o admin vê em Administração → Solicitações. -->
+<div class="login-tela">
+  <div class="login-fundo"></div>
+  <div class="login-wrap"><div class="login-box">
+    <a href="index.html"><img class="login-logo" src="marca/ospa.svg" alt="OSPA"></a>
+    <h1 class="login-title" id="ac-titulo"></h1>
+    <p class="login-sub" id="ac-descricao"></p>
+
+    <form id="ac-form" onsubmit="return false" action="javascript:void(0)" method="post" novalidate>
+      <label class="login-field"><span data-t="acesso.email"></span>
+        <input type="email" id="ac-email" autocomplete="email" spellcheck="false" placeholder="voce@empresa.com.br" maxlength="200"></label>
+      <label class="login-field"><span data-t="acesso.nome"></span>
+        <input type="text" id="ac-nome" autocomplete="name" maxlength="120"></label>
+      <label class="login-field"><span><span data-t="acesso.empresa"></span> <span class="login-opcional" id="ac-opcional"></span></span>
+        <input type="text" id="ac-empresa" autocomplete="organization" maxlength="120"></label>
+      <label class="login-field"><span data-t="acesso.projeto"></span>
+        <input type="text" id="ac-projeto" maxlength="200"></label>
+      <!-- Isca para robôs: invisível para pessoas; se vier preenchido, não envia. -->
+      <div class="login-isca" aria-hidden="true"><input type="text" id="ac-site" tabindex="-1" autocomplete="off"></div>
+      <div class="login-err" id="ac-erro"></div>
+      <button type="submit" class="login-btn" id="ac-enviar" data-t="acesso.enviar"></button>
+    </form>
+    <div class="login-ok" id="ac-ok" hidden data-t="acesso.enviado"></div>
+
+    <a class="login-pedir" href="index.html"><span data-t="acesso.ja_tem"></span> <span data-t="acesso.entrar"></span></a>
+  </div></div>
+</div>
+
+<script src="idioma.js?v=3"></script>
+<script src="auth.js?v=3"></script>
+<script>
+document.getElementById('ac-titulo').innerHTML = t('acesso.titulo');
+document.getElementById('ac-descricao').textContent = t('acesso.descricao');
+document.getElementById('ac-projeto').placeholder = t('acesso.projeto_ph');
+document.getElementById('ac-opcional').textContent = ospaIdioma() === 'en' ? '(optional)' : '(opcional)';
+
+function erro(msg) {
+  const el = document.getElementById('ac-erro');
+  el.textContent = msg; el.style.display = msg ? 'block' : 'none';
+}
+
+document.getElementById('ac-form').addEventListener('submit', async function (e) {
+  e.preventDefault();
+  erro('');
+  const v = id => document.getElementById(id).value.trim();
+  if (v('ac-site')) return;   // robô
+
+  const btn = document.getElementById('ac-enviar');
+  btn.disabled = true; btn.textContent = t('acesso.enviando');
+  try {
+    // Sem sessão: chamada com a chave pública. A função valida tudo no servidor.
+    const r = await fetch(SB_URL + '/rest/v1/rpc/acesso_solicitar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SB_KEY },
+      body: JSON.stringify({ p_email: v('ac-email'), p_nome: v('ac-nome'),
+                             p_empresa: v('ac-empresa'), p_projeto: v('ac-projeto') })
+    });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      throw new Error(d.message || t('acesso.falhou'));
+    }
+    document.getElementById('ac-form').hidden = true;
+    document.getElementById('ac-ok').hidden = false;
+  } catch (e) {
+    erro(e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = t('acesso.enviar');
+  }
+});
+</script>
+</body>
+</html>

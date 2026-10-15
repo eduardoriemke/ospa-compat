@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=IBM+Plex+Serif:wght@300;400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="tokens.css?v=1">
-<link rel="stylesheet" href="login.css?v=2">
+<link rel="stylesheet" href="login.css?v=3">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -144,7 +144,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 <div id="screen-app">
   <div class="header">
     <img id="app-logo" class="header-logo" alt="OSPA">
-    <div class="header-title"><span class="header-eyebrow">OSPA Compat</span>Administração</div>
+    <div class="header-title"><span class="header-eyebrow">Plataforma de compatibilização</span>Administração</div>
     <span class="user-name" id="user-name-badge"></span>
     <a class="logout-btn" href="index.html" style="text-decoration:none">← Projetos</a>
 <button class="logout-btn" id="btn-senha" onclick="ospaTrocarSenha()">Senha</button>
@@ -154,20 +154,22 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     <div class="tab active" data-tab="usuarios" onclick="switchTab('usuarios')">Usuários</div>
     <div class="tab" data-tab="empresas" onclick="switchTab('empresas')">Empresas</div>
     <div class="tab" data-tab="novo" onclick="switchTab('novo')">Novo usuário</div>
+    <div class="tab" data-tab="solicitacoes" onclick="switchTab('solicitacoes')">Solicitações <span id="sol-contagem"></span></div>
   </div>
   <div class="main">
     <div id="tab-usuarios"></div>
     <div id="tab-empresas" style="display:none"></div>
     <div id="tab-novo" style="display:none"></div>
+    <div id="tab-solicitacoes" style="display:none"></div>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
-<script src="idioma.js?v=2"></script>
+<script src="idioma.js?v=3"></script>
 <script src="auth.js?v=3"></script>
 <script src="dados.js?v=1"></script>
-<script src="login.js?v=3"></script>
+<script src="login.js?v=4"></script>
 <script src="disciplinas.js?v=1"></script>
 <script>
 
@@ -176,6 +178,7 @@ let USERS = [];
 let ACCESS = [];   // all projeto_usuarios_v2 rows
 let PROJECTS = [];
 let EMPRESAS = [];   // cadastro global de empresas
+let SOLICITACOES = [];   // pedidos de acesso pendentes (acesso.html)
 
 
 setLogos(OSPA_LOGO);
@@ -211,19 +214,23 @@ async function loadApp() {
     ospaIdiomaDaSessao(ME.idioma);   // vale para a tela de entrada e para a troca de senha
 
     setLoadingText('Carregando dados…');
-    const [users, access, projects, empresas] = await Promise.all([
+    const [users, access, projects, empresas, solicitacoes] = await Promise.all([
       apiTodos('usuarios','order=nome.asc'),
       api('GET','projeto_usuarios_v2',null,'order=created_at.asc'),
       apiTodos('projetos','order=nome.asc&select=id,nome'),
       apiTodos('empresas','order=nome.asc'),
+      // .catch: se a fase 13 ainda não rodou no banco, a página abre sem a aba
+      rpc('acesso_listar', {}).catch(() => []),
     ]);
     USERS = users; ACCESS = access; PROJECTS = projects; EMPRESAS = empresas;
+    SOLICITACOES = solicitacoes || [];
 
     document.getElementById('user-name-badge').textContent = ME.nome;
     await ospaCarregarCores(null);  // Cores das disciplinas vindas do banco (disciplinas.js)
     renderUsersTab();
     renderEmpresasTab();
     renderNewUserTab();
+    renderSolicitacoesTab();
     show('app');
   } catch(e) {
     setLoadingText('Erro: ' + e.message);
@@ -234,6 +241,82 @@ function switchTab(name) {
   document.getElementById('tab-usuarios').style.display = name === 'usuarios' ? 'block' : 'none';
   document.getElementById('tab-empresas').style.display = name === 'empresas' ? 'block' : 'none';
   document.getElementById('tab-novo').style.display = name === 'novo' ? 'block' : 'none';
+  document.getElementById('tab-solicitacoes').style.display = name === 'solicitacoes' ? 'block' : 'none';
+}
+
+
+// ── ABA SOLICITAÇÕES ──
+// Pedidos feitos em acesso.html ("Não tem acesso? Solicite."). Criar a
+// conta usa o mesmo usr_criar da aba Novo usuário; o vínculo ao projeto
+// continua em Configurações → Equipe.
+function renderSolicitacoesTab() {
+  const el = document.getElementById('tab-solicitacoes');
+  document.getElementById('sol-contagem').textContent = SOLICITACOES.length ? '(' + SOLICITACOES.length + ')' : '';
+  const emails = new Set(USERS.map(u => (u.email || '').toLowerCase()));
+
+  el.innerHTML = '<div class="section-title">Solicitações de acesso pendentes (' + SOLICITACOES.length + ')</div>' +
+    '<div id="sol-senha" style="display:none;margin-bottom:16px"></div>' +
+    (SOLICITACOES.length ? '' :
+      '<div class="no-access">Nenhuma solicitação pendente. Os pedidos chegam pelo link ' +
+      '"Não tem acesso? Solicite." da tela de entrada.</div>');
+
+  SOLICITACOES.forEach(s => {
+    const temConta = emails.has(s.email.toLowerCase());
+    const card = document.createElement('div');
+    card.className = 'user-card';
+    card.innerHTML =
+      '<div class="user-card-head" style="cursor:default">' +
+        '<div><div class="user-card-name">' + esc(s.nome) + '</div>' +
+        '<div class="user-card-email">' + esc(s.email) + '</div></div>' +
+        (s.empresa ? '<span class="user-empresa-badge">' + esc(s.empresa) + '</span>' : '') +
+        (temConta ? '<span class="user-global-badge">Já tem conta</span>' : '') +
+        '<span class="user-card-count">' + new Date(s.criada_em).toLocaleDateString('pt-BR') + '</span>' +
+      '</div>' +
+      '<div style="padding:0 16px 14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">' +
+        '<div style="font-family:var(--mono);font-size:10.5px;color:var(--text2);flex:1;min-width:200px">' +
+          'Projeto: <b style="color:var(--text)">' + esc(s.projeto) + '</b></div>' +
+        (temConta
+          ? '<button class="icon-btn" data-acao="atendida">Marcar como atendida</button>'
+          : '<button class="primary-btn" style="margin:0" data-acao="criar">Criar conta</button>') +
+        '<button class="icon-btn" data-acao="recusar">Recusar</button>' +
+      '</div>';
+    card.querySelector('[data-acao="criar"]')?.addEventListener('click', () => atenderSolicitacao(s));
+    card.querySelector('[data-acao="atendida"]')?.addEventListener('click', () => resolverSolicitacao(s, 'atendida'));
+    card.querySelector('[data-acao="recusar"]').addEventListener('click', () => {
+      if (confirm('Recusar o pedido de ' + s.nome + '?\n\nA pessoa não é avisada automaticamente.'))
+        resolverSolicitacao(s, 'recusada');
+    });
+    el.appendChild(card);
+  });
+}
+
+async function recarregarSolicitacoes() {
+  SOLICITACOES = await rpc('acesso_listar', {}).catch(() => []) || [];
+  renderSolicitacoesTab();
+}
+
+async function atenderSolicitacao(s) {
+  try {
+    const r = await rpc('usr_criar', { p_nome: s.nome, p_email: s.email });
+    const criado = Array.isArray(r) ? r[0] : r;
+    await rpc('acesso_resolver', { p_id: s.id, p_situacao: 'atendida' });
+    await recarregarEmpresas();   // recarrega usuários e empresas
+    await recarregarSolicitacoes();
+    const caixa = document.getElementById('sol-senha');
+    mostrarSenha(caixa, s.nome, criado.senha);
+    caixa.insertAdjacentHTML('beforeend',
+      '<div class="help-text">Agora vincule ' + esc(s.nome) + ' ao projeto <b>' + esc(s.projeto) +
+      '</b> em <b>Configurações → Equipe</b>, e avise a pessoa por e-mail.</div>');
+    toast('Conta criada.');
+  } catch (e) { alert(e.message); }
+}
+
+async function resolverSolicitacao(s, situacao) {
+  try {
+    await rpc('acesso_resolver', { p_id: s.id, p_situacao: situacao });
+    await recarregarSolicitacoes();
+    toast(situacao === 'recusada' ? 'Pedido recusado.' : 'Pedido marcado como atendido.');
+  } catch (e) { alert(e.message); }
 }
 
 
