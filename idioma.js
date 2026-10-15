@@ -106,6 +106,7 @@ const OSPA_TEXTOS = {
   'projetos.contagem': { pt: '%{n} projetos',            en: '%{n} projects' },
   'projetos.nenhum':   { pt: 'Nenhum projeto encontrado.', en: 'No projects found.' },
   'projetos.novo':     { pt: 'Novo projeto',             en: 'New project' },
+  'projetos.sem_acesso': { pt: 'Você não participa deste projeto', en: 'You are not part of this project' },
   'projetos.admin':    { pt: 'Administração',            en: 'Administration' },
   'projetos.excluidos': { pt: 'Projetos excluídos',      en: 'Deleted projects' },
 

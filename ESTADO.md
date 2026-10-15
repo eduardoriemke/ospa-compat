@@ -102,6 +102,12 @@ um HTML com o script embutido, mais arquivos compartilhados.
     `solicitacoes_acesso` pela função `acesso_solicitar`; o admin vê em
     Administração → Solicitações e cria a conta com o `usr_criar` de sempre.
     Sem e-mail ainda: nem aviso ao admin, nem resposta à pessoa
+22. **14** — `empresas.interna` (a OSPA). Na lista de projetos, colaborador da OSPA
+    vê também os projetos de que não participa, esmaecidos e sem clique; externo
+    continua vendo só os seus (nome, foto e cliente podem ser confidenciais).
+    A decidir: colaborador da OSPA abrir qualquer projeto em leitura, editando só
+    onde for coordenador. Atenção: as tabelas antigas (`projetos` etc.) seguem
+    abertas a qualquer logado — o sigilo real depende de fechá-las no banco
 
 ## Bilíngue (fase 11)
 

@@ -30,6 +30,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
 .proj-card{position:relative;aspect-ratio:4/3;border-radius:12px;overflow:hidden;cursor:pointer;background:#DCDAD6;transition:transform .2s,box-shadow .2s}
 .proj-card:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(25,25,25,.16)}
+.proj-card.alheio{opacity:.4;filter:grayscale(.7);cursor:default}
+.proj-card.alheio:hover{transform:none;box-shadow:none}
 /* Sem foto: cinza claro com a marca apagada; o degradê de baixo é o mesmo das fotos */
 .proj-card-foto{position:absolute;inset:0;background:center/cover no-repeat;display:flex;align-items:center;justify-content:center}
 .proj-card-foto-marca{height:20px;opacity:.16;margin-bottom:22%}
@@ -158,7 +160,7 @@ body.restricted-coordinator .proj-card-bkp{display:none!important}
 </div>
 
 <div class="toast" id="toast"></div>
-<script src="idioma.js?v=4"></script>
+<script src="idioma.js?v=5"></script>
 <script src="auth.js?v=3"></script>
 <script src="dados.js?v=1"></script>
 <script src="login.js?v=4"></script>
@@ -215,7 +217,12 @@ async function loadProjects(){
     var proj=await apiTodos('projetos','order=created_at.asc');
     PROJETOS = proj;
     if (MY_PROJECT_IDS !== null) {
-      proj = proj.filter(p => MY_PROJECT_IDS.includes(p.id));
+      if (INTERNO) {
+        // Colaborador da OSPA: todos, os seus primeiro (os outros vêm esmaecidos)
+        proj = proj.filter(p => ehMeu(p.id)).concat(proj.filter(p => !ehMeu(p.id)));
+      } else {
+        proj = proj.filter(p => ehMeu(p.id));
+      }
     }
     renderProjects(proj);
     document.getElementById("screen-loading").style.display="none";
@@ -239,6 +246,11 @@ function renderProjects(projetos,todos){
   projetos.forEach(function(p){
     var card=document.createElement("div");
     card.className="proj-card";
+    // Projeto de que a pessoa não participa (só colaborador da OSPA vê): compõe a página, sem clique
+    if (!ehMeu(p.id)) {
+      card.classList.add("alheio");
+      card.title=t("projetos.sem_acesso");
+    }
     // Texto da busca: código, nome, cliente e endereço, sem acento
     card.dataset.busca=semAcento([p.id,p.nome,p.cliente,p.endereco].join(" "));
     card.innerHTML=
@@ -252,7 +264,7 @@ function renderProjects(projetos,todos){
       "<button class=\"proj-card-bkp\" title=\"Criar backup\">↺</button>"+
       "<button class=\"proj-card-del\" title=\"Excluir\">×</button>";
     (function(pid,pnome){
-      card.onclick=function(){ window.location.href="home.html?id="+encodeURIComponent(pid); };
+      if (ehMeu(pid)) card.onclick=function(){ window.location.href="home.html?id="+encodeURIComponent(pid); };
       card.querySelector(".proj-card-del").onclick=function(e){e.stopPropagation();deleteProject(pid,pnome);};
       card.querySelector(".proj-card-bkp").onclick=function(e){e.stopPropagation();backupManual(pid,pnome);};
     })(p.id,p.nome);
@@ -275,6 +287,9 @@ function renderProjects(projetos,todos){
 
   carregarFotos(projetos.map(function(p){ return p.id; }));
 }
+
+// Admin participa de tudo; os demais, dos projetos em projeto_usuarios_v2
+function ehMeu(pid){ return MY_PROJECT_IDS === null || MY_PROJECT_IDS.indexOf(pid) !== -1; }
 
 function semAcento(s){ return String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase(); }
 
@@ -411,6 +426,7 @@ async function createProject(){
 let ME = null;
 let MY_PROJECT_IDS = null; // null = admin (all projects), array = restricted list
 let PROJECT_ROLES = null;
+let INTERNO = false;  // colaborador da OSPA (empresa marcada como interna, fase 14)
 let PROJETOS = [];  // lista carregada, usada também para nomear os backups  // null = admin (Editor em tudo), objeto { projeto_id: 'coordenador'|'projetista' }
 
 async function apiAuth(method, table, body, qs) {
@@ -424,7 +440,7 @@ async function apiAuth(method, table, body, qs) {
   return method === 'DELETE' ? null : r.json();
 }
 function doLogout() {
-  SESSION = null; ME = null; MY_PROJECT_IDS = null; PROJECT_ROLES = null; PROJETOS = [];
+  SESSION = null; ME = null; MY_PROJECT_IDS = null; PROJECT_ROLES = null; PROJETOS = []; INTERNO = false;
   clearSavedSession();
   document.getElementById('screen-loading').style.display = 'none';
   document.getElementById('screen-projects').style.display = 'none';
@@ -467,6 +483,9 @@ async function afterLogin() {
       MY_PROJECT_IDS = access.map(a => a.projeto_id);
       PROJECT_ROLES = {};
       access.forEach(a => { PROJECT_ROLES[a.projeto_id] = a.papel; });
+      // .catch: antes da fase 14 a coluna não existe — trata todos como externos
+      INTERNO = !!ME.empresa_id && await apiAuth('GET','empresas',null,'id=eq.'+ME.empresa_id+'&select=interna')
+        .then(r => !!(r[0] && r[0].interna)).catch(() => false);
     }
 
     if (MY_PROJECT_IDS !== null) {
