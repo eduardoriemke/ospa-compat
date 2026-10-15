@@ -19,8 +19,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 #screen-projects{display:none;justify-content:center;padding:56px 32px 40px}
 .proj-wrap{width:100%;max-width:960px}
 .proj-logo{height:23px;display:block;margin-bottom:40px}
-.proj-eyebrow{font-family:var(--sans);font-size:11px;font-weight:500;letter-spacing:0.16em;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
-.proj-titulo{font-family:var(--sans);font-size:28px;font-weight:700;letter-spacing:-0.01em;color:var(--text);margin-bottom:28px}
+.proj-titulo{font-family:var(--sans);font-size:26px;font-weight:300;line-height:1.25;letter-spacing:-0.01em;color:var(--text);margin-bottom:28px}
+.proj-titulo b{font-weight:700}
 .proj-busca{display:flex;align-items:center;gap:12px;margin:-8px 0 20px}
 .proj-busca[hidden],.proj-vazio[hidden]{display:none}
 .proj-busca input{width:min(320px,100%);background:var(--surface);border:1px solid var(--border2);border-radius:999px;padding:9px 16px;font-family:var(--sans);font-size:13px;color:var(--text);outline:none}
@@ -28,11 +28,11 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .proj-busca span{margin-left:auto;font-family:var(--sans);font-size:11px;color:var(--text3)}
 .proj-vazio{font-family:var(--sans);font-size:13px;color:var(--text3);padding:24px 0}
 .proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
-.proj-card{position:relative;aspect-ratio:4/3;border-radius:12px;overflow:hidden;cursor:pointer;background:#2B2D30;transition:transform .2s,box-shadow .2s}
+.proj-card{position:relative;aspect-ratio:4/3;border-radius:12px;overflow:hidden;cursor:pointer;background:#DCDAD6;transition:transform .2s,box-shadow .2s}
 .proj-card:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(25,25,25,.16)}
-/* Sem foto: fundo escuro neutro com a marca apagada */
+/* Sem foto: cinza claro com a marca apagada; o degradê de baixo é o mesmo das fotos */
 .proj-card-foto{position:absolute;inset:0;background:center/cover no-repeat;display:flex;align-items:center;justify-content:center}
-.proj-card-foto-marca{height:20px;opacity:.18;filter:invert(1);margin-bottom:22%}
+.proj-card-foto-marca{height:20px;opacity:.16;margin-bottom:22%}
 .proj-card-foto.tem-foto .proj-card-foto-marca{display:none}
 .proj-card::after{content:"";position:absolute;inset:0;pointer-events:none;
   background:linear-gradient(to top,rgba(15,15,15,.82) 0%,rgba(15,15,15,.35) 42%,rgba(15,15,15,0) 70%)}
@@ -111,8 +111,8 @@ body.restricted-coordinator .proj-card-bkp{display:none!important}
 <div id="screen-projects">
   <div class="proj-wrap">
     <img id="projects-logo" class="proj-logo" alt="OSPA">
-    <div class="proj-eyebrow" data-t="login.plataforma_txt">Plataforma de compatibilização</div>
-    <h1 class="proj-titulo" data-t="projetos.selecione">Selecione um projeto</h1>
+    <!-- Mesmo título da tela de entrada; o HTML (negrito) vem de t('login.plataforma') -->
+    <h1 class="proj-titulo" id="proj-titulo">Plataforma de <b>compatibilização</b></h1>
     <!-- A busca só aparece quando a lista cresce (ver BUSCA_A_PARTIR_DE) -->
     <div class="proj-busca" id="proj-busca" hidden>
       <input type="search" id="proj-busca-campo" data-t-ph="projetos.buscar" autocomplete="off" oninput="filtrarProjetos()">
@@ -232,6 +232,8 @@ function escHtml(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/
 var BUSCA_A_PARTIR_DE = 7;
 
 function renderProjects(projetos,todos){
+  // O idioma só é conhecido depois do login, por isso o título é refeito aqui
+  document.getElementById("proj-titulo").innerHTML=t("login.plataforma");
   var grid=document.getElementById("proj-grid");
   grid.innerHTML="";
   projetos.forEach(function(p){
