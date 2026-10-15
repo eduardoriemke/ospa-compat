@@ -91,6 +91,16 @@ const OSPA_TEXTOS = {
   'login.invalido':    { pt: 'Email ou senha inválidos.', en: 'Invalid email or password.' },
   'login.aviso_registro': { pt: 'Os acessos ao sistema são registrados para fins de coordenação do projeto.',
                             en: 'System access is logged for project coordination purposes.' },
+  'login.plataforma':  { pt: 'Plataforma de <b>compatibilização</b>',
+                         en: 'Design <b>coordination</b> platform' },
+  'login.plataforma_txt': { pt: 'Plataforma de compatibilização', en: 'Design coordination platform' },
+  'login.descricao':   { pt: 'Compatibilização de projetos e comunicação entre projetistas.',
+                         en: 'Design coordination and communication between consultants.' },
+  'login.google':      { pt: 'Entrar com o e-mail OSPA', en: 'Sign in with OSPA email' },
+  'login.ou':          { pt: 'ou',                       en: 'or' },
+  'login.pedir':       { pt: 'Não tem acesso? Peça o seu.', en: 'No access? Request it.' },
+  'login.pedir_assunto': { pt: 'Acesso à Plataforma de compatibilização',
+                           en: 'Access to the Design coordination platform' },
 
   // ── troca de senha ──
   'senha.entre_antes': { pt: 'Entre no sistema primeiro.', en: 'Sign in first.' },

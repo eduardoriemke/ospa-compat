@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=IBM+Plex+Serif:wght@300;400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="tokens.css?v=1">
-<link rel="stylesheet" href="login.css?v=1">
+<link rel="stylesheet" href="login.css?v=2">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -23,14 +23,14 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 /* ── LOADING / DENIED ── */
 #screen-loading,#screen-denied{display:none;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:12px;text-align:center;padding:20px}
-.loading-logo{height:36px;opacity:0.6}
+.loading-logo{height:23px;opacity:0.6}
 .loading-text{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:0.12em}
 .denied-title{font-family:var(--serif);font-size:18px;font-weight:300;color:var(--text)}
 
 /* ── APP ── */
 #screen-app{display:none}
 .header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 40px;display:flex;align-items:center;gap:24px}
-.header-logo{height:32px}
+.header-logo{height:20px}
 .header-title{font-family:var(--serif);font-size:17px;font-weight:300;color:var(--text);flex:1}
 .header-eyebrow{font-family:var(--sans);font-size:9px;font-weight:500;letter-spacing:0.2em;text-transform:uppercase;color:var(--text3);display:block;margin-bottom:2px}
 .user-name{font-family:var(--mono);font-size:10px;color:var(--text2)}
@@ -124,7 +124,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 <body>
 
 <!-- LOGIN -->
-<div id="screen-login" data-titulo="Administração" data-sub="Acesso restrito a administradores"></div>
+<div id="screen-login"></div>
 
 <!-- LOADING -->
 <div id="screen-loading">
@@ -164,10 +164,10 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 <div class="toast" id="toast"></div>
 
-<script src="idioma.js?v=1"></script>
-<script src="auth.js?v=2"></script>
+<script src="idioma.js?v=2"></script>
+<script src="auth.js?v=3"></script>
 <script src="dados.js?v=1"></script>
-<script src="login.js?v=2"></script>
+<script src="login.js?v=3"></script>
 <script src="disciplinas.js?v=1"></script>
 <script>
 

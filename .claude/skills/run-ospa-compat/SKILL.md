@@ -57,7 +57,8 @@ powershell -ExecutionPolicy Bypass -File $d run -f "$env:TEMP\ospa-passos.txt"
 Steps: `goto <page|url>` · `login` · `wait <ms>` · `waitfor <css>` ·
 `click <css>` · `type <css> <text>` · `eval <js>` (prints result, `await` ok) ·
 `ss <file.png>` (1440x900 viewport) · `tab` (switch to the tab opened by
-`window.open`, i.e. the editor). Console errors/warnings and page exceptions
+`window.open`, i.e. the editor) · `viewport <w> <h>` (e.g. `viewport 390 844`
+for phone; below 700px wide it also turns on mobile emulation). Console errors/warnings and page exceptions
 are printed inline as `[console.error]` / `[exceção]`; `alert`/`confirm`
 are auto-accepted and logged as `[alert]` / `[confirm]`.
 
@@ -118,5 +119,10 @@ There is no test suite; the driver is the check.
   (link not rendered for this role/project type, or JS error; read the
   `[console.error]` lines above it).
 - *`Supabase local não responde`* → `supabase start` (Docker Desktop must be running).
+  If `docker ps` says `failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine`,
+  Docker Desktop is closed: `Start-Process "$env:ProgramFiles\Docker\Docker\Docker Desktop.exe"`,
+  wait for `docker info` to succeed, then `supabase start`. The first `supabase start` can fail with
+  `StatusDbNotReadyError ... starting`; wait for
+  `docker inspect -f '{{.State.Health.Status}}' supabase_db_ospa-compat` to be `healthy` and run it again.
 - *`login: Invalid login credentials`* → run `seed` (after re-importing with
   `baixar-producao.ps1` the local db is recreated and the test user is gone).

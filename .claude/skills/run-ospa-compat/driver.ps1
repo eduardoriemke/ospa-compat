@@ -23,6 +23,7 @@
 #        eval <js>                 imprime o resultado (await permitido)
 #        ss <arquivo.png>          screenshot da área visível (1440x900)
 #        tab                       passa a dirigir a aba nova (window.open — editor)
+#        viewport <larg> <alt>     ex.: viewport 390 844 (celular)
 #      Ou de um arquivo, um passo por linha (# comenta):  run -f passos.txt
 # ============================================================
 param([Parameter(Position=0)][string]$Cmd = 'help',
@@ -247,8 +248,13 @@ function Run($passos) {
           WaitFor '#login-email'
           $null = Js "document.getElementById('login-email').value=$(Lit $TEST_EMAIL);document.getElementById('login-password').value=$(Lit $TEST_PASS);doLogin()"
           Start-Sleep -Milliseconds 2500
-          $err = Js "(document.getElementById('login-err')||{}).textContent||''"
+          # Só conta se estiver visível: o doLogin esconde o erro anterior sem apagar o texto.
+          $err = Js "(()=>{const e=document.getElementById('login-err');return e&&e.offsetParent!==null?e.textContent:''})()"
           if ($err) { Falha "login: $err (rode: driver.ps1 seed)" }
+        }
+        'viewport' {
+          $w, $h = $arg -split '\s+'
+          $null = Cdp 'Emulation.setDeviceMetricsOverride' @{ width = [int]$w; height = [int]$h; deviceScaleFactor = 1; mobile = ([int]$w -lt 700) }
         }
         'wait'    { Start-Sleep -Milliseconds ([int]$arg) }
         'waitfor' { WaitFor $arg }
