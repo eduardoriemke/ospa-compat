@@ -24,6 +24,7 @@
 #        ss <arquivo.png>          screenshot da área visível (1440x900)
 #        tab                       passa a dirigir a aba nova (window.open — editor)
 #        viewport <larg> <alt>     ex.: viewport 390 844 (celular)
+#        upload <seletor> <arquivo> escolhe um arquivo num <input type=file>, mesmo oculto
 #      Ou de um arquivo, um passo por linha (# comenta):  run -f passos.txt
 # ============================================================
 param([Parameter(Position=0)][string]$Cmd = 'help',
@@ -255,6 +256,15 @@ function Run($passos) {
         'viewport' {
           $w, $h = $arg -split '\s+'
           $null = Cdp 'Emulation.setDeviceMetricsOverride' @{ width = [int]$w; height = [int]$h; deviceScaleFactor = 1; mobile = ([int]$w -lt 700) }
+        }
+        'upload' {
+          # Preenche um <input type=file> (mesmo oculto) e dispara o change, como um clique em "Escolher".
+          $sel, $arq = $arg -split '\s+', 2
+          $arq = (Resolve-Path $arq).Path
+          $docRoot = (Cdp 'DOM.getDocument' @{ depth = 0 }).root.nodeId
+          $node = (Cdp 'DOM.querySelector' @{ nodeId = $docRoot; selector = $sel }).nodeId
+          if (-not $node) { throw "upload: '$sel' não encontrado" }
+          $null = Cdp 'DOM.setFileInputFiles' @{ nodeId = $node; files = @($arq) }
         }
         'wait'    { Start-Sleep -Milliseconds ([int]$arg) }
         'waitfor' { WaitFor $arg }

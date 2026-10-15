@@ -54,6 +54,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .pfield input:focus,.pfield textarea:focus{border-color:var(--text2)}
 .pfield textarea{min-height:90px;resize:vertical;line-height:1.5}
 .pfield-ro{opacity:0.55;pointer-events:none}
+.dg-foto{aspect-ratio:16/9;background:var(--surface2);border:1px solid var(--border);overflow:hidden;display:flex;align-items:center;justify-content:center}
+.dg-foto img{width:100%;height:100%;object-fit:cover;display:block}
+.dg-foto span{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.08em}
 .pmodal-acoes{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
 .pbtn{font-family:var(--sans);font-size:11px;font-weight:600;padding:8px 16px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer}
 .pbtn:hover{border-color:var(--text2);color:var(--text)}
@@ -242,6 +245,7 @@ let PAV = [], USO_PAV = {};
 let MEMBROS = [], CANDIDATOS = [], EMPRESAS = [];
 let BACKUPS = [];
 let DRIVE = null;
+let FOTO = null;                // data URI da foto do projeto (ou null)
 let ABA = 'disciplinas';
 let ORDEM_EDITADA = null;       // pavimentos (de cima para baixo) enquanto você reordena
 let VER_INATIVAS = false, VER_INATIVOS = false, VER_MANTIDAS = false;
@@ -342,7 +346,7 @@ async function loadApp() {
 }
 
 async function carregarTudo() {
-  const [proj, disc, uso, pastas, cat, pav, usoPav, membros, candidatos, empresas, backups, drive] = await Promise.all([
+  const [proj, disc, uso, pastas, cat, pav, usoPav, membros, candidatos, empresas, backups, drive, foto] = await Promise.all([
     api('GET','projetos',null,'id=eq.'+encodeURIComponent(PROJ_ID)).then(r => r[0]),
     api('GET','disciplinas',null,'projeto_id=eq.'+encodeURIComponent(PROJ_ID)+'&order=sigla.asc'),
     rpc('cfg_uso_disciplinas', { p_projeto: PROJ_ID }),
@@ -354,8 +358,12 @@ async function carregarTudo() {
     rpc('eq_candidatos', { p_projeto: PROJ_ID }),
     api('GET','empresas',null,'order=nome.asc'),
     rpc('bk_listar', { p_projeto: PROJ_ID }).catch(() => []),
-    rpc('varredura_situacao', { p_projeto: PROJ_ID }).catch(() => [])
+    rpc('varredura_situacao', { p_projeto: PROJ_ID }).catch(() => []),
+    // .catch: se a fase 12 ainda não rodou no banco, a página abre sem a foto
+    api('GET','projeto_fotos',null,'projeto_id=eq.'+encodeURIComponent(PROJ_ID)+'&select=dados')
+      .then(r => (r && r[0]) ? r[0].dados : null).catch(() => null)
   ]);
+  FOTO = foto;
   PROJETO = proj;
   DISC = disc || [];
   USO_DISC = {}; (uso || []).forEach(u => { USO_DISC[u.sigla] = u; });
@@ -920,6 +928,7 @@ function htmlDados() {
     '<div class="pfield pfield-ro"><label>Código do projeto</label>' +
       '<input value="' + esc(PROJ_ID) + '" disabled></div>' +
     htmlTipo() +
+    htmlFoto() +
     campo('dg-nome', 'Nome', p.nome) +
     campo('dg-cliente', 'Cliente', p.cliente) +
     campo('dg-endereco', 'Endereço', p.endereco) +
@@ -934,6 +943,47 @@ function htmlDados() {
       '<button class="cfg-btn pri" id="dg-salvar">Salvar</button>' +
       '<button class="cfg-btn leve" id="dg-desfazer">Desfazer alterações</button>' +
     '</div></div>';
+}
+
+// A foto tem salvamento próprio, como o tipo: escolheu o arquivo, já vale.
+function htmlFoto() {
+  return '<div class="pfield"><label>Foto do projeto</label>' +
+    '<div class="dg-foto">' + (FOTO ? '<img src="' + FOTO + '" alt="">' : '<span>Sem foto</span>') + '</div>' +
+    '<div style="display:flex;gap:8px;margin-top:8px">' +
+      '<button class="cfg-btn" id="dg-foto-escolher">' + (FOTO ? 'Trocar foto…' : 'Escolher foto…') + '</button>' +
+      (FOTO ? '<button class="cfg-btn leve" id="dg-foto-remover">Remover</button>' : '') +
+      '<input type="file" id="dg-foto-arquivo" accept="image/jpeg,image/png,image/webp" hidden>' +
+    '</div>' +
+    '<div style="font-family:var(--mono);font-size:9.5px;color:var(--text3);margin-top:3px">' +
+    'Aparece no cartão da lista de projetos e no alto da página inicial. Prefira uma foto horizontal.</div></div>';
+}
+
+// Reduz no navegador antes de enviar: lado maior 1600 px, JPEG.
+// Uma foto de câmera de 5 MB vira ~200 KB.
+function reduzirFoto(arquivo) {
+  return new Promise((ok, falha) => {
+    const url = URL.createObjectURL(arquivo);
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, 1600 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      const g = c.getContext('2d');
+      g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);   // PNG transparente
+      g.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      ok(c.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); falha(new Error('Não foi possível ler esta imagem.')); };
+    img.src = url;
+  });
+}
+
+async function enviarFoto(arquivo) {
+  if (!arquivo) return;
+  let dados;
+  try { dados = await reduzirFoto(arquivo); } catch (e) { alert(e.message); return; }
+  operar(() => rpc('proj_foto', { p_projeto: PROJ_ID, p_dados: dados }), 'Foto do projeto atualizada.');
 }
 
 function salvarDados() {
@@ -1286,6 +1336,16 @@ function ligarEventos() {
   if (btnDesfazer) btnDesfazer.onclick = () => render();
   const selTipo = document.getElementById('dg-tipo');
   if (selTipo) selTipo.onchange = salvarTipo;
+  const fotoArq = document.getElementById('dg-foto-arquivo');
+  if (fotoArq) {
+    document.getElementById('dg-foto-escolher').onclick = () => fotoArq.click();
+    fotoArq.onchange = () => enviarFoto(fotoArq.files[0]);
+  }
+  const fotoRem = document.getElementById('dg-foto-remover');
+  if (fotoRem) fotoRem.onclick = () => {
+    if (confirm('Remover a foto do projeto?'))
+      operar(() => rpc('proj_foto', { p_projeto: PROJ_ID, p_dados: null }), 'Foto removida.');
+  };
 }
 
 // Aviso antes de sair com a ordem dos pavimentos alterada e não salva

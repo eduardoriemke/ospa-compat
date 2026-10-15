@@ -90,6 +90,13 @@ um HTML com o script embutido, mais arquivos compartilhados.
     imagem; a coordenação pode promover a ficha de conflito
 18. **11** — bilíngue PT/EN: textos viram dados num dicionário de chaves,
     idioma por pessoa (`usuarios.idioma`), seletor no pé da barra lateral
+19. **Identidade** (sem SQL) — logo só "OSPA"; tela de entrada única no estilo da
+    Plataforma de briefing ("Plataforma de compatibilização"), botão do Google pronto
+    mas escondido até o provedor ser ligado no Supabase
+20. **12** — foto do projeto: tabela `projeto_fotos` (uma por projeto, imagem em texto,
+    reduzida no navegador a 1600 px). Coordenação troca em Configurações → Dados gerais;
+    aparece no cartão da lista e no alto da página inicial. Primeira tabela fechada de
+    verdade: leitura para quem está logado, escrita só pela função `proj_foto`
 
 ## Bilíngue (fase 11)
 

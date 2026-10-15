@@ -19,7 +19,11 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .proj-logo{height:23px}
 .proj-title{font-family:var(--serif);font-size:14px;font-weight:300;color:var(--text2);letter-spacing:0.08em}
 .proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1px;background:var(--border);width:100%;max-width:960px}
-.proj-card{background:var(--surface);padding:22px 24px;position:relative}
+.proj-card{background:var(--surface);padding:22px 24px;position:relative;cursor:pointer}
+.proj-card-foto{margin:-22px -24px 18px;aspect-ratio:16/9;background:var(--surface2) center/cover no-repeat;display:flex;align-items:center;justify-content:center;transition:filter .2s}
+.proj-card-foto-marca{height:18px;opacity:.12}
+.proj-card-foto.tem-foto .proj-card-foto-marca{display:none}
+.proj-card:hover .proj-card-foto.tem-foto{filter:brightness(1.05)}
 .proj-card-code{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:7px}
 .proj-card-name{font-family:var(--serif);font-size:19px;font-weight:300;color:var(--text);margin-bottom:3px}
 .proj-card-sub{font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:14px}
@@ -33,6 +37,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .proj-action:hover{border-color:var(--text2);color:var(--text)}
 .proj-action-editor{border-color:var(--text);color:var(--text)}
 .proj-action-editor:hover{background:var(--text);color:var(--surface)}
+.proj-card-bkp,.proj-card-del{background:rgba(255,255,255,.85)!important;border-radius:2px}
 .proj-card-bkp{position:absolute;top:10px;right:36px;background:none;border:none;font-size:13px;color:var(--text3);cursor:pointer;opacity:0;transition:opacity 0.1s;padding:4px 6px}
 .proj-card:hover .proj-card-bkp{opacity:1}
 .proj-card-bkp:hover{color:var(--text)}
@@ -201,6 +206,8 @@ function renderProjects(projetos,todos){
     var card=document.createElement("div");
     card.className="proj-card";
     card.innerHTML=
+      // A foto chega depois (carregarFotos): a lista aparece sem esperar as imagens
+      "<div class=\"proj-card-foto\" data-projeto=\""+p.id+"\"><img class=\"proj-card-foto-marca\" src=\""+LOGO+"\" alt=\"\"></div>"+
       "<div class=\"proj-card-code\">"+p.id+"</div>"+
       "<div class=\"proj-card-name\">"+p.nome+"</div>"+
       "<div class=\"proj-card-sub\">"+(p.cliente||"")+"</div>"+
@@ -215,6 +222,21 @@ function renderProjects(projetos,todos){
   });
   // O botão "+ Novo projeto" do cabeçalho já cobre esta ação —
   // o card duplicado foi removido para não repetir o mesmo comando.
+  carregarFotos(projetos.map(function(p){ return p.id; }));
+}
+
+// Fotos dos projetos (Configurações → Dados gerais). Sem foto, o cartão
+// fica com o fundo neutro e a marca apagada.
+async function carregarFotos(ids){
+  if(!ids.length) return;
+  try{
+    var lista=ids.map(function(id){ return '"'+String(id).replace(/"/g,'')+'"'; }).join(",");
+    var fotos=await api("GET","projeto_fotos",null,"select=projeto_id,dados&projeto_id=in.("+encodeURIComponent(lista)+")");
+    (fotos||[]).forEach(function(f){
+      var el=document.querySelector('.proj-card-foto[data-projeto="'+f.projeto_id+'"]');
+      if(el){ el.style.backgroundImage="url("+f.dados+")"; el.classList.add("tem-foto"); }
+    });
+  }catch(e){ console.warn("Fotos dos projetos:",e.message); }
 }
 
 async function deleteProject(id,nome){

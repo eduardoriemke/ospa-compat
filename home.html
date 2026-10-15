@@ -38,6 +38,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 /* ── RESUMO DO PROJETO ── */
 .proj-hero{margin-bottom:28px}
+.proj-hero-foto{aspect-ratio:21/8;background:var(--surface2) center/cover no-repeat;border:1px solid var(--border);margin-bottom:24px}
 .proj-hero-code{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:6px}
 .proj-hero-name{font-family:var(--serif);font-size:26px;font-weight:300;color:var(--text);margin-bottom:4px}
 .proj-hero-sub{font-family:var(--mono);font-size:11px;color:var(--text2)}
@@ -125,6 +126,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 <!-- APP -->
 <div id="screen-app">
   <div class="page-body">
+      <div class="proj-hero-foto" id="hero-foto" hidden></div>
       <div class="proj-hero">
         <div class="proj-hero-code" id="hero-code">—</div>
         <div class="proj-hero-name" id="hero-name">—</div>
@@ -173,6 +175,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 document.body.dataset.projeto = new URLSearchParams(window.location.search).get('id') || '';
 let USER_PROFILE = null;
 let PROJETO = null;
+let FOTO = null;
 let COORDENADOR_NOME = '';
 let DISCIPLINAS = [];
 let EQUIPE = [];
@@ -238,13 +241,17 @@ async function loadApp() {
 
     setLoadingText(t('home.carregando_projeto'));
 
-    const [proj, cfg, acessos] = await Promise.all([
+    const [proj, cfg, acessos, foto] = await Promise.all([
       api('GET','projetos',null,'id=eq.'+projId).then(r=>r[0]),
       api('GET','config_projeto',null,'projeto_id=eq.'+projId).then(r=>r[0]||{}),
       api('GET','projeto_usuarios_v2',null,'projeto_id=eq.'+projId+'&order=papel.asc'),
+      // Foto do projeto (Configurações → Dados gerais); sem ela, nada aparece
+      api('GET','projeto_fotos',null,'projeto_id=eq.'+projId+'&select=dados')
+        .then(r => (r && r[0]) ? r[0].dados : null).catch(() => null),
     ]);
 
     PROJETO = proj;
+    FOTO = foto;
     DISCIPLINAS = cfg.disciplinas || [];
 
     // Equipe do projeto: cruza projeto_usuarios_v2 (papel/disciplinas) com
@@ -423,6 +430,9 @@ function quandoAcesso(iso) {
 }
 
 function renderPage() {
+  const heroFoto = document.getElementById('hero-foto');
+  heroFoto.hidden = !FOTO;
+  heroFoto.style.backgroundImage = FOTO ? 'url(' + FOTO + ')' : '';
   document.getElementById('hero-code').textContent = PROJETO.id || '';
   document.getElementById('hero-name').textContent = PROJETO.nome || '';
   document.getElementById('hero-sub').textContent = PROJETO.cliente || '';
