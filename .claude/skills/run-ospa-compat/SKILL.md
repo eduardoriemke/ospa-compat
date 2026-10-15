@@ -100,6 +100,13 @@ There is no test suite; the driver is the check.
 - **`click` changes page → follow it with `wait`**; evaluating while the page
   navigates fails with "Execution context was destroyed".
 - **Only `localhost` is allowed in `goto`**; the driver refuses other hosts.
+- **PowerShell variables are case-insensitive**: `$d` (the driver path) and a
+  `$D` helper are the same variable. A script that set `$D` to a psql
+  scriptblock and then `$d` to the driver silently ran the driver instead of
+  the SQL meant to restore the test user. Use distinct names.
+- To test as a non-admin, temporarily `update usuarios set papel_global=null`
+  for `agente@ospa.local` and insert a `projeto_usuarios_v2` row; restore with
+  `driver.ps1 seed` (it sets admin back) and delete the row.
 - `sidebar.js` records accesses (`acessos` table): browsing writes rows to
   the local db. Harmless, but don't be surprised by them.
 

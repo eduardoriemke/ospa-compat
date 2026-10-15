@@ -14,19 +14,39 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 #screen-loading{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px}
 .loading-logo{height:25px;opacity:0.7}
 .loading-text{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:0.12em}
-#screen-projects{display:none;flex-direction:column;align-items:center;padding:60px 40px}
-.proj-header{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:960px;margin-bottom:48px}
-.proj-logo{height:23px}
-.proj-title{font-family:var(--serif);font-size:14px;font-weight:300;color:var(--text2);letter-spacing:0.08em}
-.proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1px;background:var(--border);width:100%;max-width:960px}
-.proj-card{background:var(--surface);padding:22px 24px;position:relative;cursor:pointer}
-.proj-card-foto{margin:-22px -24px 18px;aspect-ratio:16/9;background:var(--surface2) center/cover no-repeat;display:flex;align-items:center;justify-content:center;transition:filter .2s}
-.proj-card-foto-marca{height:18px;opacity:.12}
+/* Lista de projetos — composição da Plataforma de briefing, em fundo claro:
+   textos empilhados à esquerda, cartões com foto e texto por cima. */
+#screen-projects{display:none;justify-content:center;padding:56px 32px 40px}
+.proj-wrap{width:100%;max-width:960px}
+.proj-logo{height:23px;display:block;margin-bottom:40px}
+.proj-eyebrow{font-family:var(--sans);font-size:11px;font-weight:500;letter-spacing:0.16em;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
+.proj-titulo{font-family:var(--sans);font-size:28px;font-weight:700;letter-spacing:-0.01em;color:var(--text);margin-bottom:28px}
+.proj-busca{display:flex;align-items:center;gap:12px;margin:-8px 0 20px}
+.proj-busca[hidden],.proj-vazio[hidden]{display:none}
+.proj-busca input{width:min(320px,100%);background:var(--surface);border:1px solid var(--border2);border-radius:999px;padding:9px 16px;font-family:var(--sans);font-size:13px;color:var(--text);outline:none}
+.proj-busca input:focus{border-color:var(--text2)}
+.proj-busca span{margin-left:auto;font-family:var(--sans);font-size:11px;color:var(--text3)}
+.proj-vazio{font-family:var(--sans);font-size:13px;color:var(--text3);padding:24px 0}
+.proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
+.proj-card{position:relative;aspect-ratio:4/3;border-radius:12px;overflow:hidden;cursor:pointer;background:#2B2D30;transition:transform .2s,box-shadow .2s}
+.proj-card:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(25,25,25,.16)}
+/* Sem foto: fundo escuro neutro com a marca apagada */
+.proj-card-foto{position:absolute;inset:0;background:center/cover no-repeat;display:flex;align-items:center;justify-content:center}
+.proj-card-foto-marca{height:20px;opacity:.18;filter:invert(1);margin-bottom:22%}
 .proj-card-foto.tem-foto .proj-card-foto-marca{display:none}
-.proj-card:hover .proj-card-foto.tem-foto{filter:brightness(1.05)}
-.proj-card-code{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:7px}
-.proj-card-name{font-family:var(--serif);font-size:19px;font-weight:300;color:var(--text);margin-bottom:3px}
-.proj-card-sub{font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:14px}
+.proj-card::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(to top,rgba(15,15,15,.82) 0%,rgba(15,15,15,.35) 42%,rgba(15,15,15,0) 70%)}
+.proj-card-info{position:absolute;left:16px;right:16px;bottom:14px;z-index:1;color:#fff}
+.proj-card-code{font-family:var(--mono);font-size:9.5px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,.75);margin-bottom:3px}
+.proj-card-name{font-family:var(--sans);font-size:17px;font-weight:700;line-height:1.2;color:#fff}
+.proj-card-sub{font-family:var(--sans);font-size:11px;color:rgba(255,255,255,.7);margin-top:3px}
+/* Rodapé: quem está logado à esquerda, ações à direita */
+.proj-rodape{display:flex;align-items:center;gap:20px;border-top:1px solid var(--border);margin-top:36px;padding-top:16px;font-family:var(--sans);font-size:12px;color:var(--text3)}
+.proj-rodape-acoes{margin-left:auto;display:flex;gap:20px;align-items:center}
+.proj-rodape-acoes a,.proj-rodape-acoes button{background:none;border:0;padding:0;font:inherit;color:var(--text2);text-decoration:none;cursor:pointer}
+.proj-rodape-acoes a:hover,.proj-rodape-acoes button:hover{color:var(--text)}
+.proj-rodape-acoes [hidden]{display:none}
+@media (max-width:640px){#screen-projects{padding:40px 20px 32px}.proj-grid{grid-template-columns:1fr 1fr;gap:10px}.proj-rodape{flex-wrap:wrap}}
 .proj-card-stats{display:flex;gap:20px;padding-top:12px;border-top:1px solid var(--border)}
 .proj-stat{font-family:var(--mono);font-size:10px;color:var(--text3)}
 .proj-stat b{color:var(--text);font-weight:600}
@@ -37,15 +57,16 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .proj-action:hover{border-color:var(--text2);color:var(--text)}
 .proj-action-editor{border-color:var(--text);color:var(--text)}
 .proj-action-editor:hover{background:var(--text);color:var(--surface)}
-.proj-card-bkp,.proj-card-del{background:rgba(255,255,255,.85)!important;border-radius:2px}
-.proj-card-bkp{position:absolute;top:10px;right:36px;background:none;border:none;font-size:13px;color:var(--text3);cursor:pointer;opacity:0;transition:opacity 0.1s;padding:4px 6px}
-.proj-card:hover .proj-card-bkp{opacity:1}
-.proj-card-bkp:hover{color:var(--text)}
-.proj-card-del{position:absolute;top:10px;right:12px;background:none;border:none;font-size:15px;color:var(--text3);cursor:pointer;opacity:0;transition:opacity 0.1s;padding:4px 6px}
-.proj-card:hover .proj-card-del{opacity:1}
-.proj-card-del:hover{color:var(--alert)}
-.proj-new{background:transparent;border:1px dashed var(--border2);display:flex;align-items:center;justify-content:center;min-height:120px;cursor:pointer;color:var(--text3);font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;transition:all 0.1s}
-.proj-new:hover{border-color:var(--text2);color:var(--text2);background:var(--surface)}
+/* Backup e excluir: aparecem ao passar o mouse, no canto do cartão */
+.proj-card-bkp,.proj-card-del{position:absolute;top:10px;z-index:2;width:26px;height:26px;border:0;border-radius:50%;background:rgba(15,15,15,.45);color:#fff;font-size:13px;line-height:26px;text-align:center;cursor:pointer;opacity:0;transition:opacity .15s,background .15s}
+.proj-card-bkp{right:42px}
+.proj-card-del{right:10px;font-size:15px}
+.proj-card:hover .proj-card-bkp,.proj-card:hover .proj-card-del{opacity:1}
+.proj-card-bkp:hover{background:rgba(15,15,15,.75)}
+.proj-card-del:hover{background:var(--alert)}
+/* "+ Novo projeto" é o último cartão (só admin) */
+.proj-new{aspect-ratio:4/3;border:1px dashed var(--border2);border-radius:12px;background:transparent;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;color:var(--text2);font-family:var(--sans);font-size:13px;font-weight:600;transition:border-color .15s,color .15s,background .15s}
+.proj-new:hover{border-color:var(--text2);color:var(--text);background:var(--surface)}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(25,25,25,0.45);z-index:200;align-items:center;justify-content:center}
 .modal-bg.open{display:flex}
 .modal{background:var(--surface);padding:32px;width:min(520px,92vw);border:1px solid var(--border);max-height:90vh;overflow-y:auto}
@@ -70,13 +91,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 #screen-denied{display:none;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:12px;text-align:center;padding:20px;font-family:var(--sans)}
 .denied-title{font-family:var(--serif);font-size:18px;font-weight:300;color:var(--text)}
 .denied-text{font-family:var(--mono);font-size:11px;color:var(--text3)}
-.logout-corner{position:fixed;top:16px;right:20px;background:none;border:none;font-family:var(--mono);font-size:9px;color:var(--text3);cursor:pointer;letter-spacing:0.08em;text-transform:uppercase;z-index:50}
-.logout-corner:hover{color:var(--alert)}
-
 body.restricted-coordinator .proj-new{display:none!important}
 body.restricted-coordinator .proj-card-del{display:none!important}
 body.restricted-coordinator .proj-card-bkp{display:none!important}
-body.restricted-coordinator .proj-header button{display:none!important}
 </style>
 </head>
 <body>
@@ -87,23 +104,33 @@ body.restricted-coordinator .proj-header button{display:none!important}
   <div class="denied-text">Você não tem permissão de edição em nenhum projeto.</div>
   <button class="login-btn" style="width:auto;padding:8px 20px" onclick="doLogout()">Sair</button>
 </div>
-<button class="logout-corner" id="btn-senha" style="display:none;right:110px" onclick="ospaTrocarSenha()">Senha</button>
-<button class="logout-corner" id="logout-corner" style="display:none" onclick="doLogout()">Sair</button>
 <div id="screen-loading">
   <img id="loading-logo" class="loading-logo" alt="OSPA">
   <div class="loading-text">Carregando…</div>
 </div>
 <div id="screen-projects">
-  <div class="proj-header">
+  <div class="proj-wrap">
     <img id="projects-logo" class="proj-logo" alt="OSPA">
-    <div class="proj-title" data-t="login.plataforma_txt">Plataforma de compatibilização</div>
-    <div style="display:flex;gap:8px" id="acoes-globais">
-      <a class="btn btn-g" id="btn-admin" href="admin.html" style="font-size:11px;text-decoration:none;display:none">Administração</a>
-      <button class="btn btn-g" id="btn-backups" onclick="openBackups()" style="font-size:11px;display:none">↺ Projetos excluídos</button>
-      <button class="btn btn-g" id="btn-novo" onclick="openModal()" style="display:none">+ Novo projeto</button>
+    <div class="proj-eyebrow" data-t="login.plataforma_txt">Plataforma de compatibilização</div>
+    <h1 class="proj-titulo" data-t="projetos.selecione">Selecione um projeto</h1>
+    <!-- A busca só aparece quando a lista cresce (ver BUSCA_A_PARTIR_DE) -->
+    <div class="proj-busca" id="proj-busca" hidden>
+      <input type="search" id="proj-busca-campo" data-t-ph="projetos.buscar" autocomplete="off" oninput="filtrarProjetos()">
+      <span id="proj-contagem"></span>
+    </div>
+    <div class="proj-grid" id="proj-grid"></div>
+    <div class="proj-vazio" id="proj-vazio" data-t="projetos.nenhum" hidden></div>
+    <div class="proj-rodape">
+      <span id="proj-usuario"></span>
+      <span class="proj-rodape-acoes">
+        <!-- Administração e projetos excluídos: só admin (o banco também confere) -->
+        <a id="btn-admin" href="admin.html" data-t="projetos.admin" hidden>Administração</a>
+        <button id="btn-backups" onclick="openBackups()" data-t="projetos.excluidos" hidden>Projetos excluídos</button>
+        <button id="btn-senha" onclick="ospaTrocarSenha()" data-t="nav.senha">Trocar senha</button>
+        <button onclick="doLogout()" data-t="nav.sair">Sair</button>
+      </span>
     </div>
   </div>
-  <div class="proj-grid" id="proj-grid"></div>
 </div>
 
 <div class="modal-bg" id="modal">
@@ -131,7 +158,7 @@ body.restricted-coordinator .proj-header button{display:none!important}
 </div>
 
 <div class="toast" id="toast"></div>
-<script src="idioma.js?v=3"></script>
+<script src="idioma.js?v=4"></script>
 <script src="auth.js?v=3"></script>
 <script src="dados.js?v=1"></script>
 <script src="login.js?v=4"></script>
@@ -199,18 +226,27 @@ async function loadProjects(){
   }
 }
 
+function escHtml(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+// A busca só aparece a partir deste número de projetos — com poucos, é ruído.
+var BUSCA_A_PARTIR_DE = 7;
+
 function renderProjects(projetos,todos){
   var grid=document.getElementById("proj-grid");
   grid.innerHTML="";
   projetos.forEach(function(p){
     var card=document.createElement("div");
     card.className="proj-card";
+    // Texto da busca: código, nome, cliente e endereço, sem acento
+    card.dataset.busca=semAcento([p.id,p.nome,p.cliente,p.endereco].join(" "));
     card.innerHTML=
       // A foto chega depois (carregarFotos): a lista aparece sem esperar as imagens
-      "<div class=\"proj-card-foto\" data-projeto=\""+p.id+"\"><img class=\"proj-card-foto-marca\" src=\""+LOGO+"\" alt=\"\"></div>"+
-      "<div class=\"proj-card-code\">"+p.id+"</div>"+
-      "<div class=\"proj-card-name\">"+p.nome+"</div>"+
-      "<div class=\"proj-card-sub\">"+(p.cliente||"")+"</div>"+
+      "<div class=\"proj-card-foto\" data-projeto=\""+escHtml(p.id)+"\"><img class=\"proj-card-foto-marca\" src=\""+LOGO+"\" alt=\"\"></div>"+
+      "<div class=\"proj-card-info\">"+
+        "<div class=\"proj-card-code\">"+escHtml(p.id)+"</div>"+
+        "<div class=\"proj-card-name\">"+escHtml(p.nome)+"</div>"+
+        (p.cliente ? "<div class=\"proj-card-sub\">"+escHtml(p.cliente)+"</div>" : "")+
+      "</div>"+
       "<button class=\"proj-card-bkp\" title=\"Criar backup\">↺</button>"+
       "<button class=\"proj-card-del\" title=\"Excluir\">×</button>";
     (function(pid,pnome){
@@ -220,9 +256,39 @@ function renderProjects(projetos,todos){
     })(p.id,p.nome);
     grid.appendChild(card);
   });
-  // O botão "+ Novo projeto" do cabeçalho já cobre esta ação —
-  // o card duplicado foi removido para não repetir o mesmo comando.
+
+  // "+ Novo projeto" volta a ser o último cartão — só para o admin
+  if (ME && ME.papel_global === "admin") {
+    var novo=document.createElement("button");
+    novo.className="proj-new";
+    novo.textContent="+ "+t("projetos.novo");
+    novo.onclick=openModal;
+    grid.appendChild(novo);
+  }
+
+  var busca=document.getElementById("proj-busca");
+  busca.hidden = projetos.length < BUSCA_A_PARTIR_DE;
+  document.getElementById("proj-busca-campo").value="";
+  filtrarProjetos();
+
   carregarFotos(projetos.map(function(p){ return p.id; }));
+}
+
+function semAcento(s){ return String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase(); }
+
+function filtrarProjetos(){
+  var termo=semAcento(document.getElementById("proj-busca-campo").value.trim());
+  var cards=document.querySelectorAll(".proj-card"), visiveis=0;
+  cards.forEach(function(c){
+    var ok=!termo || c.dataset.busca.indexOf(termo)!==-1;
+    c.style.display=ok?"":"none";
+    if(ok) visiveis++;
+  });
+  // O "+ Novo projeto" some durante a busca, para não parecer resultado
+  var novo=document.querySelector(".proj-new");
+  if(novo) novo.style.display=termo?"none":"";
+  document.getElementById("proj-contagem").textContent=t("projetos.contagem",{n:visiveis});
+  document.getElementById("proj-vazio").hidden = !(termo && !visiveis);
 }
 
 // Fotos dos projetos (Configurações → Dados gerais). Sem foto, o cartão
@@ -361,8 +427,9 @@ function doLogout() {
   document.getElementById('screen-loading').style.display = 'none';
   document.getElementById('screen-projects').style.display = 'none';
   document.getElementById('screen-denied').style.display = 'none';
-  document.getElementById('btn-senha').style.display = 'block';
-    document.getElementById('logout-corner').style.display = 'none';
+  document.getElementById('btn-admin').hidden = true;
+  document.getElementById('btn-backups').hidden = true;
+  document.body.classList.remove('restricted-coordinator');
   document.getElementById('screen-login').style.display = 'flex';
   document.getElementById('login-password').value = '';
   document.getElementById('login-btn').textContent = 'Entrar';
@@ -384,12 +451,10 @@ async function afterLogin() {
     ospaIdiomaDaSessao(ME.idioma);   // vale para a tela de entrada e a troca de senha
     // Criar e excluir projeto, e backups de projetos excluídos, são
     // de administrador — o banco confere, isto só evita botão inútil.
-    if (ME.papel_global === 'admin') {
-      ['btn-admin','btn-backups','btn-novo'].forEach(function(id){
-        var el = document.getElementById(id);
-        if (el) el.style.display = id === 'btn-admin' ? 'inline-flex' : 'inline-block';
-      });
-    }
+    // ("+ Novo projeto" é desenhado na própria lista, em renderProjects.)
+    document.getElementById('btn-admin').hidden = ME.papel_global !== 'admin';
+    document.getElementById('btn-backups').hidden = ME.papel_global !== 'admin';
+    document.getElementById('proj-usuario').textContent = ME.nome || ME.email || '';
 
     if (ME.papel_global === 'admin') {
       MY_PROJECT_IDS = null; // sees everything
@@ -402,15 +467,13 @@ async function afterLogin() {
       access.forEach(a => { PROJECT_ROLES[a.projeto_id] = a.papel; });
     }
 
-    document.getElementById('btn-senha').style.display = 'block';
-    document.getElementById('logout-corner').style.display = 'block';
     if (MY_PROJECT_IDS !== null) {
       document.body.classList.add('restricted-coordinator');
     }
     await loadProjects();
     if (MY_PROJECT_IDS !== null) {
       // Defensive: hide creation/deletion controls for restricted coordinators
-      document.querySelectorAll('.proj-header button, .proj-new, .proj-card-del').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('.proj-new, .proj-card-del, .proj-card-bkp').forEach(el => el.style.display = 'none');
     }
   } catch(e) {
     lt.textContent = 'Erro: ' + e.message;

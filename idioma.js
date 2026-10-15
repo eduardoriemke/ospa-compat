@@ -100,6 +100,15 @@ const OSPA_TEXTOS = {
   'login.ou':          { pt: 'ou',                       en: 'or' },
   'login.pedir':       { pt: 'Não tem acesso? Solicite.', en: 'No access? Request it.' },
 
+  // ── lista de projetos (index.html) ──
+  'projetos.selecione': { pt: 'Selecione um projeto',    en: 'Select a project' },
+  'projetos.buscar':   { pt: 'Buscar por nome, código ou cliente', en: 'Search by name, code or client' },
+  'projetos.contagem': { pt: '%{n} projetos',            en: '%{n} projects' },
+  'projetos.nenhum':   { pt: 'Nenhum projeto encontrado.', en: 'No projects found.' },
+  'projetos.novo':     { pt: 'Novo projeto',             en: 'New project' },
+  'projetos.admin':    { pt: 'Administração',            en: 'Administration' },
+  'projetos.excluidos': { pt: 'Projetos excluídos',      en: 'Deleted projects' },
+
   // ── solicitação de acesso (acesso.html) ──
   'acesso.titulo':     { pt: 'Solicitar <b>acesso</b>', en: 'Request <b>access</b>' },
   'acesso.descricao':  { pt: 'A plataforma reúne a compatibilização dos projetos da OSPA. O acesso é liberado por projeto, então informe de qual você participa.',
