@@ -132,6 +132,15 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .cmp-marca.desat{color:var(--pend);background:#FBF3E0;border:1px solid var(--pend)}
 .cmp-marca.falta{color:var(--alert);background:#FBEAEA;border:1px solid var(--alert)}
 .cmp-vazio{font-family:var(--mono);font-size:11px;color:var(--resol);padding:12px 0}
+.cmp-zip{margin-top:18px;padding:16px 18px;border:1px solid var(--border);background:var(--surface2)}
+.cmp-zip-tit{font-family:var(--sans);font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:4px}
+.cmp-zip-txt{font-family:var(--sans);font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:12px}
+.cmp-zip-pasta{font-family:var(--mono);font-size:11px;color:var(--text);margin-bottom:12px}
+.cmp-zip-acoes{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.cmp-zip-barra{height:4px;background:var(--border);margin:12px 0 6px;overflow:hidden}
+.cmp-zip-barra i{display:block;height:100%;width:0;background:var(--text);transition:width .2s}
+.cmp-zip-status{font-family:var(--mono);font-size:10.5px;color:var(--text2);line-height:1.6;word-break:break-all}
+.cmp-zip-aviso{font-family:var(--mono);font-size:10.5px;color:var(--alert);margin-top:8px;line-height:1.6}
 .gmodal-acoes{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
 .gbtn{font-family:var(--sans);font-size:11px;font-weight:600;padding:8px 16px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer}
 .gbtn:hover{border-color:var(--text2);color:var(--text)}
@@ -298,6 +307,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
       <div id="cmp-resultado" style="display:none"></div>
 
+      <!-- Pendências em ZIP, lidas da pasta do projeto no Google Drive para computador -->
+      <div id="cmp-zip" class="cmp-zip" style="display:none"></div>
+
       <div class="gmodal-acoes">
         <button class="gbtn" id="cmp-exportar" onclick="exportarComparacao()" style="display:none">Exportar (.csv)</button>
         <button class="gbtn" onclick="fecharComparador()">Fechar</button>
@@ -365,6 +377,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 <script src="dados.js?v=1"></script>
 <script src="login.js?v=4"></script>
 <script src="disciplinas.js?v=1"></script>
+<script src="zip.js?v=1"></script>
 <script>
 // Sessão (SB_URL, SB_KEY, SB_AUTH, SESSION, SESSION_KEY, saveSession,
 // loadSavedSession, clearSavedSession, refreshSession, tryRestoreSession
@@ -789,6 +802,7 @@ function abrirComparador() {
   document.getElementById('cmp-processando').style.display = 'none';
   document.getElementById('cmp-resultado').style.display = 'none';
   document.getElementById('cmp-resultado').innerHTML = '';
+  document.getElementById('cmp-zip').style.display = 'none';
   document.getElementById('cmp-input').value = '';
   document.getElementById('modal-comparar').classList.add('open');
 }
@@ -830,10 +844,10 @@ function compararComServidor(arquivos) {
     const anterior = p.revisoes.find(r => locais.has((r.nome_arquivo || '').toUpperCase()));
     if (anterior) {
       desatualizados++;
-      porDisc[disc].push({ tipo: 'desat', nome: p.topo.nome_arquivo, detalhe: 'servidor tem ' + (anterior.revisao || '—') });
+      porDisc[disc].push({ tipo: 'desat', nome: p.topo.nome_arquivo, detalhe: 'servidor tem ' + (anterior.revisao || '—'), doc: p.topo });
     } else {
       faltando++;
-      porDisc[disc].push({ tipo: 'falta', nome: p.topo.nome_arquivo, detalhe: '' });
+      porDisc[disc].push({ tipo: 'falta', nome: p.topo.nome_arquivo, detalhe: '', doc: p.topo });
     }
   });
 
@@ -900,6 +914,273 @@ function renderComparacao(r) {
   document.getElementById('cmp-processando').style.display = 'none';
   document.getElementById('cmp-exportar').style.display = 'inline-block';
   el.style.display = 'block';
+  renderZipPendencias();
+}
+
+// ════════════════════════════════════════════════════════
+// PENDÊNCIAS EM ZIP
+// Lê os arquivos pendentes da pasta do projeto no Google Drive para
+// computador (disco G:, modo "Transmitir arquivos") e grava um ZIP com
+// a mesma estrutura de pastas do Drive. O coordenador distribui no
+// servidor — que tem organização própria, por entrega.
+//
+// Tudo acontece no computador: o navegador lê do G: e grava o ZIP no
+// disco, aos poucos (zip.js). Nada passa pelo Supabase nem pelo Apps
+// Script — que falhava com arquivos grandes. Só Chrome e Edge permitem
+// escolher pasta e gravar arquivo assim.
+//
+// O caminho de cada arquivo é: pasta da disciplina / caminho / nome,
+// como a varredura do Drive registra. Se não estiver lá (pasta renomeada,
+// arquivo movido), procura pelo nome em toda a pasta do projeto.
+// ════════════════════════════════════════════════════════
+
+const ZIP_SUPORTADO = 'showDirectoryPicker' in window && 'showSaveFilePicker' in window;
+let ZIP_PASTA = null;        // FileSystemDirectoryHandle da raiz do projeto no G:
+let ZIP_PERMISSAO = false;
+let ZIP_CANCELAR = false;
+let ZIP_PASTAS_DISC = null;  // id da pasta no Drive → nome da pasta (disciplinas.pasta_nome)
+
+// A pasta escolhida fica guardada no navegador (IndexedDB), por projeto,
+// para não precisar navegar até ela toda vez.
+function zipBanco() {
+  return new Promise((ok, falha) => {
+    const r = indexedDB.open('ospa_compat', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('pastas');
+    r.onsuccess = () => ok(r.result);
+    r.onerror = () => falha(r.error);
+  });
+}
+async function zipLerPasta() {
+  try {
+    const db = await zipBanco();
+    return await new Promise(ok => {
+      const q = db.transaction('pastas').objectStore('pastas').get('drive_' + PROJETO.id);
+      q.onsuccess = () => ok(q.result || null);
+      q.onerror = () => ok(null);
+    });
+  } catch (e) { return null; }
+}
+async function zipSalvarPasta(h) {
+  try {
+    const db = await zipBanco();
+    db.transaction('pastas', 'readwrite').objectStore('pastas').put(h, 'drive_' + PROJETO.id);
+  } catch (e) {}
+}
+
+function zipPendentes() {
+  const r = ULTIMA_COMPARACAO;
+  if (!r) return [];
+  const lista = [];
+  Object.keys(r.porDisc).sort().forEach(d => r.porDisc[d].forEach(it => { if (it.doc) lista.push(it); }));
+  return lista;
+}
+
+async function renderZipPendencias() {
+  const box = document.getElementById('cmp-zip');
+  const pend = zipPendentes();
+  if (!pend.length) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+
+  if (!ZIP_SUPORTADO) {
+    box.innerHTML = '<div class="cmp-zip-tit">Baixar pendências (.zip)</div>' +
+      '<div class="cmp-zip-txt">Disponível só no Chrome ou no Edge, que permitem ler a pasta do Drive e gravar o ZIP no computador.</div>';
+    return;
+  }
+
+  if (!ZIP_PASTA) {
+    const salva = await zipLerPasta();
+    if (!ZIP_PASTA) ZIP_PASTA = salva;   // não desfaz uma escolha feita enquanto lia
+  }
+  ZIP_PERMISSAO = !!ZIP_PASTA && (await ZIP_PASTA.queryPermission({ mode: 'read' }).catch(() => 'denied')) === 'granted';
+
+  let pasta, acoes;
+  if (!ZIP_PASTA) {
+    pasta = 'Pasta do projeto no Drive: <span style="color:var(--text3)">não escolhida</span>';
+    acoes = '<button class="gbtn gbtn-primary" id="zip-escolher">Escolher pasta do projeto no Drive…</button>';
+  } else if (!ZIP_PERMISSAO) {
+    pasta = 'Pasta do projeto no Drive: <b>' + esc(ZIP_PASTA.name) + '</b>';
+    acoes = '<button class="gbtn gbtn-primary" id="zip-liberar">Liberar acesso à pasta</button>' +
+            '<button class="gbtn" id="zip-escolher">Trocar pasta…</button>';
+  } else {
+    pasta = 'Pasta do projeto no Drive: <b>' + esc(ZIP_PASTA.name) + '</b> ✓';
+    acoes = '<button class="gbtn gbtn-primary" id="zip-baixar">Baixar ' + pend.length + ' pendência(s) (.zip)</button>' +
+            '<button class="gbtn" id="zip-escolher">Trocar pasta…</button>';
+  }
+
+  box.innerHTML =
+    '<div class="cmp-zip-tit">Baixar pendências (.zip)</div>' +
+    '<div class="cmp-zip-txt">Junta num ZIP só os arquivos faltando e desatualizados, com a mesma estrutura de pastas do Drive. ' +
+      'Os arquivos são lidos do Google Drive para computador (disco G:) — escolha a pasta raiz do projeto, a que contém as pastas das disciplinas.</div>' +
+    '<div class="cmp-zip-pasta">' + pasta + '</div>' +
+    '<div class="cmp-zip-acoes">' + acoes + '</div>' +
+    '<div id="zip-progresso"></div>';
+
+  const b = id => document.getElementById(id);
+  if (b('zip-escolher')) b('zip-escolher').onclick = zipEscolherPasta;
+  if (b('zip-liberar'))  b('zip-liberar').onclick  = zipLiberar;
+  if (b('zip-baixar'))   b('zip-baixar').onclick   = zipBaixar;
+}
+
+async function zipNomesEsperados() {
+  if (!ZIP_PASTAS_DISC) {
+    const discs = await api('GET', 'disciplinas', null,
+      'projeto_id=eq.' + encodeURIComponent(PROJETO.id) + '&select=pasta_drive_id,pasta_nome').catch(() => []);
+    ZIP_PASTAS_DISC = {};
+    (discs || []).forEach(d => { if (d.pasta_drive_id && d.pasta_nome) ZIP_PASTAS_DISC[d.pasta_drive_id] = d.pasta_nome; });
+  }
+  return ZIP_PASTAS_DISC;
+}
+
+async function zipEscolherPasta() {
+  let h;
+  try {
+    h = await window.showDirectoryPicker({ id: 'ospa-drive', mode: 'read' });
+  } catch (e) { return; }   // cancelou
+
+  // Confere se é a raiz do projeto: deve conter pastas de disciplina
+  const esperadas = new Set(Object.values(await zipNomesEsperados()).map(n => n.toLowerCase()));
+  let achou = 0;
+  for await (const [nome, item] of h.entries()) {
+    if (item.kind === 'directory' && esperadas.has(nome.toLowerCase())) achou++;
+  }
+  if (esperadas.size && !achou &&
+      !confirm('A pasta "' + h.name + '" não tem nenhuma das pastas de disciplina deste projeto ' +
+               '(' + [...esperadas].slice(0, 4).join(', ') + '…).\n\nUsar mesmo assim?')) return;
+
+  ZIP_PASTA = h;
+  await zipSalvarPasta(h);
+  renderZipPendencias();
+}
+
+async function zipLiberar() {
+  try { await ZIP_PASTA.requestPermission({ mode: 'read' }); } catch (e) {}
+  renderZipPendencias();
+}
+
+// Desce pelas pastas; null se algum trecho não existir
+async function zipAbrir(raiz, partes) {
+  let dir = raiz;
+  for (let i = 0; i < partes.length - 1; i++) {
+    try { dir = await dir.getDirectoryHandle(partes[i]); } catch (e) { return null; }
+  }
+  try { return await dir.getFileHandle(partes[partes.length - 1]); } catch (e) { return null; }
+}
+
+// Índice nome → caminho de tudo na pasta do projeto. Só a listagem
+// (o Drive não baixa nada para listar); montado só se precisar.
+async function zipIndice(raiz, aoAvancar) {
+  const indice = new Map();
+  let lidos = 0;
+  async function visitar(dir, prefixo) {
+    for await (const [nome, item] of dir.entries()) {
+      if (ZIP_CANCELAR) return;
+      if (item.kind === 'directory') await visitar(item, prefixo + nome + '/');
+      else {
+        const k = nome.toUpperCase();
+        if (!indice.has(k)) indice.set(k, { handle: item, caminho: prefixo + nome });
+        if (++lidos % 200 === 0 && aoAvancar) aoAvancar(lidos);
+      }
+    }
+  }
+  await visitar(raiz, '');
+  return indice;
+}
+
+function zipMB(b) { return (b / 1048576).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' MB'; }
+
+async function zipBaixar() {
+  const pend = zipPendentes();
+  const hoje = new Date().toISOString().slice(0, 10);
+
+  // 1º o arquivo de destino (precisa do clique, então vem antes de qualquer espera)
+  let saida;
+  try {
+    saida = await window.showSaveFilePicker({
+      suggestedName: 'pendencias_' + PROJETO.id + '_' + hoje + '.zip',
+      types: [{ description: 'Arquivo ZIP', accept: { 'application/zip': ['.zip'] } }]
+    });
+  } catch (e) { return; }   // cancelou
+
+  ZIP_CANCELAR = false;
+  const prog = document.getElementById('zip-progresso');
+  prog.innerHTML = '<div class="cmp-zip-barra"><i id="zip-barra"></i></div>' +
+    '<div class="cmp-zip-status" id="zip-status">Localizando arquivos no Drive…</div>' +
+    '<div class="cmp-zip-acoes" style="margin-top:8px"><button class="gbtn" id="zip-cancelar">Cancelar</button></div>';
+  document.getElementById('zip-cancelar').onclick = () => { ZIP_CANCELAR = true; };
+  document.querySelectorAll('#cmp-zip .cmp-zip-acoes button:not(#zip-cancelar)').forEach(x => x.disabled = true);
+  const status = t => { const s = document.getElementById('zip-status'); if (s) s.textContent = t; };
+  const barra = f => { const s = document.getElementById('zip-barra'); if (s) s.style.width = Math.round(f * 100) + '%'; };
+
+  // Localiza cada pendência: primeiro pelo caminho registrado, depois pelo nome
+  const pastas = await zipNomesEsperados();
+  const achados = [], naoAchados = [];
+  let indice = null;
+  for (const it of pend) {
+    if (ZIP_CANCELAR) break;
+    const d = it.doc;
+    const idPasta = ((d.link_pasta_disciplina || '').match(/folders\/([^/?#]+)/) || [])[1];
+    const pastaDisc = pastas[idPasta] || d.disciplina_original || d.disciplina;
+    const partes = [pastaDisc].concat((d.caminho || '').split('/').filter(Boolean), [d.nome_arquivo]);
+    let fh = await zipAbrir(ZIP_PASTA, partes);
+    let caminho = partes.join('/');
+    if (!fh) {
+      if (!indice) indice = await zipIndice(ZIP_PASTA, n => status('Procurando arquivos fora do lugar… ' + n + ' listados'));
+      const r = indice.get((d.nome_arquivo || '').toUpperCase());
+      if (r) { fh = r.handle; caminho = r.caminho; }
+    }
+    if (fh) achados.push({ it, fh, caminho });
+    else naoAchados.push(it);
+  }
+
+  if (ZIP_CANCELAR) { status('Cancelado.'); renderZipFim(); return; }
+  if (!achados.length) {
+    status('Nenhum dos ' + pend.length + ' arquivos foi encontrado na pasta "' + ZIP_PASTA.name + '". Confira se é a pasta raiz do projeto.');
+    renderZipFim(); return;
+  }
+
+  // Grava o ZIP
+  let destino, zip;
+  try {
+    destino = await saida.createWritable();
+    zip = new OspaZip(destino);
+    const arquivos = [];
+    for (const a of achados) arquivos.push(Object.assign(a, { file: await a.fh.getFile() }));
+    const total = arquivos.reduce((s, a) => s + a.file.size, 0) || 1;
+    let feito = 0;
+    for (let i = 0; i < arquivos.length; i++) {
+      if (ZIP_CANCELAR) throw new Error('cancelado');
+      const a = arquivos[i];
+      const base = feito;
+      status('(' + (i + 1) + '/' + arquivos.length + ') ' + a.caminho + ' — ' + zipMB(a.file.size));
+      await zip.adicionar(a.caminho, a.file, n => barra((base + n) / total));
+      feito += a.file.size;
+    }
+
+    // Lista do que veio (e do que faltou), para distribuir no servidor
+    const linhas = [['Disciplina', 'Arquivo', 'Situação', 'Caminho no Drive', 'No ZIP']];
+    achados.forEach(a => linhas.push([a.it.doc.disciplina, a.it.nome, a.it.tipo === 'desat' ? 'Desatualizado' : 'Faltando', a.caminho, 'sim']));
+    naoAchados.forEach(it => linhas.push([it.doc.disciplina, it.nome, it.tipo === 'desat' ? 'Desatualizado' : 'Faltando', '', 'não encontrado no Drive']));
+    await zip.adicionarTexto('_pendencias.csv', '﻿' + linhas.map(l => l.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(';')).join('\r\n'));
+    await zip.fechar();
+    barra(1);
+    status('ZIP salvo: ' + achados.length + ' arquivo(s), ' + zipMB(total) + '. Dentro dele, _pendencias.csv lista tudo.');
+    if (naoAchados.length) {
+      document.getElementById('zip-progresso').insertAdjacentHTML('beforeend',
+        '<div class="cmp-zip-aviso">' + naoAchados.length + ' arquivo(s) não encontrados no Drive local — talvez renomeados ou removidos depois da última varredura: ' +
+        naoAchados.slice(0, 8).map(it => esc(it.nome)).join(', ') + (naoAchados.length > 8 ? '…' : '') + '</div>');
+    }
+  } catch (e) {
+    try { if (destino) await destino.abort(); } catch (x) {}
+    status(e.message === 'cancelado' ? 'Cancelado. O arquivo parcial foi descartado.'
+           : 'Falhou: ' + e.message + '. O arquivo parcial foi descartado.');
+  }
+  renderZipFim();
+}
+
+function renderZipFim() {
+  const c = document.getElementById('zip-cancelar');
+  if (c) c.remove();
+  document.querySelectorAll('#cmp-zip .cmp-zip-acoes button').forEach(x => x.disabled = false);
 }
 
 // Exporta as pendências em CSV — separador ponto e vírgula e BOM,

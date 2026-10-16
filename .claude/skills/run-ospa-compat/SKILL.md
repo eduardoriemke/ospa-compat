@@ -107,6 +107,14 @@ There is no test suite; the driver is the check.
 - To test as a non-admin, temporarily `update usuarios set papel_global=null`
   for `agente@ospa.local` and insert a `projeto_usuarios_v2` row; restore with
   `driver.ps1 seed` (it sets admin back) and delete the row.
+- **Folder/file pickers (`showDirectoryPicker`, `showSaveFilePicker`) can't be
+  driven headless.** To test the comparator's "Baixar pendências (.zip)", build a
+  fake Drive tree in the browser's private storage (`navigator.storage.getDirectory()`
+  returns real directory handles), set `ZIP_PASTA` to it, override
+  `window.showSaveFilePicker` to return an OPFS file handle, call
+  `compararComServidor([...])` with a fake server list, click `#zip-baixar`, then
+  read the OPFS file back as base64 and check it with
+  `"C:\Program Files\7-Zip\7z.exe" t file.zip`.
 - `sidebar.js` records accesses (`acessos` table): browsing writes rows to
   the local db. Harmless, but don't be surprised by them.
 

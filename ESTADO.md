@@ -108,6 +108,15 @@ um HTML com o script embutido, mais arquivos compartilhados.
     A decidir: colaborador da OSPA abrir qualquer projeto em leitura, editando só
     onde for coordenador. Atenção: as tabelas antigas (`projetos` etc.) seguem
     abertas a qualquer logado — o sigilo real depende de fechá-las no banco
+23. **Pendências em ZIP** (sem SQL) — no comparador de Documentos, "Baixar
+    pendências (.zip)": lê os arquivos faltando/desatualizados da pasta do projeto
+    no Google Drive para computador (G:, modo "Transmitir arquivos") e grava um ZIP
+    com a estrutura de pastas do Drive + `_pendencias.csv`. Tudo no navegador
+    (Chrome/Edge), gravando em disco aos poucos (`zip.js`, sem biblioteca, ZIP64).
+    Substitui a tentativa pelo Apps Script, que falhava com arquivos grandes.
+    Caminho no G: = pasta da disciplina (`disciplinas.pasta_nome`) / `caminho` /
+    nome; se não achar, procura pelo nome. Pasta compartilhada por terceiros
+    precisa de atalho no Meu Drive para aparecer no G:
 
 ## Bilíngue (fase 11)
 
