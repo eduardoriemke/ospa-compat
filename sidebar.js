@@ -403,6 +403,10 @@ function ospaRegistrarAcesso(projeto) {
 
 let _ondasAtivas = null;   // laço em execução, para encerrar o anterior
 
+// Desligada em out./2026, a pedido: incomodava. O código fica; para
+// religar, basta trocar para true (e subir a versão do sidebar.js).
+const OSPA_ONDAS_LIGADAS = false;
+
 /* ------------------------------------------------------------
    Ondas concêntricas a partir de um ponto fixo, deformadas por
    obstáculos que derivam lentamente. A leitura é de respiração
@@ -420,6 +424,7 @@ function ospaIniciarOndas() {
   // Sem encerrar o laço antigo, ele seguiria desenhando num elemento
   // que já saiu da tela.
   if (_ondasAtivas) _ondasAtivas.parar();
+  if (!OSPA_ONDAS_LIGADAS) return;
 
   const cv = document.querySelector('.sidebar-ondas');
   if (!cv) return;

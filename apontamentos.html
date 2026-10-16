@@ -53,7 +53,14 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .ap.critico::before{background:var(--alert)}
 .ap.s-RESOLVIDO{opacity:0.55}
 /* Cabeçalho no padrão da ficha: ⚠ do crítico e status no canto direito */
-.ap-alerta{color:var(--alert);font-size:13px;line-height:1}
+.ap-alerta{color:var(--alert);font-size:13px;line-height:1;user-select:none}
+/* Como no Editor: ⚠ apagado quando não é crítico, aceso quando é; um clique alterna.
+   O chip de status também alterna com um clique (pendente ↔ resolvido). */
+.ap-alerta.clicavel{cursor:pointer;color:var(--text3);opacity:0.25;transition:all 0.15s}
+.ap-alerta.clicavel.on{color:var(--alert);opacity:1}
+.ap-alerta.clicavel:hover{opacity:0.6}
+.badge-status.clicavel{cursor:pointer;transition:filter 0.15s}
+.badge-status.clicavel:hover{filter:brightness(0.93)}
 .ap-info{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:10px;color:var(--text2);letter-spacing:0.04em}
 .ap-info b{font-weight:600;color:var(--text)}
 .ap-info .atrasado,.ap-info .atrasado b{color:var(--alert)}
@@ -223,8 +230,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 <div class="toast" id="toast"></div>
 
-<script src="idioma.js?v=6"></script>
-<script src="sidebar.js?v=12"></script>
+<script src="idioma.js?v=7"></script>
+<script src="sidebar.js?v=13"></script>
 <script src="editor-launcher.js?v=5"></script>
 <script src="auth.js?v=4"></script>
 <script src="dados.js?v=1"></script>
@@ -512,14 +519,24 @@ function cartao(a) {
   const meta = document.createElement('span'); meta.className = 'ap-meta';
   meta.textContent = a.autor_nome + ' · ' + tQuando(a.created_at);
   h.appendChild(meta);
-  if (a.critico) {
-    const al = document.createElement('span'); al.className = 'ap-alerta'; al.textContent = '⚠';
-    al.title = t('ap.campo_critico');
+  // ⚠: quem pode ajustar (autor ou coordenação) vê sempre e alterna com um clique;
+  // os demais só veem quando está aceso.
+  if (a.pode_ajustar || a.critico) {
+    const al = document.createElement('span');
+    al.className = 'ap-alerta' + (a.pode_ajustar ? ' clicavel' + (a.critico ? ' on' : '') : '');
+    al.textContent = '⚠';
+    al.title = a.pode_ajustar ? (a.critico ? t('ap.critico_tirar') : t('ap.critico_por')) : t('ap.campo_critico');
+    if (a.pode_ajustar) al.onclick = () => alternarCritico(a);
     h.appendChild(al);
   }
   const st = document.createElement('span');
   st.className = 'badge-status s-' + a.status;
   st.textContent = a.status === 'ABERTO' ? t('ap.status_aberto') : t('ap.status_resolvido');
+  if (podeResolver(a)) {
+    st.classList.add('clicavel');
+    st.title = a.status === 'ABERTO' ? t('ap.status_clique_resolver') : t('ap.status_clique_reabrir');
+    st.onclick = () => resolver(a, a.status === 'ABERTO');
+  }
   h.appendChild(st);
   el.appendChild(h);
 
@@ -574,13 +591,7 @@ function cartao(a) {
   verBtn.onclick = () => alternarConversa(a);
   ac.appendChild(verBtn);
 
-  if (podeResolver(a)) {
-    const r = document.createElement('button');
-    r.className = 'ap-btn' + (a.status === 'ABERTO' ? ' pri' : '');
-    r.textContent = a.status === 'ABERTO' ? t('ap.marcar_resolvido') : t('ap.reabrir');
-    r.onclick = () => resolver(a, a.status === 'ABERTO');
-    ac.appendChild(r);
-  }
+  // Resolver/reabrir: pelo chip de status no cabeçalho, como no Editor
 
   if (a.sou_autor || podeCoordenar()) {
     const e = document.createElement('button');
@@ -1072,6 +1083,20 @@ function modalPromover(a) {
 }
 
 // ── AÇÕES ──
+// Só o crítico muda; destinatários, prazo e local seguem como estão
+async function alternarCritico(a) {
+  try {
+    await rpc('ap_ajustar', {
+      p_apontamento: a.id,
+      p_disciplinas: a.destino_disciplinas || [], p_coordenacao: !!a.destino_coordenacao,
+      p_todos: !!a.destino_todos, p_prazo: a.prazo || null, p_local: a.local || null,
+      p_critico: !a.critico
+    });
+    toast(a.critico ? t('ap.critico_tirado') : t('ap.critico_posto'));
+    await recarregar();
+  } catch (e) { toast(t('g.erro', { msg: e.message })); }
+}
+
 async function resolver(a, resolvido) {
   try {
     await rpc('ap_resolver', { p_apontamento: a.id, p_resolvido: resolvido });
