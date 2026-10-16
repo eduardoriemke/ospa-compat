@@ -148,6 +148,11 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .cfg-add input{font-family:var(--mono);font-size:12px;padding:6px 10px;border:1px solid var(--border2);background:var(--surface);width:90px;text-transform:uppercase;outline:none}
 /* paleta de cores */
 .cfg-paleta{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+/* Chips de disciplina (Equipe → disciplinas da pessoa): neutros quando fora,
+   na cor da disciplina quando escolhidos (regra .chip.on.d-XXX do disciplinas.js) */
+.chip{font-family:var(--mono);font-size:10px;font-weight:500;padding:4px 10px;border-radius:2px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;user-select:none;transition:all .1s}
+.chip:hover{border-color:var(--text2);color:var(--text2)}
+.chip.on{background:var(--text);border-color:var(--text);color:var(--surface);font-weight:700}
 .cfg-cor{width:30px;height:24px;border:2px solid transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:8px;font-weight:600}
 .cfg-cor.on{outline:2px solid var(--acento);outline-offset:1px}
 .cfg-cat{display:flex;flex-wrap:wrap;gap:6px;max-height:220px;overflow:auto;padding:2px}
@@ -198,7 +203,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   </div>
 </div>
 
-<script src="idioma.js?v=7"></script>
+<script src="idioma.js?v=8"></script>
 <script src="sidebar.js?v=13"></script>
 <script src="editor-launcher.js?v=5"></script>
 <script src="auth.js?v=4"></script>
@@ -327,6 +332,9 @@ async function loadApp() {
 
     setLoadingText('Carregando configurações…');
     await carregarTudo();
+    // Cores das disciplinas (disciplinas.js): sem isto os chips da Equipe
+    // ficavam sem cor e o selecionado não se distinguia do resto.
+    await ospaCarregarCores(PROJ_ID);
 
     // A sidebar lê nome, papel e disciplinas destas marcações — sem elas,
     // assume "projetista" e esconde os itens da coordenação.

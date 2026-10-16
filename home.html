@@ -83,6 +83,19 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .painel-cartao.pendente .painel-rot{color:var(--alert)}
 .painel-nota{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:6px}
 .painel-cartao.pendente .painel-nota{color:var(--alert);opacity:0.8}
+/* Cartão de conflitos em aberto, discreto quando a saúde está acima */
+.painel-cartao.discreto{flex:0 1 auto;padding:10px 14px}
+.painel-cartao.discreto .painel-num{font-size:20px}
+
+/* Saúde do projeto e das disciplinas da pessoa (régua do Monitor) */
+.saude{border:1px solid var(--border);background:var(--surface);padding:16px 18px;margin-bottom:12px}
+.saude-tit{font-family:var(--sans);font-size:9px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:var(--text3);margin-bottom:12px}
+.saude-linha{display:flex;gap:28px;flex-wrap:wrap}
+.saude-bloco{display:flex;align-items:center;gap:12px}
+.saude-rosca text{font-family:var(--sans);font-size:15px;font-weight:600;fill:var(--text)}
+.saude-rot{font-family:var(--sans);font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.saude-num{font-family:var(--mono);font-size:10px;color:var(--text2);line-height:1.6}
+.saude-crit{color:var(--alert)}
 .painel-alerta{color:#A35A00}
 
 /* ── EQUIPE ── */
@@ -97,7 +110,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .equipe-table td{padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:top}
 .equipe-table tr:last-child td{border-bottom:none}
 .equipe-nome{font-weight:600;display:flex;align-items:center;gap:8px}
-.equipe-email{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:2px}
+.equipe-email{display:block;font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:2px;text-decoration:none}
+.equipe-email:hover{color:var(--text);text-decoration:underline;text-underline-offset:2px}
 .papel-badge.p-coordenador{font-family:var(--mono);font-size:9px;font-weight:600;padding:2px 7px;border-radius:2px;letter-spacing:0.06em;text-transform:uppercase;white-space:nowrap;background:#E4F2EE;color:var(--resol)}
 .equipe-vazio{background:var(--surface);border:1px solid var(--border);padding:16px 18px;font-family:var(--mono);font-size:11px;color:var(--text3)}
 
@@ -157,7 +171,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   </div>
 </div>
 
-<script src="idioma.js?v=7"></script>
+<script src="idioma.js?v=8"></script>
 <script src="sidebar.js?v=13"></script>
 <script src="editor-launcher.js?v=5"></script>
 <script src="auth.js?v=4"></script>
@@ -184,7 +198,7 @@ setLogos(OSPA_LOGO);
 
 function doLogout() {
   SESSION = null; USER_PROFILE = null;
-  PAINEL = null; EQUIPE_PAINEL = []; EQUIPE = []; AP_RESUMO = null;
+  PAINEL = null; EQUIPE_PAINEL = []; EQUIPE = []; AP_RESUMO = null; FICHAS_SAUDE = [];
   clearSavedSession();
   show('login');
   document.getElementById('login-password').value = '';
@@ -296,13 +310,17 @@ async function loadApp() {
     // Trocar de usuário na mesma aba recarrega os dados, mas as variáveis
     // da sessão anterior continuariam em memória. Limpar aqui evita que a
     // tabela encontre dados de quem saiu.
-    PAINEL = null; EQUIPE_PAINEL = []; AP_RESUMO = null;
+    PAINEL = null; EQUIPE_PAINEL = []; AP_RESUMO = null; FICHAS_SAUDE = [];
 
     // Painel: pendências desta pessoa (e da equipe, para a coordenação)
     PAINEL = await rpc('painel_pessoal', { p_projeto: projId }).then(r => (r && r[0]) || null).catch(() => null);
     // Apontamentos esperando esta pessoa. O catch cobre o banco ainda sem a
     // fase 10 aplicada: o painel simplesmente não mostra o cartão.
     AP_RESUMO = await rpc('ap_meu_resumo', { p_projeto: projId }).then(r => (r && r[0]) || null).catch(() => null);
+    // Saúde: fichas publicadas (as que o projetista vê), como no Monitor de Conflitos
+    FICHAS_SAUDE = await api('GET', 'conflitos', null,
+      'projeto_id=eq.' + encodeURIComponent(projId) + '&publicado=not.is.false&select=status,disciplinas,alerta')
+      .catch(() => []);
     if (USER_PROFILE && ospaPode(USER_PROFILE.papel, 'ver_equipe')) {
       EQUIPE_PAINEL = await rpc('painel_equipe', { p_projeto: projId }).catch(() => []);
     }
@@ -336,6 +354,52 @@ function renderSidebar() {
 // nova, nenhum estado a manter em dia.
 
 let PAINEL = null, EQUIPE_PAINEL = [], AP_RESUMO = null;
+let FICHAS_SAUDE = [];   // status, disciplinas e alerta das fichas publicadas
+
+// ── SAÚDE ──
+// Mesma régua do Monitor de Conflitos (analytics.html): porcentagem de
+// fichas resolvidas; vermelho abaixo de 40%, âmbar até 70%, verde acima.
+function corSaude(pct) { return pct < 40 ? '#C42828' : pct < 70 ? '#B8860B' : '#1A6B48'; }
+
+function roscaSaude(pct, cor) {
+  const tam = 76, esp = 7, r = (tam - esp) / 2, c = 2 * Math.PI * r;
+  return '<svg class="saude-rosca" width="' + tam + '" height="' + tam + '" viewBox="0 0 ' + tam + ' ' + tam + '">' +
+    '<circle cx="' + tam / 2 + '" cy="' + tam / 2 + '" r="' + r + '" stroke-width="' + esp + '" fill="none" stroke="var(--border)"></circle>' +
+    '<circle cx="' + tam / 2 + '" cy="' + tam / 2 + '" r="' + r + '" stroke-width="' + esp + '" fill="none" stroke="' + cor + '"' +
+    ' stroke-dasharray="' + c + '" stroke-dashoffset="' + (c - pct / 100 * c) + '" stroke-linecap="butt"' +
+    ' transform="rotate(-90 ' + tam / 2 + ' ' + tam / 2 + ')"></circle>' +
+    '<text x="50%" y="52%" text-anchor="middle" dominant-baseline="middle">' + pct + '%</text></svg>';
+}
+
+// Um bloco: rosca + rótulo + "x/y resolvidas · n em aberto · c críticos"
+function blocoSaude(rotuloHtml, fichas) {
+  const total = fichas.length;
+  if (!total) return '';
+  const resolvidas = fichas.filter(f => f.status === 'RESOLVIDO').length;
+  const abertas = total - resolvidas;
+  const criticos = fichas.filter(f => f.alerta && f.status !== 'RESOLVIDO').length;
+  const pct = Math.round(resolvidas / total * 100);
+  return '<div class="saude-bloco">' + roscaSaude(pct, corSaude(pct)) +
+    '<div class="saude-txt"><div class="saude-rot">' + rotuloHtml + '</div>' +
+    '<div class="saude-num">' + t('home.saude_resolvidas', { r: resolvidas, n: total }) + '</div>' +
+    '<div class="saude-num">' + tn('home.saude_abertas', abertas) +
+      (criticos ? ' · <span class="saude-crit">' + tn('home.criticos_n', criticos) + '</span>' : '') + '</div>' +
+    '</div></div>';
+}
+
+// Projeto inteiro e, para quem responde por disciplinas, cada uma delas
+function htmlSaude() {
+  const fichas = FICHAS_SAUDE || [];
+  if (!fichas.length) return '';
+  let h = blocoSaude(t('home.saude_projeto'), fichas);
+  const minhas = (USER_PROFILE && USER_PROFILE.disciplinas) || [];
+  minhas.slice(0, 4).forEach(sig => {
+    h += blocoSaude(t('home.saude_disciplina') + ' <span class="d-tag d-' + esc(sig) + '">' + esc(sig) + '</span>',
+                    fichas.filter(f => (f.disciplinas || []).includes(sig)));
+  });
+  return '<div class="saude"><div class="saude-tit">' + t('home.saude_titulo') + '</div>' +
+         '<div class="saude-linha">' + h + '</div></div>';
+}
 
 function relatorioComDiscs(discs) {
   // leva ao relatório já filtrado pelas disciplinas da pessoa
@@ -415,7 +479,10 @@ function renderPainel() {
          (p.mais_antiga_dias ? '<div class="painel-nota">' + t('home.mais_antiga', { n: p.mais_antiga_dias }) + '</div>' : '') +
          '</a>';
   }
-  h += '<a class="painel-cartao" href="' + relatorioComDiscs(discs) + '">' +
+  // Conflitos em aberto: com a saúde ao lado, vira um cartão discreto (sem o
+  // número grande). Sem fichas para calcular a saúde, fica como era.
+  const saude = htmlSaude();
+  h += '<a class="painel-cartao' + (saude ? ' discreto' : '') + '" href="' + relatorioComDiscs(discs) + '">' +
        '<div class="painel-num">' + p.abertos + '</div>' +
        '<div class="painel-rot">' + tn('home.abertos', p.abertos) +
        (discs.length && discs.length <= 4 ? t('home.abertos_em', { discs: discs.join(', ') }) : '') + '</div>' +
@@ -424,7 +491,7 @@ function renderPainel() {
        '</a>';
   h += '</div>';
 
-  el.innerHTML = h;
+  el.innerHTML = saude + h;
   el.style.display = 'block';
 }
 
@@ -512,7 +579,7 @@ function renderEquipe() {
 
     return '<tr>' + sinal +
       '<td><div class="equipe-nome">'+esc(p.nome)+coordBadge+'</div>' +
-        (p.email ? '<div class="equipe-email">'+esc(p.email)+'</div>' : '') + '</td>' +
+        (p.email ? '<a class="equipe-email" href="mailto:'+encodeURIComponent(p.email).replace(/%40/g,'@')+'" title="'+esc(t('home.escrever_para'))+'">'+esc(p.email)+'</a>' : '') + '</td>' +
       '<td>'+(p.empresa ? esc(p.empresa) : '<span style="color:var(--text3)">—</span>')+'</td>' +
       '<td>'+discs+'</td>' + extras +
     '</tr>';
