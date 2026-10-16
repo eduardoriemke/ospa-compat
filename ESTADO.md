@@ -230,6 +230,16 @@ diária. Com vários projetos ativos, revisar esse intervalo.
 
 ## Próximas etapas
 
+- **Fechar as tabelas antigas no banco** — `projetos`, `conflitos`, `imagens` e
+  as demais têm política `acesso_total`: qualquer usuário logado lê e grava tudo
+  direto pela API, sem passar pelas funções. A tela esconde, mas não protege.
+  Fazer com cuidado (cada tela depende de alguma leitura direta) e testar bem.
+- **Integrações com a TI** — domínio próprio (ex.: `compat.ospa.com.br`), repositório
+  e Supabase numa conta/organização da OSPA, SMTP (recuperar senha) e projeto no
+  Google Cloud (entrar com Google; download direto do Drive sem o G:).
+- **Colaborador da OSPA abrir qualquer projeto** em leitura, editando só onde for
+  coordenador (a marcação `empresas.interna` já existe).
+
 - **Código da ficha no servidor** — o `C-NN` ainda é calculado no navegador, a
   partir da lista que aquele navegador carregou: duas pessoas criando ficha ao
   mesmo tempo geram o mesmo número, sem erro e sem aviso. A promoção de
