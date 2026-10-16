@@ -434,7 +434,7 @@ function ospaIniciarOndas() {
   let L = 0, A = 0, cx = 0, cy = 0, raioMax = 1;
 
   const acento = (getComputedStyle(document.documentElement)
-                    .getPropertyValue('--acento-rgb') || '95, 118, 132').trim();
+                    .getPropertyValue('--acento-rgb') || '25, 25, 25').trim();
 
   const ONDAS = 7;          // anéis simultâneos
   const PONTOS = 46;        // pontos por anel — suficiente na escala da faixa
