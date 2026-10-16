@@ -50,13 +50,39 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .ap{background:var(--surface);border:1px solid var(--border);margin-bottom:14px;position:relative}
 .ap::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:transparent}
 .ap.para-mim::before{background:var(--acento)}
+.ap.critico::before{background:var(--alert)}
 .ap.s-RESOLVIDO{opacity:0.55}
+/* Cabeçalho no padrão da ficha: ⚠ do crítico e status no canto direito */
+.ap-alerta{color:var(--alert);font-size:13px;line-height:1}
+.ap-info{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:10px;color:var(--text2);letter-spacing:0.04em}
+.ap-info b{font-weight:600;color:var(--text)}
+.ap-info .atrasado,.ap-info .atrasado b{color:var(--alert)}
 .ap-head{padding:10px 14px 9px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);background:var(--surface2);flex-wrap:wrap}
 .ap-code{font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:0.04em}
 .badge-status{font-family:var(--mono);font-size:9px;font-weight:500;padding:2px 8px;border-radius:2px;letter-spacing:0.08em;text-transform:uppercase}
 .badge-status.s-ABERTO{background:rgba(122,82,0,0.08);color:var(--pend);border:1px solid rgba(122,82,0,0.2)}
 .badge-status.s-RESOLVIDO{background:rgba(26,107,72,0.08);color:var(--resol);border:1px solid rgba(26,107,72,0.2)}
 .ap-destino{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:2px;border:1px solid var(--border2);background:var(--surface);color:var(--text2)}
+.ap-destinos{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;font-family:var(--mono);font-size:9px;color:var(--text3)}
+
+/* Seletor de destinatários — o mesmo gesto das disciplinas da ficha:
+   crachás com ×, e um + tracejado que abre a lista do que falta. */
+.dest-box{display:flex;gap:5px;flex-wrap:wrap;align-items:center;position:relative;padding:8px;border:1px solid var(--border2);background:var(--bg);min-height:38px}
+.dest-box .d-tag,.dest-box .ap-destino{display:inline-flex;align-items:center}
+.tag-x-inline{background:none;border:none;color:inherit;opacity:0.4;cursor:pointer;font-size:10px;padding:0 0 0 3px;line-height:1}
+.tag-x-inline:hover{opacity:1}
+.disc-add-btn{font-family:var(--mono);font-size:10px;padding:1px 7px;border-radius:2px;border:1px dashed var(--border2);background:transparent;color:var(--text3);cursor:pointer}
+.disc-add-btn:hover{border-color:var(--text2);color:var(--text2)}
+.disc-picker{display:flex;flex-wrap:wrap;gap:4px;padding:6px 8px;background:var(--surface);border:1px solid var(--border2);position:absolute;z-index:10;max-width:320px;box-shadow:0 4px 16px rgba(25,25,25,0.1);top:100%;left:0;margin-top:2px}
+.disc-pick-chip{font-family:var(--mono);font-size:9px;font-weight:500;padding:2px 7px;border-radius:2px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer}
+.disc-pick-chip:hover{border-color:var(--text2);color:var(--text)}
+.campos-linha{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.campos-linha .pfield{flex:1;min-width:140px}
+.check{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text);cursor:pointer;padding:8px 0}
+
+/* Histórico, intercalado com a conversa */
+.ev{font-family:var(--mono);font-size:10px;color:var(--text3);padding:1px 0 1px 12px;line-height:1.6}
+.ev b{font-weight:600;color:var(--text2)}
 .ap-body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:9px}
 .ap-titulo{font-size:14px;font-weight:600;line-height:1.45}
 .ap-desc{font-size:12.5px;color:var(--text2);line-height:1.65;white-space:pre-wrap}
@@ -64,7 +90,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .ap-ficha{font-family:var(--mono);font-size:9.5px;color:var(--resol);background:rgba(26,107,72,0.07);border:1px solid rgba(26,107,72,0.2);padding:4px 8px;border-radius:2px}
 
 .ap-imgs{display:flex;gap:5px;flex-wrap:wrap}
-.thumb{width:84px;height:62px;object-fit:cover;border:1px solid var(--border);cursor:pointer;display:block}
+.thumb{width:180px;height:135px;object-fit:cover;border:1px solid var(--border);cursor:pointer;display:block}
 .thumb:hover{outline:1px solid var(--text2)}
 
 .ap-acoes{display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:10px;align-items:center}
@@ -82,7 +108,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .resp-autor{font-size:10px;font-weight:600}
 .resp-hora{font-family:var(--mono);font-size:9px;color:var(--text3);margin-left:auto}
 .resp-texto{font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap}
-.resp-img{width:64px;height:48px;object-fit:cover;border:1px solid var(--border);cursor:pointer;display:inline-block;margin:6px 4px 0 0}
+.resp-img{width:120px;height:90px;object-fit:cover;border:1px solid var(--border);cursor:pointer;display:inline-block;margin:6px 4px 0 0}
 .sem-resp{font-family:var(--mono);font-size:10px;color:var(--text3);font-style:italic}
 
 .form-resp{display:flex;gap:6px;margin-top:2px}
@@ -92,7 +118,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .anexo-btn{background:none;border:1px dashed var(--border2);color:var(--text3);font-family:var(--mono);font-size:9px;padding:5px 9px;cursor:pointer;border-radius:2px;white-space:nowrap}
 .anexo-btn:hover{border-color:var(--text2);color:var(--text2)}
 .anexo-prev{display:flex;align-items:center;gap:4px}
-.anexo-prev img{width:52px;height:40px;object-fit:cover;border:1px solid var(--border);cursor:pointer}
+.anexo-prev img{width:72px;height:54px;object-fit:cover;border:1px solid var(--border);cursor:pointer}
 .anexo-x{background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:0 3px;line-height:1}
 .anexo-x:hover{color:var(--alert)}
 
@@ -197,7 +223,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 <div class="toast" id="toast"></div>
 
-<script src="idioma.js?v=5"></script>
+<script src="idioma.js?v=6"></script>
 <script src="sidebar.js?v=12"></script>
 <script src="editor-launcher.js?v=5"></script>
 <script src="auth.js?v=4"></script>
@@ -211,21 +237,28 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
    O caminho inverso da ficha de conflito. A ficha nasce da análise
    da coordenação e desce para as disciplinas; o apontamento nasce
    de quem está trabalhando e sobe. Qualquer pessoa do projeto abre
-   um, dirigido à coordenação ou a uma disciplina, com imagem para
-   mostrar do que está falando.
+   um, dirigido a uma ou mais disciplinas, à coordenação ou a todos,
+   com imagem para mostrar do que está falando.
+
+   Status é um só (pendente/resolvido), mostrado como nas fichas —
+   não é por disciplina: com "todos" não haveria a quem perguntar.
+   Prazo, local e crítico seguem os campos da ficha (fase 15).
 
    Quem vê o quê é decidido NO BANCO (ap_listar, ap_respostas): esta
-   tela nunca recebe um apontamento que não seja do seu autor, do
-   seu destino ou da coordenação. A conferência aqui é só de
+   tela nunca recebe um apontamento que não seja do seu autor, dos
+   seus destinatários ou da coordenação — e as tabelas são fechadas,
+   só as funções ap_* as acessam. A conferência aqui é só de
    apresentação — mostrar ou esconder um botão.
    ============================================================ */
 
 let PROJ_ID = null, PROJETO = null, USER_PROFILE = null;
 let DISC = [];        // disciplinas ativas do projeto
+let PAV = [];         // pavimentos ativos (local)
 let LISTA = [];       // apontamentos visíveis
 let RESUMO = null;
 let ABERTOS = {};     // id → respostas carregadas (conversa expandida)
-let FILTRO = { status: 'ABERTO', so_meus: false, so_para_mim: false };
+let HIST = {};        // id → eventos do histórico (mesma conversa)
+let FILTRO = { status: 'ABERTO', so_meus: false, so_para_mim: false, so_atrasados: false, so_criticos: false };
 
 PROJ_ID = new URLSearchParams(window.location.search).get('id');
 document.body.dataset.projeto = PROJ_ID || '';
@@ -250,7 +283,7 @@ function doLogout() {
   // Trocar de usuário na mesma aba não recarrega a página: sem limpar, a
   // lista da sessão anterior continuaria em memória. Já aconteceu de um
   // painel da coordenação aparecer para um projetista por causa disso.
-  LISTA = []; RESUMO = null; ABERTOS = {}; DISC = []; PROJETO = null;
+  LISTA = []; RESUMO = null; ABERTOS = {}; HIST = {}; DISC = []; PAV = []; PROJETO = null;
   clearSavedSession();
   show('login');
   const p = document.getElementById('login-password'); if (p) p.value = '';
@@ -278,7 +311,7 @@ async function loadApp() {
   }
 
   // Limpa antes de carregar: ver doLogout
-  LISTA = []; RESUMO = null; ABERTOS = {}; DISC = []; PROJETO = null;
+  LISTA = []; RESUMO = null; ABERTOS = {}; HIST = {}; DISC = []; PAV = []; PROJETO = null;
 
   try {
     const uid = SESSION.user.id;
@@ -301,15 +334,17 @@ async function loadApp() {
     }
 
     setLoadingText(t('ap.carregando'));
-    const [proj, disc, lista, resumo] = await Promise.all([
+    const [proj, disc, pav, lista, resumo] = await Promise.all([
       api('GET','projetos',null,'id=eq.'+encodeURIComponent(PROJ_ID)).then(r => r[0]),
       api('GET','disciplinas',null,'projeto_id=eq.'+encodeURIComponent(PROJ_ID)+'&ativa=is.true&order=sigla.asc').catch(() => []),
+      api('GET','pavimentos',null,'projeto_id=eq.'+encodeURIComponent(PROJ_ID)+'&ativo=is.true&order=ordem.asc&select=sigla,nome').catch(() => []),
       rpc('ap_listar', { p_projeto: PROJ_ID }),
       rpc('ap_meu_resumo', { p_projeto: PROJ_ID }).then(r => (r && r[0]) || null).catch(() => null)
     ]);
 
     PROJETO = proj || {};
     DISC = disc || [];
+    PAV = pav || [];
     LISTA = lista || [];
     RESUMO = resumo;
 
@@ -342,6 +377,8 @@ function render() {
     if (FILTRO.status !== 'TODOS' && a.status !== FILTRO.status) return false;
     if (FILTRO.so_meus && !a.sou_autor) return false;
     if (FILTRO.so_para_mim && !ehParaMim(a)) return false;
+    if (FILTRO.so_atrasados && !atrasado(a)) return false;
+    if (FILTRO.so_criticos && !a.critico) return false;
     return true;
   });
 
@@ -365,10 +402,16 @@ function render() {
   vis.forEach(a => alvo.appendChild(cartao(a)));
 }
 
-function ehParaMim(a) {
-  if (a.sou_destino) return true;
-  return a.destino_tipo === 'coordenacao' && podeCoordenar();
+// O banco já diz se a pessoa é destinatária (disciplina, coordenação ou todos)
+function ehParaMim(a) { return !!a.sou_destino; }
+
+function hojeISO() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
+function atrasado(a) { return a.status === 'ABERTO' && !!a.prazo && a.prazo < hojeISO(); }
+// Prazo é só data: meio-dia evita que o fuso puxe para o dia anterior
+function dataPrazo(p) { return tData(p + 'T12:00:00'); }
 
 function renderFiltros() {
   const f = document.getElementById('filters');
@@ -401,6 +444,25 @@ function renderFiltros() {
   meus.onclick = () => { FILTRO.so_meus = !FILTRO.so_meus; render(); };
   row.appendChild(meus);
 
+  // Atrasados e críticos só aparecem quando existem — senão é botão vazio
+  const nAtr = LISTA.filter(atrasado).length;
+  if (nAtr || FILTRO.so_atrasados) {
+    const at = document.createElement('button');
+    at.className = 'chip' + (FILTRO.so_atrasados ? ' on' : '');
+    at.textContent = t('ap.atrasados') + ' (' + nAtr + ')';
+    if (nAtr) at.style.color = 'var(--alert)';
+    at.onclick = () => { FILTRO.so_atrasados = !FILTRO.so_atrasados; render(); };
+    row.appendChild(at);
+  }
+  const nCrit = LISTA.filter(a => a.critico && a.status === 'ABERTO').length;
+  if (nCrit || FILTRO.so_criticos) {
+    const cr = document.createElement('button');
+    cr.className = 'chip' + (FILTRO.so_criticos ? ' on' : '');
+    cr.textContent = '⚠ ' + t('ap.criticos') + ' (' + nCrit + ')';
+    cr.onclick = () => { FILTRO.so_criticos = !FILTRO.so_criticos; render(); };
+    row.appendChild(cr);
+  }
+
   const sp = document.createElement('span'); sp.className = 'spacer'; row.appendChild(sp);
 
   const novo = document.createElement('button');
@@ -411,46 +473,76 @@ function renderFiltros() {
   f.appendChild(row);
 }
 
-function crachaDestino(a) {
-  if (a.destino_tipo === 'coordenacao') {
-    const s = document.createElement('span');
-    s.className = 'ap-destino'; s.textContent = t('ap.para_coordenacao');
-    return s;
+// Crachás dos destinatários: Todos, Coordenação e as disciplinas
+function crachasDestino(dest) {
+  const els = [];
+  if (dest.todos) {
+    const s = document.createElement('span'); s.className = 'ap-destino'; s.textContent = t('ap.destino_todos');
+    els.push(s);
   }
-  const w = document.createElement('span');
-  w.className = 'ap-destino';
-  w.style.cssText = 'display:inline-flex;align-items:center;gap:5px';
-  w.appendChild(document.createTextNode('→'));
-  const tag = document.createElement('span');
-  tag.className = 'd-tag d-' + a.destino_disciplina;
-  tag.textContent = a.destino_disciplina;
-  w.appendChild(tag);
-  return w;
+  if (dest.coord) {
+    const s = document.createElement('span'); s.className = 'ap-destino'; s.textContent = t('ap.destino_coord');
+    els.push(s);
+  }
+  (dest.disc || []).forEach(sig => {
+    const tag = document.createElement('span'); tag.className = 'd-tag d-' + sig; tag.textContent = sig;
+    els.push(tag);
+  });
+  return els;
+}
+
+function destinoDe(a) {
+  return { todos: !!a.destino_todos, coord: !!a.destino_coordenacao, disc: a.destino_disciplinas || [] };
 }
 
 function cartao(a) {
   const el = document.createElement('div');
-  el.className = 'ap s-' + a.status + (ehParaMim(a) && a.status === 'ABERTO' ? ' para-mim' : '');
+  el.className = 'ap s-' + a.status + (a.critico && a.status === 'ABERTO' ? ' critico' : '') +
+                 (ehParaMim(a) && a.status === 'ABERTO' ? ' para-mim' : '');
 
-  // cabeçalho
+  // cabeçalho: código e destinatários à esquerda; autor, ⚠ e status à direita (como a ficha)
   const h = document.createElement('div'); h.className = 'ap-head';
   const cod = document.createElement('span'); cod.className = 'ap-code'; cod.textContent = a.codigo;
   h.appendChild(cod);
-  const st = document.createElement('span');
-  st.className = 'badge-status s-' + a.status;
-  st.textContent = a.status === 'ABERTO' ? t('ap.status_aberto') : t('ap.status_resolvido');
-  h.appendChild(st);
-  h.appendChild(crachaDestino(a));
+  const dw = document.createElement('span'); dw.className = 'ap-destinos';
+  dw.appendChild(document.createTextNode('→'));
+  crachasDestino(destinoDe(a)).forEach(x => dw.appendChild(x));
+  h.appendChild(dw);
   const sp = document.createElement('span'); sp.className = 'spacer'; h.appendChild(sp);
   const meta = document.createElement('span'); meta.className = 'ap-meta';
   meta.textContent = a.autor_nome + ' · ' + tQuando(a.created_at);
   h.appendChild(meta);
+  if (a.critico) {
+    const al = document.createElement('span'); al.className = 'ap-alerta'; al.textContent = '⚠';
+    al.title = t('ap.campo_critico');
+    h.appendChild(al);
+  }
+  const st = document.createElement('span');
+  st.className = 'badge-status s-' + a.status;
+  st.textContent = a.status === 'ABERTO' ? t('ap.status_aberto') : t('ap.status_resolvido');
+  h.appendChild(st);
   el.appendChild(h);
 
   // corpo
   const b = document.createElement('div'); b.className = 'ap-body';
   const tit = document.createElement('div'); tit.className = 'ap-titulo'; tit.textContent = a.titulo;
   b.appendChild(tit);
+  if (a.prazo || a.local) {
+    const info = document.createElement('div'); info.className = 'ap-info';
+    if (a.local) {
+      const l = document.createElement('span');
+      l.innerHTML = esc(t('ap.campo_local')) + ' <b>' + esc(a.local) + '</b>';
+      info.appendChild(l);
+    }
+    if (a.prazo) {
+      const p = document.createElement('span');
+      if (atrasado(a)) p.className = 'atrasado';
+      p.innerHTML = esc(t('ap.campo_prazo')) + ' <b>' + esc(dataPrazo(a.prazo)) + '</b>' +
+                    (atrasado(a) ? ' · ' + esc(t('ap.atrasado')) : '');
+      info.appendChild(p);
+    }
+    b.appendChild(info);
+  }
   if (a.descricao) {
     const d = document.createElement('div'); d.className = 'ap-desc'; d.textContent = a.descricao;
     b.appendChild(d);
@@ -523,8 +615,7 @@ function cartao(a) {
 }
 
 function podeResolver(a) {
-  return a.sou_autor || a.sou_destino || podeCoordenar() ||
-         (a.destino_tipo === 'coordenacao' && podeCoordenar());
+  return a.sou_autor || a.sou_destino || podeCoordenar();
 }
 
 // ── CONVERSA ──
@@ -538,7 +629,13 @@ function conversa(a) {
     c.appendChild(v);
   }
 
-  respostas.forEach(r => {
+  // Respostas e histórico na ordem em que aconteceram
+  const linha = respostas.map(r => ({ quando: r.created_at, r }))
+    .concat((HIST[a.id] || []).map(e => ({ quando: e.created_at, e })))
+    .sort((x, y) => x.quando < y.quando ? -1 : x.quando > y.quando ? 1 : 0);
+
+  linha.forEach(({ r, e }) => {
+    if (e) { c.appendChild(linhaEvento(e)); return; }
     const it = document.createElement('div');
     it.className = 'resp' + (r.sou_autor ? ' minha' : '');
     const h = document.createElement('div'); h.className = 'resp-head';
@@ -581,7 +678,7 @@ function conversa(a) {
     env.disabled = true; env.textContent = t('ap.enviando');
     try {
       await rpc('ap_responder', { p_apontamento: a.id, p_texto: texto, p_imagens: pend.length ? pend : null });
-      ABERTOS[a.id] = await rpc('ap_respostas', { p_apontamento: a.id });
+      await carregarConversa(a);
       a.respostas = ABERTOS[a.id].length;
       toast(t('ap.resposta_enviada'));
       render();
@@ -597,11 +694,45 @@ function conversa(a) {
 }
 
 async function alternarConversa(a) {
-  if (ABERTOS[a.id]) { delete ABERTOS[a.id]; render(); return; }
+  if (ABERTOS[a.id]) { delete ABERTOS[a.id]; delete HIST[a.id]; render(); return; }
   try {
-    ABERTOS[a.id] = await rpc('ap_respostas', { p_apontamento: a.id }) || [];
+    await carregarConversa(a);
     render();
   } catch (e) { toast(t('g.erro', { msg: e.message })); }
+}
+
+async function carregarConversa(a) {
+  const [resp, hist] = await Promise.all([
+    rpc('ap_respostas', { p_apontamento: a.id }),
+    // .catch: antes da fase 15 o histórico não existe — a conversa segue sem ele
+    rpc('ap_historico', { p_apontamento: a.id }).catch(() => [])
+  ]);
+  ABERTOS[a.id] = resp || [];
+  HIST[a.id] = hist || [];
+}
+
+// "Fulano marcou como resolvido · 16/10 14:32"
+function linhaEvento(e) {
+  const d = e.detalhe || '';
+  let txt;
+  switch (e.tipo) {
+    case 'destinos': {
+      const nomes = d.split(',').filter(Boolean).map(x =>
+        x === 'TODOS' ? t('ap.destino_todos') : x === 'COORDENACAO' ? t('ap.destino_coord') : x);
+      txt = t('ap.ev_destinos', { lista: nomes.join(', ') }); break;
+    }
+    case 'prazo':    txt = d ? t('ap.ev_prazo', { data: dataPrazo(d) }) : t('ap.ev_prazo_sem'); break;
+    case 'local':    txt = d ? t('ap.ev_local', { local: d }) : t('ap.ev_local_sem'); break;
+    case 'critico':  txt = d === 'sim' ? t('ap.ev_critico_sim') : t('ap.ev_critico_nao'); break;
+    case 'resolvido':txt = t('ap.ev_resolvido'); break;
+    case 'reaberto': txt = t('ap.ev_reaberto'); break;
+    case 'editado':  txt = t('ap.ev_editado'); break;
+    case 'promovido':txt = t('ap.ev_promovido', { codigo: d }); break;
+    default:         txt = e.tipo;
+  }
+  const el = document.createElement('div'); el.className = 'ev';
+  el.innerHTML = '<b>' + esc(e.usuario_nome) + '</b> ' + esc(txt) + ' · ' + esc(tDataHora(e.created_at));
+  return el;
 }
 
 // ── ANEXOS ──
@@ -679,29 +810,137 @@ function campoTexto(id, rotulo, valor, placeholder, linhas) {
   return w;
 }
 
+// Seletor de destinatários. `dest` = { todos, coord, disc: [siglas] }, alterado no lugar.
+// "Todos" já inclui a coordenação e todas as disciplinas: escolhido, os outros saem.
+function seletorDestinos(dest) {
+  const w = document.createElement('div'); w.className = 'pfield';
+  const l = document.createElement('label'); l.textContent = t('ap.campo_destino');
+  const box = document.createElement('div'); box.className = 'dest-box';
+  const dica = document.createElement('div'); dica.className = 'dica';
+  dica.textContent = t('ap.destino_dica');
+
+  function tirar(qual) {
+    if (qual === 'todos') dest.todos = false;
+    else if (qual === 'coord') dest.coord = false;
+    else dest.disc = dest.disc.filter(s => s !== qual);
+    desenhar();
+  }
+  function comX(el, qual) {
+    const x = document.createElement('button'); x.className = 'tag-x-inline'; x.textContent = '×';
+    x.type = 'button';
+    x.onclick = ev => { ev.stopPropagation(); tirar(qual); };
+    el.appendChild(x);
+    return el;
+  }
+  function desenhar() {
+    box.innerHTML = '';
+    const [eTodos, eCoord, ...eDisc] = [
+      dest.todos ? crachasDestino({ todos: true })[0] : null,
+      dest.coord ? crachasDestino({ coord: true })[0] : null,
+      ...dest.disc.map(s => crachasDestino({ disc: [s] })[0])
+    ];
+    if (eTodos) box.appendChild(comX(eTodos, 'todos'));
+    if (eCoord) box.appendChild(comX(eCoord, 'coord'));
+    eDisc.forEach((el, i) => box.appendChild(comX(el, dest.disc[i])));
+
+    // O que ainda dá para acrescentar
+    const opcoes = [];
+    if (!dest.todos) {
+      opcoes.push(['todos', t('ap.destino_todos'), 'ap-destino']);
+      if (!dest.coord) opcoes.push(['coord', t('ap.destino_coord'), 'ap-destino']);
+      DISC.filter(d => !dest.disc.includes(d.sigla)).forEach(d => opcoes.push([d.sigla, d.sigla, 'disc-pick-chip d-' + d.sigla]));
+    }
+    if (!opcoes.length) return;
+    const add = document.createElement('button'); add.type = 'button';
+    add.className = 'disc-add-btn'; add.textContent = '+';
+    add.onclick = ev => {
+      ev.stopPropagation();
+      const aberto = box.querySelector('.disc-picker');
+      if (aberto) { aberto.remove(); return; }
+      const p = document.createElement('div'); p.className = 'disc-picker';
+      opcoes.forEach(([qual, rotulo, classe]) => {
+        const c = document.createElement('span');
+        c.className = classe.startsWith('ap-destino') ? 'disc-pick-chip' : classe;
+        c.textContent = rotulo;
+        c.onclick = e2 => {
+          e2.stopPropagation();
+          if (qual === 'todos') { dest.todos = true; dest.coord = false; dest.disc = []; }
+          else if (qual === 'coord') dest.coord = true;
+          else dest.disc.push(qual);
+          desenhar();
+        };
+        p.appendChild(c);
+      });
+      box.appendChild(p);
+      setTimeout(() => document.addEventListener('click', () => p.remove(), { once: true }), 0);
+    };
+    box.appendChild(add);
+  }
+  desenhar();
+  w.appendChild(l); w.appendChild(box); w.appendChild(dica);
+  return w;
+}
+
+// Prazo, local e crítico, numa linha. `ext` = { prazo, local, critico }, lido ao salvar.
+function camposExtras(ext, prefixo) {
+  const linha = document.createElement('div'); linha.className = 'campos-linha';
+
+  const pw = document.createElement('div'); pw.className = 'pfield';
+  const pl = document.createElement('label'); pl.textContent = t('ap.campo_prazo');
+  const pi = document.createElement('input'); pi.type = 'date'; pi.className = 'campo';
+  pi.id = prefixo + '-prazo'; pi.value = ext.prazo || '';
+  pw.appendChild(pl); pw.appendChild(pi);
+  linha.appendChild(pw);
+
+  // Local só quando o projeto tem pavimentos cadastrados
+  if (PAV.length || ext.local) {
+    const lw = document.createElement('div'); lw.className = 'pfield';
+    const ll = document.createElement('label'); ll.textContent = t('ap.campo_local');
+    const ls = document.createElement('select'); ls.id = prefixo + '-local';
+    const vazio = document.createElement('option'); vazio.value = ''; vazio.textContent = t('ap.sem_local');
+    ls.appendChild(vazio);
+    const siglas = PAV.map(p => p.sigla);
+    if (ext.local && !siglas.includes(ext.local)) siglas.push(ext.local);
+    siglas.forEach(s => {
+      const o = document.createElement('option'); o.value = s;
+      const pv = PAV.find(p => p.sigla === s);
+      o.textContent = s + (pv && pv.nome ? ' — ' + pv.nome : '');
+      if (s === ext.local) o.selected = true;
+      ls.appendChild(o);
+    });
+    lw.appendChild(ll); lw.appendChild(ls);
+    linha.appendChild(lw);
+  }
+
+  const cw = document.createElement('label'); cw.className = 'check';
+  cw.title = t('ap.critico_dica');
+  const ci = document.createElement('input'); ci.type = 'checkbox'; ci.id = prefixo + '-critico';
+  ci.checked = !!ext.critico;
+  cw.appendChild(ci); cw.appendChild(document.createTextNode('⚠ ' + t('ap.campo_critico')));
+  linha.appendChild(cw);
+
+  return linha;
+}
+
+function lerExtras(prefixo) {
+  const v = id => document.getElementById(prefixo + '-' + id);
+  return {
+    prazo: (v('prazo') && v('prazo').value) || null,
+    local: (v('local') && v('local').value) || null,
+    critico: !!(v('critico') && v('critico').checked)
+  };
+}
+
 function modalNovo() {
   const pend = [];
+  const dest = { todos: false, coord: !DISC.length, disc: [] };
   const corpo = document.createElement('div');
   corpo.style.cssText = 'display:flex;flex-direction:column;gap:14px';
 
   corpo.appendChild(campoTexto('ap-titulo', t('ap.campo_titulo'), '', t('ap.campo_titulo_ph'), 0));
   corpo.appendChild(campoTexto('ap-desc', t('ap.campo_desc'), '', t('ap.campo_desc_ph'), 4));
-
-  const dw = document.createElement('div'); dw.className = 'pfield';
-  const dl = document.createElement('label'); dl.textContent = t('ap.campo_destino');
-  const sel = document.createElement('select'); sel.id = 'ap-destino';
-  const o1 = document.createElement('option'); o1.value = 'coordenacao'; o1.textContent = t('ap.destino_coord');
-  sel.appendChild(o1);
-  DISC.forEach(d => {
-    const o = document.createElement('option');
-    o.value = 'disciplina:' + d.sigla;
-    o.textContent = d.sigla + (d.nome ? ' — ' + d.nome : '');
-    sel.appendChild(o);
-  });
-  const dica = document.createElement('div'); dica.className = 'dica';
-  dica.textContent = DISC.length ? t('ap.destino_dica') : t('ap.destino_dica_sem');
-  dw.appendChild(dl); dw.appendChild(sel); dw.appendChild(dica);
-  corpo.appendChild(dw);
+  corpo.appendChild(seletorDestinos(dest));
+  corpo.appendChild(camposExtras({}, 'ap'));
 
   const aw = document.createElement('div'); aw.className = 'pfield';
   const al = document.createElement('label'); al.textContent = t('ap.campo_imagens');
@@ -714,13 +953,14 @@ function modalNovo() {
   abrirModal(t('ap.novo_titulo'), corpo, t('ap.registrar'), async () => {
     const titulo = document.getElementById('ap-titulo').value.trim();
     const desc   = document.getElementById('ap-desc').value;
-    const destino = document.getElementById('ap-destino').value;
     if (titulo.length < 3) throw new Error(t('ap.titulo_curto'));
-    const [tipo, sigla] = destino.split(':');
+    if (!dest.todos && !dest.coord && !dest.disc.length) throw new Error(t('ap.destino_escolha'));
+    const ext = lerExtras('ap');
     await rpc('ap_criar', {
       p_projeto: PROJ_ID, p_titulo: titulo, p_descricao: desc,
-      p_destino_tipo: tipo, p_destino_disciplina: sigla || null,
-      p_imagens: pend.length ? pend : null
+      p_disciplinas: dest.disc, p_coordenacao: dest.coord, p_todos: dest.todos,
+      p_imagens: pend.length ? pend : null,
+      p_prazo: ext.prazo, p_local: ext.local, p_critico: ext.critico
     });
     toast(t('ap.registrado'));
     await recarregar();
@@ -732,6 +972,13 @@ function modalEditar(a) {
   corpo.style.cssText = 'display:flex;flex-direction:column;gap:14px';
   corpo.appendChild(campoTexto('ed-titulo', t('ap.campo_titulo'), a.titulo, '', 0));
   corpo.appendChild(campoTexto('ed-desc', t('ap.campo_desc'), a.descricao || '', '', 4));
+
+  // Destinatários, prazo, local e crítico: autor ou coordenação (o banco confere)
+  const dest = { todos: !!a.destino_todos, coord: !!a.destino_coordenacao, disc: (a.destino_disciplinas || []).slice() };
+  if (a.pode_ajustar) {
+    corpo.appendChild(seletorDestinos(dest));
+    corpo.appendChild(camposExtras({ prazo: a.prazo, local: a.local, critico: a.critico }, 'ed'));
+  }
 
   // As imagens que já estão lá entram na mesma fila das novas: a lista
   // parte das atuais, o × tira e o botão acrescenta. O que for salvo é
@@ -759,6 +1006,15 @@ function modalEditar(a) {
   abrirModal(t('ap.editar_titulo', { codigo: a.codigo }), corpo, t('g.salvar'), async () => {
     const titulo = document.getElementById('ed-titulo').value.trim();
     if (titulo.length < 3) throw new Error(t('ap.titulo_curto'));
+    if (a.pode_ajustar) {
+      if (!dest.todos && !dest.coord && !dest.disc.length) throw new Error(t('ap.destino_escolha'));
+      const ext = lerExtras('ed');
+      await rpc('ap_ajustar', {
+        p_apontamento: a.id,
+        p_disciplinas: dest.disc, p_coordenacao: dest.coord, p_todos: dest.todos,
+        p_prazo: ext.prazo, p_local: ext.local, p_critico: ext.critico
+      });
+    }
     await rpc('ap_editar', {
       p_apontamento: a.id,
       p_titulo: titulo,
@@ -782,7 +1038,7 @@ function modalPromover(a) {
   const dl = document.createElement('label'); dl.textContent = t('ap.promover_disc');
   const box = document.createElement('div');
   box.style.cssText = 'display:flex;gap:5px;flex-wrap:wrap;padding:8px;border:1px solid var(--border2);background:var(--bg)';
-  const escolhidas = new Set(a.destino_disciplina ? [a.destino_disciplina] : []);
+  const escolhidas = new Set(a.destino_disciplinas || []);
   if (!DISC.length) {
     const v = document.createElement('span'); v.className = 'dica';
     v.textContent = t('ap.promover_sem_disc');
@@ -801,7 +1057,7 @@ function modalPromover(a) {
   dw.appendChild(dl); dw.appendChild(box);
   corpo.appendChild(dw);
 
-  corpo.appendChild(campoTexto('pr-local', t('ap.promover_pav'), '', t('ap.promover_pav_ph'), 0));
+  corpo.appendChild(campoTexto('pr-local', t('ap.promover_pav'), a.local || '', t('ap.promover_pav_ph'), 0));
 
   abrirModal(t('ap.promover_titulo', { codigo: a.codigo }), corpo, t('ap.promover_ok'), async () => {
     if (!escolhidas.size) throw new Error(t('ap.promover_escolha'));
@@ -841,6 +1097,9 @@ async function recarregar() {
   ]);
   LISTA = lista || [];
   RESUMO = resumo;
+  // Conversas abertas também: resolver, reabrir ou ajustar entra no histórico
+  await Promise.all(LISTA.filter(a => ABERTOS[a.id]).map(a => carregarConversa(a).catch(() => {})));
+  for (const id of Object.keys(ABERTOS)) if (!LISTA.some(a => String(a.id) === id)) { delete ABERTOS[id]; delete HIST[id]; }
   render();
 }
 

@@ -157,7 +157,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   </div>
 </div>
 
-<script src="idioma.js?v=5"></script>
+<script src="idioma.js?v=6"></script>
 <script src="sidebar.js?v=12"></script>
 <script src="editor-launcher.js?v=5"></script>
 <script src="auth.js?v=4"></script>
@@ -355,12 +355,22 @@ function cartaoApontamentos() {
   if (!r) return '';
   const paraMim = Number(r.para_mim || 0);
   const semResp = Number(r.para_mim_sem_resposta || 0);
-  if (!paraMim) return '';
-  return '<a class="painel-cartao' + (semResp ? ' pendente' : '') + '" href="' + apontamentosUrl() + '">' +
+  const atrasados = Number(r.atrasados || 0);   // fase 15: prazo vencido
+  if (!paraMim && !atrasados) return '';
+  // Nada dirigido a você, mas algo atrasado (por exemplo, um que você abriu):
+  // o cartão conta os atrasados, em vez de mostrar "0 dirigidos".
+  if (!paraMim) {
+    return '<a class="painel-cartao pendente" href="' + apontamentosUrl() + '">' +
+      '<div class="painel-num">' + atrasados + '</div>' +
+      '<div class="painel-rot">' + tn('home.ap_atrasados_rot', atrasados) + '</div></a>';
+  }
+  return '<a class="painel-cartao' + (semResp || atrasados ? ' pendente' : '') + '" href="' + apontamentosUrl() + '">' +
     '<div class="painel-num">' + paraMim + '</div>' +
     '<div class="painel-rot">' + tn('home.ap_dirigidos', paraMim) + '</div>' +
     (semResp ? '<div class="painel-nota painel-alerta">' +
                t('home.ap_sem_resposta', { n: semResp }) + '</div>' : '') +
+    (atrasados ? '<div class="painel-nota painel-alerta">' +
+                 t('home.ap_atrasados', { n: atrasados }) + '</div>' : '') +
     '</a>';
 }
 

@@ -117,6 +117,12 @@ um HTML com o script embutido, mais arquivos compartilhados.
     Caminho no G: = pasta da disciplina (`disciplinas.pasta_nome`) / `caminho` /
     nome; se não achar, procura pelo nome. Pasta compartilhada por terceiros
     precisa de atalho no Meu Drive para aparecer no G:
+24. **15** — apontamentos, segunda versão: vários destinatários (disciplinas,
+    coordenação, todos), prazo, local (pavimento), crítico e histórico automático
+    (gatilho → `apontamento_eventos`). Status segue único, agora com a cara da
+    ficha (Pendente/Resolvido no canto). Imagens maiores. **Tabelas dos
+    apontamentos fechadas**: até aqui estavam sem RLS e abertas até à chave
+    pública; agora só as funções `ap_*` (security definer) acessam
 
 ## Bilíngue (fase 11)
 
@@ -147,6 +153,16 @@ migração; só a peça que lê a lista será trocada.
   fica como foi escrito.
 
 ## Apontamentos (fase 10)
+
+> **Atualizado na fase 15** (`SQL/fase15_apontamentos_v2.sql`): o destino deixou
+> de ser um só. Agora: `destino_disciplinas[]`, `destino_coordenacao`,
+> `destino_todos` (toda a equipe, coordenação incluída), mais `prazo`, `local` e
+> `critico`. Quem é destinatário: `ap_e_destinatario`. Destinatários, prazo,
+> local e crítico mudam por `ap_ajustar` (autor ou coordenação). Cada mudança
+> entra em `apontamento_eventos` por gatilho e aparece na conversa. As colunas
+> antigas `destino_tipo`/`destino_disciplina` não são mais usadas (o `ap_listar`
+> ainda as devolve, calculadas, para páginas antigas). O texto abaixo é o
+> desenho original.
 
 Duas tabelas (`apontamentos`, `apontamento_respostas`) e as funções `ap_*`.
 Objeto diferente da ficha, de propósito: a ficha nasce da análise da
@@ -238,7 +254,17 @@ diária. Com vários projetos ativos, revisar esse intervalo.
   e Supabase numa conta/organização da OSPA, SMTP (recuperar senha) e projeto no
   Google Cloud (entrar com Google; download direto do Drive sem o G:).
 - **Colaborador da OSPA abrir qualquer projeto** em leitura, editando só onde for
-  coordenador (a marcação `empresas.interna` já existe).
+  coordenador (a marcação `empresas.interna` já existe). **Fazer junto com o
+  "Entrar com Google"**: quem entrar com e-mail @ospa.com.br ganha conta
+  automaticamente, sem o admin cadastrar um a um. Plano já levantado: papel novo
+  "leitura" sem capacidades de edição (`OSPA_CAPACIDADES` no sidebar.js); as 9
+  páginas que hoje barram quem não é da equipe passam a abrir em leitura para
+  interno; esconder os botões de escrita que não dependem de capacidade
+  (responder/comentar no Relatório; novo apontamento e responder nos
+  Apontamentos); cartões esmaecidos da lista viram clicáveis; fase SQL abrindo
+  as funções de leitura dos apontamentos (`ap_listar`, `ap_pode_ver`) a interno,
+  mantendo as de escrita exigindo participar. A decidir: leitura vê como
+  coordenador (painel da equipe, Análise, Monitor) ou como projetista.
 
 - **Código da ficha no servidor** — o `C-NN` ainda é calculado no navegador, a
   partir da lista que aquele navegador carregou: duas pessoas criando ficha ao
