@@ -1248,7 +1248,8 @@ function appendNewCard(grid) {
     const _nc={id:newId,alert:false,status:'PENDENTE',disc:[],loc:'',desc:'',sol:null,obs:null,_db:null};
     CONFLICTS.push(_nc);
     sbPost('conflitos',{projeto_id:META.code,codigo:newId,alerta:false,status:'PENDENTE',local:'',disciplinas:[],descricao:'',proposta:'',observacao:'',ordem:CONFLICTS.length-1})
-      .then(r=>{if(r&&r[0])_nc._db=r[0].id;}).catch(e=>console.error(e));
+      .then(r=>{ if(r&&r[0]){ _nc._db=r[0].id; edSalvarFichaNova(_nc); } })
+      .catch(e=>{ console.error(e); _serr('A ficha ' + newId + ' não foi criada no banco: ' + e.message); });
     renderAll();
     setTimeout(() => { const el = document.getElementById('card-'+newId); if(el) el.scrollIntoView({behavior:'smooth'}); }, 100);
   };
@@ -1287,6 +1288,19 @@ function sortConflicts() {
   CONFLICTS.forEach((c,i) => { if(c._db) sbPatch('conflitos','id',c._db,{ordem:i}).catch(()=>{}); });
   _saved();
 }
+// A ficha nova aparece na hora, mas só ganha o id do banco (_db) quando a
+// gravação volta. O que foi feito nesse intervalo — imagem colada, disciplina,
+// local, texto — não tinha onde ser salvo e se perdia (aparecia no editor,
+// não no relatório). Quando o id chega, grava a ficha inteira de uma vez.
+function edSalvarFichaNova(c) {
+  sbPatch('conflitos','id',c._db,{
+    alerta: !!c.alert, status: c.status || 'PENDENTE', local: c.loc || '',
+    disciplinas: c.disc || [], descricao: c.desc || '', proposta: c.sol || '',
+    observacao: c.obs || '', publicado: !!c.pub
+  }).catch(e => _serr(e.message));
+  if (getImages(c.id).length || c._imagensPendentes) { c._imagensPendentes = false; syncImages(c); }
+}
+
 function nextConflictCode() {
   let max = 0;
   CONFLICTS.forEach(c => { const m = c.id.match(/C-(\d+)/); if (m) max = Math.max(max, parseInt(m[1])); });
@@ -1420,8 +1434,10 @@ function downloadHTML(html, filename) {
 
 async function syncImages(c) {
   if (!c._db) {
-    // Antes isto era um retorno silencioso: a alteração sumia sem aviso.
-    _serr('Conflito ainda não salvo no banco — a imagem não foi sincronizada.');
+    // Ficha recém-criada, ainda sem id do banco: as imagens ficam marcadas e
+    // são gravadas assim que o id chegar (edSalvarFichaNova).
+    c._imagensPendentes = true;
+    _saving();
     return;
   }
   _saving();

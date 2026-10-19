@@ -19,7 +19,7 @@
 // Atualize esta linha a cada publicação. O selo aparece discretamente
 // no canto inferior de todas as páginas — serve pra saber, no suporte,
 // se a pessoa está mesmo na versão mais recente ("que versão aparece aí?").
-const OSPA_VERSAO = 'v2026.10.16.2';
+const OSPA_VERSAO = 'v2026.10.19';
 
 // ── AMBIENTE ──
 // Aberto em localhost/127.0.0.1 → Supabase local (`supabase start`),
