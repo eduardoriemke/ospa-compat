@@ -12,7 +12,7 @@ runs steps over the DevTools Protocol (goto, login, click, eval, screenshot).
 Paths are relative to the repo root.
 
 **Never against production.** `auth.js` picks the local Supabase
-(`http://127.0.0.1:54321`) only when the page is opened on `localhost`/`127.0.0.1`,
+(`http://127.0.0.1:44321`) only when the page is opened on `localhost`/`127.0.0.1`,
 and `editor-launcher.js` passes that choice into the editor blob. The driver
 refuses to start if either of those is missing, aborts if a page resolves
 `SB_URL` to `jxezjuovrxajjleyjdcs`, and blocks that host on the network.
@@ -69,7 +69,7 @@ Stop the server when done: `powershell -ExecutionPolicy Bypass -File $d stop`
 
 Useful addresses: projects `index.html`; a project's pages take `?id=<projeto>`
 (`home.html?id=02139SJD_COMPAT`, `apontamentos.html?id=...`). Local projects:
-`02139SJD_COMPAT` (MARSALA), `02151WEB`. Studio: http://127.0.0.1:54323.
+`02139SJD_COMPAT` (MARSALA), `02151WEB`. Studio: http://127.0.0.1:44323.
 SQL against the local db: `docker exec supabase_db_ospa-compat psql -U postgres -d postgres -c "..."`.
 
 ## Run (human path)
@@ -133,6 +133,17 @@ There is no test suite; the driver is the check.
 - *`tab: nenhuma aba nova apareceu`* → the page didn't call `window.open`
   (link not rendered for this role/project type, or JS error; read the
   `[console.error]` lines above it).
+- *`ports are not available ... bind: Foi feita uma tentativa de acesso a um soquete de uma maneira que é proibida`*
+  → Windows (Hyper-V/WSL) reserved a port range that covered the old Supabase
+  ports (543xx). Check with `netsh interface ipv4 show excludedportrange protocol=tcp`.
+  Since 2026-10-19 the local Supabase uses **443xx** (API 44321, DB 44322, Studio
+  44323) — below 49152, where Windows never reserves. If ports ever change again,
+  update `supabase/config.toml`, the local URL in `auth.js` (and bump `auth.js?v=`),
+  `$SB_LOCAL` in the driver, and `supabase/baixar-producao.ps1`; then
+  `supabase stop` + `supabase start` (data is kept).
+- *`Supabase local não responde`* but all containers are "Up" → the port mapping
+  was lost after Docker restarted (`docker port supabase_kong_ospa-compat` prints
+  nothing). `supabase stop` then `supabase start`.
 - *`Supabase local não responde`* → `supabase start` (Docker Desktop must be running).
   If `docker ps` says `failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine`,
   Docker Desktop is closed: `Start-Process "$env:ProgramFiles\Docker\Docker\Docker Desktop.exe"`,

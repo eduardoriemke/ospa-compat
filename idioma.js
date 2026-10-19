@@ -297,6 +297,7 @@ const OSPA_TEXTOS = {
   'ap.ev_editado':     { pt: 'editou o texto ou as imagens', en: 'edited the text or images' },
   'ap.ev_promovido':   { pt: 'transformou na ficha %{codigo}', en: 'turned it into clash %{codigo}' },
   'ap.campo_imagens':  { pt: 'Imagens',                  en: 'Images' },
+  'ap.colar_dica':     { pt: 'ou cole (Ctrl+V) / arraste aqui', en: 'or paste (Ctrl+V) / drop here' },
   'ap.registrar':      { pt: 'Registrar',                en: 'Create' },
   'ap.registrado':     { pt: 'Apontamento registrado.',  en: 'Issue created.' },
   'ap.titulo_curto':   { pt: 'Escreva um título com ao menos 3 letras.',

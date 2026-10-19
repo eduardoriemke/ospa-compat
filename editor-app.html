@@ -428,6 +428,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .drag-handle:active{cursor:grabbing}
 .card.dragging{opacity:0.35;outline:2px dashed var(--border2)}
 .card.drag-over{outline:2px solid var(--text2);outline-offset:-2px}
+.card.img-drop{outline:2px dashed var(--text2);outline-offset:-2px;background:rgba(25,25,25,0.02)}
 .card-new{
   background:transparent;border:1px dashed var(--border2);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -580,6 +581,59 @@ const deletedImages = {};
 const S = { modoDisc: 'qualquer', discs: new Set(), locs: new Set(), hideResolved: false, onlyCritical: false, overrides: {} };
 
 const IS_EDITOR = !!document.getElementById('ed-panel');
+
+// ── COLAR E ARRASTAR IMAGENS NAS FICHAS ──
+// Cópia pequena do imagens.js do site (o editor abre num blob e não carrega
+// arquivos externos). Ctrl+V vai para a ficha com o foco ou sob o mouse;
+// arrastar um arquivo para a ficha também anexa. Arrastar a FICHA continua
+// reordenando — os dois se distinguem pelo tipo do que está sendo arrastado.
+const ED_ADICIONAR_IMAGENS = new WeakMap();   // elemento da ficha → adicionarImagensFicha
+let ED_FICHA_SOB_MOUSE = null;
+
+function edReduzirImagem(file) {
+  return new Promise((ok, falha) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1200;
+      let w = img.width, h = img.height;
+      if (Math.max(w, h) > MAX) { const k = MAX / Math.max(w, h); w = Math.round(w * k); h = Math.round(h * k); }
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      const g = cv.getContext('2d');
+      g.fillStyle = '#fff'; g.fillRect(0, 0, w, h);   // print com transparência não fica preto
+      g.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      ok(cv.toDataURL('image/jpeg', 0.75));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); falha(new Error('Imagem ilegível')); };
+    img.src = url;
+  });
+}
+function edImagensDe(dados) {
+  const lista = [];
+  if (dados && dados.items) for (const it of dados.items) {
+    if (it.kind === 'file' && it.type.startsWith('image/')) { const f = it.getAsFile(); if (f) lista.push(f); }
+  }
+  if (!lista.length && dados && dados.files) for (const f of dados.files) if (f.type.startsWith('image/')) lista.push(f);
+  return lista;
+}
+function edTemArquivos(e) { return !!(e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files')); }
+
+if (IS_EDITOR) {
+  document.addEventListener('paste', e => {
+    const files = edImagensDe(e.clipboardData);
+    if (!files.length) return;                         // texto: colar normal
+    const alvo = (e.target.closest && e.target.closest('.card')) ||
+                 (ED_FICHA_SOB_MOUSE && ED_FICHA_SOB_MOUSE.isConnected ? ED_FICHA_SOB_MOUSE : null);
+    const adicionar = alvo && ED_ADICIONAR_IMAGENS.get(alvo);
+    if (!adicionar) return;
+    e.preventDefault();
+    adicionar(files);
+  });
+  // Soltar um arquivo fora de uma ficha não abre a imagem no lugar do editor
+  window.addEventListener('dragover', e => { if (edTemArquivos(e)) e.preventDefault(); });
+  window.addEventListener('drop', e => { if (edTemArquivos(e)) e.preventDefault(); });
+}
 
 document.getElementById('logo-img').src = LOGO_SRC;
 
@@ -865,17 +919,27 @@ function buildCard(c) {
   card.id = 'card-' + c.id;
   // Drop target (card receives drops)
   if (IS_EDITOR) {
+    card.addEventListener('mouseenter', () => { ED_FICHA_SOB_MOUSE = card; });
     card.addEventListener('dragover', e => {
       e.preventDefault();
+      // Arquivo de imagem vindo do computador: anexar, não reordenar
+      if (edTemArquivos(e)) { e.dataTransfer.dropEffect = 'copy'; card.classList.add('img-drop'); return; }
       e.dataTransfer.dropEffect = 'move';
       document.querySelectorAll('.card.drag-over').forEach(el => el.classList.remove('drag-over'));
       card.classList.add('drag-over');
     });
     card.addEventListener('dragleave', e => {
-      if (!card.contains(e.relatedTarget)) card.classList.remove('drag-over');
+      if (!card.contains(e.relatedTarget)) { card.classList.remove('drag-over'); card.classList.remove('img-drop'); }
     });
     card.addEventListener('drop', e => {
       e.preventDefault();
+      card.classList.remove('img-drop');
+      if (edTemArquivos(e)) {
+        const files = edImagensDe(e.dataTransfer);
+        const adicionar = ED_ADICIONAR_IMAGENS.get(card);
+        if (files.length && adicionar) adicionar(files);
+        return;
+      }
       const fromId = e.dataTransfer.getData('text/plain');
       card.classList.remove('drag-over');
       if (!fromId || fromId === c.id) return;
@@ -1072,6 +1136,18 @@ function buildCard(c) {
   if (obsWrap)  body.appendChild(obsWrap);
 
   // Images
+  // Anexar, colar (Ctrl+V) e arrastar chegam todos aqui: reduz para 1200px,
+  // JPEG 0,75 (como sempre), acrescenta às imagens da ficha e salva.
+  async function adicionarImagensFicha(files) {
+    if (!customImages[c.id]) customImages[c.id] = [];
+    for (const f of files) {
+      try { customImages[c.id].push(await edReduzirImagem(f)); } catch (e) { console.error(e); }
+    }
+    rebuildImgSection();
+    if (c._db) syncImages(c);
+  }
+  if (IS_EDITOR) ED_ADICIONAR_IMAGENS.set(card, adicionarImagensFicha);
+
   function rebuildImgSection() {
     const ex = body.querySelector('.img-section'); if (ex) ex.remove();
     const allImgs = getImages(c.id);
@@ -1126,35 +1202,9 @@ function buildCard(c) {
     if (IS_EDITOR) {
       const ua = document.createElement('label'); ua.className = 'img-upload-inline'; ua.textContent = '+';
       ua.title = 'Adicionar imagem';
+      ua.title = 'Adicionar imagem — ou cole (Ctrl+V) com o mouse sobre a ficha, ou arraste para ela';
       const fi = document.createElement('input'); fi.type='file'; fi.accept='image/*'; fi.multiple=true; fi.style.display='none';
-      fi.onchange = e => {
-        if (!customImages[c.id]) customImages[c.id] = [];
-        Array.from(e.target.files).forEach(file => {
-          const reader = new FileReader();
-          reader.onload = ev => {
-            // Compress: resize to max 1200px, JPEG quality 0.75
-            const img = new Image();
-            img.onload = () => {
-              const MAX = 1200;
-              let w = img.width, h = img.height;
-              if (Math.max(w, h) > MAX) {
-                const scale = MAX / Math.max(w, h);
-                w = Math.round(w * scale);
-                h = Math.round(h * scale);
-              }
-              const canvas = document.createElement('canvas');
-              canvas.width = w; canvas.height = h;
-              canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-              const compressed = canvas.toDataURL('image/jpeg', 0.75);
-              customImages[c.id].push(compressed);
-              rebuildImgSection();
-              if(c._db){syncImages(c);}
-            };
-            img.src = ev.target.result;
-          };
-          reader.readAsDataURL(file);
-        });
-      };
+      fi.onchange = e => { adicionarImagensFicha(Array.from(e.target.files)); fi.value = ''; };
       ua.appendChild(fi);
       const thumbRow = sec.querySelector('.img-thumbs-row') || sec;
       thumbRow.appendChild(ua);

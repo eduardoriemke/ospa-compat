@@ -304,13 +304,14 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 <div class="toast" id="toast"></div>
 
-<script src="idioma.js?v=8"></script>
+<script src="idioma.js?v=9"></script>
 <script src="sidebar.js?v=13"></script>
-<script src="editor-launcher.js?v=5"></script>
-<script src="auth.js?v=5"></script>
+<script src="editor-launcher.js?v=6"></script>
+<script src="auth.js?v=6"></script>
 <script src="dados.js?v=1"></script>
 <script src="login.js?v=4"></script>
 <script src="disciplinas.js?v=1"></script>
+<script src="imagens.js?v=1"></script>
 <script>
 // Sessão (SB_URL, SB_KEY, SB_AUTH, SESSION, SESSION_KEY, saveSession,
 // loadSavedSession, clearSavedSession, refreshSession, tryRestoreSession
@@ -928,8 +929,11 @@ function renderProjSection(c) {
       preview.appendChild(pImg); preview.appendChild(rmBtn);
       attachRow.appendChild(preview);
     });
-    attachRow.appendChild(attachBtn); attachRow.appendChild(fileInput);
+    attachRow.appendChild(attachBtn); attachRow.appendChild(colarDica); attachRow.appendChild(fileInput);
   }
+  const colarDica = document.createElement('span');
+  colarDica.style.cssText = 'font-family:var(--mono);font-size:9.5px;color:var(--text3);align-self:center';
+  colarDica.textContent = t('ap.colar_dica');
   const attachBtn = document.createElement('button'); attachBtn.className = 'comment-attach-btn';
   attachBtn.textContent = '+ Anexar imagem';
   const fileInput = document.createElement('input'); fileInput.type = 'file'; fileInput.accept = 'image/*'; fileInput.multiple = true; fileInput.style.display = 'none';
@@ -955,6 +959,12 @@ function renderProjSection(c) {
     fileInput.value = '';
   };
   renderAttachRow();
+  attachBtn.title = t('ap.colar_dica');
+  // Colar (Ctrl+V) com o cursor no comentário, ou arrastar a imagem para cá (imagens.js)
+  ospaZonaDeImagens(formWrap, async files => {
+    for (const f of files) { try { pendingImages.push(await ospaReduzirImagem(f)); } catch (e) {} }
+    renderAttachRow();
+  });
 
   formWrap.appendChild(form); formWrap.appendChild(attachRow);
   commBlock.appendChild(formWrap);

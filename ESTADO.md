@@ -123,6 +123,13 @@ um HTML com o script embutido, mais arquivos compartilhados.
     ficha (Pendente/Resolvido no canto). Imagens maiores. **Tabelas dos
     apontamentos fechadas**: até aqui estavam sem RLS e abertas até à chave
     pública; agora só as funções `ap_*` (security definer) acessam
+25. **Colar e arrastar imagens** (sem SQL) — Ctrl+V e arrastar arquivo, além do
+    botão de anexar, nos apontamentos (novo, edição, respostas), nos comentários
+    do Relatório e nas fichas do Editor (vai para a ficha sob o mouse; arrastar a
+    ficha continua reordenando). `imagens.js` no site; o Editor (blob) tem cópia
+    própria. Mesma redução de sempre (1200 px, JPEG 0,75). Decidido não fazer
+    marcação na imagem (o Lightshot já faz) nem pauta impressa (a reunião é no
+    notebook, na própria tela)
 
 ## Bilíngue (fase 11)
 

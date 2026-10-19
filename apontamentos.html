@@ -230,13 +230,14 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 <div class="toast" id="toast"></div>
 
-<script src="idioma.js?v=8"></script>
+<script src="idioma.js?v=9"></script>
 <script src="sidebar.js?v=13"></script>
-<script src="editor-launcher.js?v=5"></script>
-<script src="auth.js?v=5"></script>
+<script src="editor-launcher.js?v=6"></script>
+<script src="auth.js?v=6"></script>
 <script src="dados.js?v=1"></script>
 <script src="login.js?v=4"></script>
 <script src="disciplinas.js?v=1"></script>
+<script src="imagens.js?v=1"></script>
 <script>
 /* ============================================================
    APONTAMENTOS
@@ -682,6 +683,8 @@ function conversa(a) {
   const anexoRow = document.createElement('div'); anexoRow.className = 'anexo-row';
   const fileInput = criarEntradaImagem(pend, () => desenharAnexos(anexoRow, pend, fileInput));
   desenharAnexos(anexoRow, pend, fileInput);
+  // Colar (Ctrl+V) com o cursor na resposta, ou arrastar para a conversa
+  ospaZonaDeImagens(c, files => receberImagens(files, pend, () => desenharAnexos(anexoRow, pend, fileInput)));
 
   env.onclick = async () => {
     const texto = ta.value.trim();
@@ -747,29 +750,20 @@ function linhaEvento(e) {
 }
 
 // ── ANEXOS ──
-// Mesma redução do comentário da ficha: no máximo 1200px e JPEG 0.75.
-// Sem isso, uma foto de celular viraria vários megabytes de base64 no banco.
+// Mesma redução do comentário da ficha (imagens.js): no máximo 1200px e
+// JPEG 0.75. Sem isso, uma foto de celular viraria megabytes no banco.
+async function receberImagens(files, destino, aoMudar) {
+  for (const f of files) {
+    try { destino.push(await ospaReduzirImagem(f)); } catch (e) { toast(t('g.erro', { msg: e.message })); }
+  }
+  aoMudar();
+}
+
 function criarEntradaImagem(destino, aoMudar) {
   const input = document.createElement('input');
   input.type = 'file'; input.accept = 'image/*'; input.multiple = true; input.style.display = 'none';
   input.onchange = e => {
-    Array.from(e.target.files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = ev => {
-        const img = new Image();
-        img.onload = () => {
-          const MAX = 1200;
-          let w = img.width, h = img.height;
-          if (Math.max(w, h) > MAX) { const s = MAX / Math.max(w, h); w = Math.round(w*s); h = Math.round(h*s); }
-          const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
-          cv.getContext('2d').drawImage(img, 0, 0, w, h);
-          destino.push(cv.toDataURL('image/jpeg', 0.75));
-          aoMudar();
-        };
-        img.src = ev.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
+    receberImagens(Array.from(e.target.files), destino, aoMudar);
     input.value = '';
   };
   return input;
@@ -786,10 +780,13 @@ function desenharAnexos(row, pend, input) {
     row.appendChild(p);
   });
   const btn = document.createElement('button');
-  btn.className = 'anexo-btn';
+  btn.className = 'anexo-btn'; btn.type = 'button';
   btn.textContent = pend.length ? t('ap.anexar_outra') : t('ap.anexar');
+  btn.title = t('ap.colar_dica');
   btn.onclick = () => input.click();
   row.appendChild(btn);
+  const dica = document.createElement('span'); dica.className = 'dica'; dica.textContent = t('ap.colar_dica');
+  row.appendChild(dica);
   row.appendChild(input);
 }
 
@@ -960,6 +957,7 @@ function modalNovo() {
   desenharAnexos(row, pend, input);
   aw.appendChild(al); aw.appendChild(row);
   corpo.appendChild(aw);
+  ospaZonaDeImagens(corpo, files => receberImagens(files, pend, () => desenharAnexos(row, pend, input)));
 
   abrirModal(t('ap.novo_titulo'), corpo, t('ap.registrar'), async () => {
     const titulo = document.getElementById('ap-titulo').value.trim();
@@ -1004,6 +1002,7 @@ function modalEditar(a) {
   ad.textContent = t('ap.editar_imagens_dica');
   aw.appendChild(al); aw.appendChild(row); aw.appendChild(ad);
   corpo.appendChild(aw);
+  ospaZonaDeImagens(corpo, files => receberImagens(files, pend, () => desenharAnexos(row, pend, input)));
 
   // Se o apontamento já virou ficha, as imagens foram COPIADAS para ela
   // na promoção: mexer aqui não mexe lá. Melhor avisar do que a pessoa

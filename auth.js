@@ -27,7 +27,7 @@ const OSPA_VERSAO = 'v2026.10.16.2';
 const SB_LOCAL = ['localhost', '127.0.0.1'].includes(location.hostname);
 
 const SB_URL  = SB_LOCAL
-  ? "http://127.0.0.1:54321"
+  ? "http://127.0.0.1:44321"
   : "https://jxezjuovrxajjleyjdcs.supabase.co";
 const SB_KEY  = SB_LOCAL
   // chave anon padrão do Supabase local (mesma em toda instalação da CLI)

@@ -52,4 +52,4 @@ foreach ($f in '1_roles', '2_estrutura', '3_dados') {
 
 Passo 'Conferência'
 docker exec $CONTAINER psql -U postgres -d postgres -c "select (select count(*) from auth.users) as usuarios, (select count(*) from information_schema.tables where table_schema='public') as tabelas_public;"
-Write-Host "`nPronto. Banco local: http://127.0.0.1:54321  |  Studio: http://127.0.0.1:54323" -ForegroundColor Green
+Write-Host "`nPronto. Banco local: http://127.0.0.1:44321  |  Studio: http://127.0.0.1:44323" -ForegroundColor Green
