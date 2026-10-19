@@ -170,9 +170,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   </div>
 </div>
 
-<script src="idioma.js?v=9"></script>
+<script src="idioma.js?v=10"></script>
 <script src="sidebar.js?v=13"></script>
-<script src="editor-launcher.js?v=9"></script>
+<script src="editor-launcher.js?v=10"></script>
 <script src="auth.js?v=7"></script>
 <script src="dados.js?v=1"></script>
 <script src="login.js?v=4"></script>
@@ -197,7 +197,7 @@ setLogos(OSPA_LOGO);
 
 function doLogout() {
   SESSION = null; USER_PROFILE = null;
-  PAINEL = null; EQUIPE_PAINEL = []; EQUIPE = []; AP_RESUMO = null; FICHAS_SAUDE = [];
+  PAINEL = null; EQUIPE_PAINEL = []; EQUIPE = []; AP_RESUMO = null; FICHAS_SAUDE = []; PARA_REVISAR_N = 0;
   clearSavedSession();
   show('login');
   document.getElementById('login-password').value = '';
@@ -309,7 +309,7 @@ async function loadApp() {
     // Trocar de usuário na mesma aba recarrega os dados, mas as variáveis
     // da sessão anterior continuariam em memória. Limpar aqui evita que a
     // tabela encontre dados de quem saiu.
-    PAINEL = null; EQUIPE_PAINEL = []; AP_RESUMO = null; FICHAS_SAUDE = [];
+    PAINEL = null; EQUIPE_PAINEL = []; AP_RESUMO = null; FICHAS_SAUDE = []; PARA_REVISAR_N = 0;
 
     // Painel: pendências desta pessoa (e da equipe, para a coordenação)
     PAINEL = await rpc('painel_pessoal', { p_projeto: projId }).then(r => (r && r[0]) || null).catch(() => null);
@@ -322,6 +322,8 @@ async function loadApp() {
       .catch(() => []);
     if (USER_PROFILE && ospaPode(USER_PROFILE.papel, 'ver_equipe')) {
       EQUIPE_PAINEL = await rpc('painel_equipe', { p_projeto: projId }).catch(() => []);
+      // Fichas com resposta de projetista para a coordenação revisar (fase 18)
+      PARA_REVISAR_N = await rpc('fichas_para_revisar', { p_projeto: projId }).then(r => (r || []).length).catch(() => 0);
     }
 
     await ospaCarregarCores(projId);   // cores das disciplinas
@@ -354,6 +356,7 @@ function renderSidebar() {
 
 let PAINEL = null, EQUIPE_PAINEL = [], AP_RESUMO = null;
 let FICHAS_SAUDE = [];   // status, disciplinas e alerta das fichas publicadas
+let PARA_REVISAR_N = 0;  // coordenação: fichas com resposta para revisar
 
 // ── SAÚDE ──
 // Mesma régua do Monitor de Conflitos (analytics.html): porcentagem de
@@ -413,6 +416,16 @@ function apontamentosUrl() {
 // O cartão dos apontamentos dirigidos a esta pessoa. Fica junto das
 // pendências de ficha de propósito: um canal que só existe na sua
 // própria tela ninguém olha, e aí deixa de servir para qualquer coisa.
+// Coordenação: fichas em que um projetista comentou ou marcou Resolvido/Inviável
+// depois da última revisão — abre o relatório já filtrado ("Para revisar")
+function cartaoRevisar() {
+  if (!PARA_REVISAR_N) return '';
+  return '<a class="painel-cartao pendente" href="projeto.html?id=' + encodeURIComponent(PROJETO.id) + '&revisar=1">' +
+    '<div class="painel-num">' + PARA_REVISAR_N + '</div>' +
+    '<div class="painel-rot">' + tn('home.revisar', PARA_REVISAR_N) + '</div>' +
+    '<div class="painel-nota">' + t('home.revisar_nota') + '</div></a>';
+}
+
 function cartaoApontamentos() {
   const r = AP_RESUMO;
   if (!r) return '';
@@ -464,6 +477,7 @@ function renderPainel() {
   }
 
   h += '<div class="painel-cartoes">';
+  h += cartaoRevisar();
   h += cartaoApontamentos();
   if (!temConflitos) {
     h += '</div>';

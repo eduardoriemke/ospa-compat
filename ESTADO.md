@@ -145,6 +145,17 @@ um HTML com o script embutido, mais arquivos compartilhados.
     Relatório filtrado (`projeto.html?disc=` / `?local=`, que o Relatório passou a
     ler). SQL: `conflitos.resolvido_em`, marcado por gatilho — a curva fica exata
     daqui para a frente (antes, estimada pela última alteração)
+28. **18** — Relatório vira o lugar de acompanhar e decidir. Status da disciplina:
+    Em análise (absorve o antigo Ciente) / **Resolvido** (novo) / Inviável;
+    Resolvido abre caixa de solução (opcional, com imagem colada), Inviável exige
+    motivo — ambos viram comentário marcado (`comentarios.marcacao`, etiqueta
+    "✓ HID marcou Resolvido"). Basta uma disciplina resolver: a ficha fica "pronta
+    para validar" e deixa de pesar como pendência das outras (`painel_pendencias`).
+    Coordenação no Relatório: status e ⚠ clicáveis, "Abrir no Editor" já na ficha
+    (`#ficha=`), filtro "Para revisar" (`fichas_para_revisar`: comentário ou
+    marcação de projetista depois de `conflitos.revisado_em`, que só muda com
+    status/crítico/texto/disciplinas/local — reordenar no Editor não conta) e
+    cartão na página inicial. O status da ficha continua decisão da coordenação
 
 ## Bilíngue (fase 11)
 

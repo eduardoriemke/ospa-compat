@@ -12,7 +12,7 @@
 // O sidebar.js chama window.ospaOpenEditor(projetoId, papel).
 // Requer a função global api(method, table, body, qs), presente em todas as páginas.
 
-const EDITOR_APP_URL = 'editor-app.html?v=8';
+const EDITOR_APP_URL = 'editor-app.html?v=9';
 
 // Guarda o HTML do editor após a primeira busca, para abrir instantaneamente
 // nas vezes seguintes dentro da mesma página.
@@ -41,7 +41,9 @@ async function _apiTodos(table, qs) {
   return resultado;
 }
 
-async function ospaOpenEditor(id, papel) {
+// ficha (opcional): código da ficha para o editor abrir já rolado nela
+// ("Abrir no Editor" do Relatório)
+async function ospaOpenEditor(id, papel, ficha) {
   if (papel !== "admin" && papel !== "coordenador") {
     alert("Você não tem permissão de edição neste projeto.");
     return;
@@ -130,7 +132,7 @@ async function ospaOpenEditor(id, papel) {
 
     var blob = new Blob([html], {type:"text/html; charset=utf-8"});
     var url  = URL.createObjectURL(blob);
-    window.open(url, "_blank");
+    window.open(url + (ficha ? '#ficha=' + encodeURIComponent(ficha) : ''), "_blank");
     setTimeout(function(){ URL.revokeObjectURL(url); }, 15000);
 
   } catch(e) {

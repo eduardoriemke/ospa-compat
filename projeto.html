@@ -155,6 +155,37 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .disc-status-readonly.s-CIENTE{background:#E4F2EE;color:var(--ciente);border-color:#B0D8CC}
 .disc-status-readonly.s-EM_ANALISE{background:#F6EEE2;color:var(--analise);border-color:#E4D0B0}
 .disc-status-readonly.s-INVIAVEL{background:#FDF2F2;color:var(--inviavel);border-color:#F0C0C0}
+/* Fase 18: "Resolvido" pela disciplina (a ficha ainda espera a coordenação validar) */
+.disc-status-select.s-RESOLVIDO,.disc-status-readonly.s-RESOLVIDO{background:#E4F2EE;color:var(--ciente);border-color:#B0D8CC;font-weight:600}
+
+/* Caixa que abre ao marcar Resolvido (solução, opcional) ou Inviável (motivo, obrigatório) */
+.marcar-box{margin:8px 0 2px;padding:10px 12px;border:1px solid var(--border2);background:var(--surface);display:flex;flex-direction:column;gap:7px}
+.marcar-box.s-RESOLVIDO{border-left:3px solid var(--ciente)}
+.marcar-box.s-INVIAVEL{border-left:3px solid var(--inviavel)}
+.marcar-tit{font-family:var(--sans);font-size:11.5px;font-weight:600;color:var(--text)}
+.marcar-box textarea{width:100%;min-height:52px;resize:vertical;border:1px solid var(--border2);background:var(--bg);padding:7px 9px;font-family:var(--sans);font-size:12px;color:var(--text);outline:none}
+.marcar-box textarea:focus{border-color:var(--text2)}
+.marcar-acoes{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.marcar-btn{font-family:var(--mono);font-size:9.5px;padding:5px 11px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;border-radius:2px}
+.marcar-btn:hover{border-color:var(--text2);color:var(--text)}
+.marcar-btn.pri{background:var(--text);border-color:var(--text);color:var(--surface)}
+.marcar-imgs{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.marcar-imgs img{width:72px;height:54px;object-fit:cover;border:1px solid var(--border)}
+.aguardando-validacao{font-family:var(--mono);font-size:10px;color:var(--ciente);margin-top:6px}
+
+/* Comentário que acompanha uma marcação */
+.comment-marca{font-family:var(--mono);font-size:9.5px;font-weight:600;padding:1px 6px;border-radius:2px;letter-spacing:0.04em}
+.comment-marca.m-RESOLVIDO{background:#E4F2EE;color:var(--ciente)}
+.comment-marca.m-INVIAVEL{background:#FDF2F2;color:var(--inviavel)}
+
+/* Coordenação: status e ⚠ clicáveis no cabeçalho; marcas de revisão */
+.badge-status.clicavel,.alert-dot.clicavel{cursor:pointer}
+.badge-status.clicavel:hover{filter:brightness(0.93)}
+.alert-dot.clicavel:hover{opacity:0.6}
+.marca-revisar{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#1A4F80;background:#E8F0F8;border:1px solid #B8D0E8;padding:1px 6px;border-radius:2px}
+.marca-validar{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--ciente);background:#E4F2EE;border:1px solid #B0D8CC;padding:1px 6px;border-radius:2px}
+.abrir-editor{font-family:var(--mono);font-size:9px;color:var(--text3);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;padding:0}
+.abrir-editor:hover{color:var(--text)}
 
 /* Comentários */
 .comments-list{display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;padding-right:4px}
@@ -307,9 +338,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
 <div class="toast" id="toast"></div>
 
-<script src="idioma.js?v=9"></script>
+<script src="idioma.js?v=10"></script>
 <script src="sidebar.js?v=13"></script>
-<script src="editor-launcher.js?v=9"></script>
+<script src="editor-launcher.js?v=10"></script>
 <script src="auth.js?v=7"></script>
 <script src="dados.js?v=1"></script>
 <script src="login.js?v=4"></script>
@@ -333,7 +364,13 @@ let DISC_STATUS = {}; // {conflito_id: [{disciplina, status, usuario_nome, updat
 let COMMENTS = {};    // {conflito_id: [{id, usuario_nome, disciplina, texto, created_at}]}
 // modoDisc: 'qualquer' → conflitos que envolvam ALGUMA das disciplinas
 //           marcadas (padrão); 'todas' → apenas os que envolvam TODAS.
-let S = { discs: new Set(), locs: new Set(), hideResolved: true, onlyAlert: false, modoDisc: 'qualquer' };
+let S = { discs: new Set(), locs: new Set(), hideResolved: true, onlyAlert: false, modoDisc: 'qualquer', paraRevisar: false };
+// Fase 18: fichas com resposta de projetista depois da última revisão da
+// coordenação (comentário ou marcação Resolvido/Inviável). conflito_id → motivo
+let PARA_REVISAR = new Map();
+function coordena() { return !!USER_PROFILE && ospaPode(USER_PROFILE.papel, 'configurar'); }
+// Status da disciplina: o antigo CIENTE passou a ser "Em análise"
+const STATUS_DISC_ROTULO = { EM_ANALISE: 'Em análise', CIENTE: 'Em análise', RESOLVIDO: 'Resolvido', INVIAVEL: 'Inviável' };
 let CONFIG = { disciplines: [], locations: [] };
 
 // ── LOGO ──
@@ -448,8 +485,17 @@ async function loadApp() {
       COMMENTS[c.conflito_id].push(c);
     });
 
+    // Fila "Para revisar" (só coordenação; .catch: antes da fase 18 não existe)
+    PARA_REVISAR = new Map();
+    if (coordena()) {
+      const rev = await rpc('fichas_para_revisar', { p_projeto: projId }).catch(() => []);
+      (rev || []).forEach(r => PARA_REVISAR.set(r.conflito_id, r.motivo));
+    }
+
     // Initialize filters — start empty (all visible), narrow to user's disciplines if assigned
     S.discs = USER_PROFILE.disciplinas.length > 0 ? new Set(USER_PROFILE.disciplinas) : new Set();
+    S.paraRevisar = coordena() && params.get('revisar') === '1';   // link da página inicial
+    if (S.paraRevisar) S.hideResolved = false;
     S.locs  = new Set();
     // Filtro vindo de um link (Monitor de Conflitos, página inicial):
     // ?disc=EST,ARQ e/ou ?local=TER têm prioridade sobre o padrão da pessoa
@@ -576,10 +622,20 @@ function renderFilters() {
   critBtn.textContent = '\u26a0 Críticos';
   critBtn.onclick = () => { S.onlyAlert=!S.onlyAlert; renderFilters(); renderCards(); };
   row1.appendChild(critBtn);
+  // Coordenação: fichas com resposta de projetista depois da sua última revisão
+  if (coordena()) {
+    const revBtn = document.createElement('span');
+    revBtn.className = 'chip-toggle' + (S.paraRevisar ? ' on' : '');
+    revBtn.textContent = '● Para revisar (' + PARA_REVISAR.size + ')';
+    revBtn.title = 'Fichas pendentes em que um projetista comentou ou marcou Resolvido/Inviável depois da sua última alteração';
+    if (PARA_REVISAR.size) revBtn.style.color = '#1A4F80';
+    revBtn.onclick = () => { S.paraRevisar = !S.paraRevisar; if (S.paraRevisar) S.hideResolved = false; renderFilters(); renderCards(); };
+    row1.appendChild(revBtn);
+  }
   const clearBtn = document.createElement('span');
   clearBtn.className = 'chip-toggle';
   clearBtn.textContent = '\u00d7 Limpar filtros';
-  clearBtn.onclick = () => { S.discs = new Set(); S.locs = new Set(); S.hideResolved = false; S.onlyAlert = false; S.modoDisc = 'qualquer'; renderFilters(); renderCards(); };
+  clearBtn.onclick = () => { S.discs = new Set(); S.locs = new Set(); S.hideResolved = false; S.onlyAlert = false; S.modoDisc = 'qualquer'; S.paraRevisar = false; renderFilters(); renderCards(); };
   row1.appendChild(clearBtn);
   el.appendChild(row1);
 
@@ -602,6 +658,7 @@ function renderCards() {
   grid.innerHTML = '';
 
   const list = CONFLICTS.filter(c => {
+    if (S.paraRevisar && !PARA_REVISAR.has(c._db)) return false;
     if (S.hideResolved && c.status === 'RESOLVIDO') return false;
     if (S.onlyAlert && !c.alert) return false;
     if (S.discs.size && c.disc.length) {
@@ -719,7 +776,40 @@ function renderCard(c) {
   const badge = document.createElement('span');
   badge.className = 'badge-status s-'+st;
   badge.textContent = c.status;
-  head.appendChild(code); head.appendChild(spacer);
+  head.appendChild(code);
+  // Marcas: "para revisar" (coordenação) e "pronta para validar" (alguma
+  // disciplina marcou Resolvido e a ficha segue pendente — basta uma)
+  if (coordena() && PARA_REVISAR.has(c._db)) {
+    const mr = document.createElement('span'); mr.className = 'marca-revisar';
+    const motivo = PARA_REVISAR.get(c._db);
+    mr.textContent = 'para revisar';
+    mr.title = motivo === 'resolvido' ? 'Uma disciplina marcou Resolvido' :
+               motivo === 'inviavel' ? 'Uma disciplina marcou Inviável' : 'Comentário novo de projetista';
+    head.appendChild(mr);
+  }
+  if (c.status !== 'RESOLVIDO' && (DISC_STATUS[c._db] || []).some(x => x.status === 'RESOLVIDO')) {
+    const mv = document.createElement('span'); mv.className = 'marca-validar';
+    mv.textContent = 'pronta para validar';
+    mv.title = 'Uma disciplina marcou Resolvido — a coordenação confere e fecha a ficha';
+    head.appendChild(mv);
+  }
+  head.appendChild(spacer);
+  if (coordena() && typeof window.ospaOpenEditor === 'function') {
+    const ed = document.createElement('button'); ed.className = 'abrir-editor';
+    ed.textContent = 'Abrir no Editor';
+    ed.title = 'Abre o Editor já nesta ficha, para mudar texto, imagens ou disciplinas';
+    ed.onclick = () => window.ospaOpenEditor(PROJETO.id, USER_PROFILE.papel, c.id);
+    head.appendChild(ed);
+  }
+  // Coordenação: ⚠ e status com um clique, como no Editor
+  if (coordena()) {
+    alertDot.classList.add('clicavel');
+    alertDot.title = c.alert ? 'Crítico — clique para desmarcar' : 'Clique para marcar como crítico';
+    alertDot.onclick = () => alterarFicha(c, { alerta: !c.alert });
+    badge.classList.add('clicavel');
+    badge.title = c.status === 'RESOLVIDO' ? 'Resolvido — clique para reabrir' : 'Pendente — clique para marcar como resolvido';
+    badge.onclick = () => alterarFicha(c, { status: c.status === 'RESOLVIDO' ? 'PENDENTE' : 'RESOLVIDO' });
+  }
   head.appendChild(alertDot); head.appendChild(badge);
   card.appendChild(head);
 
@@ -800,13 +890,20 @@ function renderDiscStatusBlock(c) {
 
     if (canEdit) {
       const sel = document.createElement('select'); sel.className = 'disc-status-select';
-      if (ds) sel.className += ' s-'+ds.status;
-      [['','—'],['CIENTE','Ciente'],['EM_ANALISE','Em análise'],['INVIAVEL','Inviável']].forEach(([v,t]) => {
+      const atual = ds ? (ds.status === 'CIENTE' ? 'EM_ANALISE' : ds.status) : '';
+      if (atual) sel.className += ' s-'+atual;
+      [['','—'],['EM_ANALISE','Em análise'],['RESOLVIDO','Resolvido'],['INVIAVEL','Inviável']].forEach(([v,t]) => {
         const opt = document.createElement('option'); opt.value = v; opt.textContent = t;
-        if (ds && ds.status === v) opt.selected = true;
+        if (atual === v) opt.selected = true;
         sel.appendChild(opt);
       });
       sel.onchange = async () => {
+        // Resolvido e Inviável abrem a caixa (solução opcional / motivo obrigatório);
+        // o status só é gravado quando a pessoa confirma.
+        if (sel.value === 'RESOLVIDO' || sel.value === 'INVIAVEL') {
+          abrirCaixaMarcacao(c, d, sel.value, statusBlock, () => { sel.value = atual; });
+          return;
+        }
         sel.className = 'disc-status-select' + (sel.value ? ' s-'+sel.value : '');
         await saveDiscStatus(c, d, sel.value);
         refreshDiscStatusBlock(c);
@@ -821,8 +918,8 @@ function renderDiscStatusBlock(c) {
     } else {
       if (ds && ds.status) {
         const badge = document.createElement('span');
-        badge.className = 'disc-status-readonly s-'+ds.status;
-        badge.textContent = ds.status === 'EM_ANALISE' ? 'Em análise' : ds.status === 'INVIAVEL' ? 'Inviável' : 'Ciente';
+        badge.className = 'disc-status-readonly s-'+(ds.status === 'CIENTE' ? 'EM_ANALISE' : ds.status);
+        badge.textContent = STATUS_DISC_ROTULO[ds.status] || ds.status;
         row.appendChild(badge);
         const meta = document.createElement('span'); meta.className = 'disc-status-meta';
         meta.textContent = ds.usuario_nome + ' · ' + fmtDate(ds.updated_at);
@@ -836,7 +933,79 @@ function renderDiscStatusBlock(c) {
     statusList.appendChild(row);
   });
   statusBlock.appendChild(statusList);
+
+  // Basta uma disciplina resolver: avisa as outras, para ninguém refazer à toa
+  const resolveram = existing.filter(x => x.status === 'RESOLVIDO').map(x => x.disciplina);
+  if (resolveram.length && c.status !== 'RESOLVIDO') {
+    const av = document.createElement('div'); av.className = 'aguardando-validacao';
+    av.textContent = '✓ ' + resolveram.join(', ') + ' marc' + (resolveram.length > 1 ? 'aram' : 'ou') +
+                     ' Resolvido · aguardando validação da coordenação';
+    statusBlock.appendChild(av);
+  }
   return statusBlock;
+}
+
+// Caixa que abre ao escolher Resolvido (solução opcional) ou Inviável (motivo
+// obrigatório). Grava o status e, se houver texto ou imagem, um comentário
+// marcado — que aparece na conversa como "✓ HID marcou Resolvido".
+function abrirCaixaMarcacao(c, disciplina, status, onde, aoCancelar) {
+  const antiga = onde.querySelector('.marcar-box'); if (antiga) antiga.remove();
+  const inviavel = status === 'INVIAVEL';
+  const imgs = [];
+  const box = document.createElement('div'); box.className = 'marcar-box s-' + status;
+  box.innerHTML =
+    '<div class="marcar-tit">' + (inviavel
+      ? disciplina + ' · Inviável — por que não dá? <span style="color:var(--inviavel)">(obrigatório)</span>'
+      : disciplina + ' · Resolvido — quer mostrar a solução? <span style="color:var(--text3);font-weight:400">(opcional)</span>') + '</div>' +
+    '<textarea placeholder="' + (inviavel ? 'Explique o motivo…' : 'Descreva a solução (opcional)…') + '"></textarea>' +
+    '<div class="marcar-imgs"></div>' +
+    '<div class="marcar-acoes"></div>';
+  const ta = box.querySelector('textarea');
+  const imgsEl = box.querySelector('.marcar-imgs');
+  const acoes = box.querySelector('.marcar-acoes');
+
+  function desenharImgs() {
+    imgsEl.innerHTML = '';
+    imgs.forEach((src, i) => {
+      const w = document.createElement('span'); w.style.cssText = 'display:inline-flex;align-items:center;gap:2px';
+      const im = document.createElement('img'); im.src = src;
+      const x = document.createElement('button'); x.className = 'comment-attach-remove'; x.textContent = '×';
+      x.onclick = () => { imgs.splice(i, 1); desenharImgs(); };
+      w.appendChild(im); w.appendChild(x); imgsEl.appendChild(w);
+    });
+    const dica = document.createElement('span');
+    dica.style.cssText = 'font-family:var(--mono);font-size:9.5px;color:var(--text3)';
+    dica.textContent = t('ap.colar_dica').replace(/^ou /, 'Imagem: ');
+    imgsEl.appendChild(dica);
+  }
+  desenharImgs();
+  ospaZonaDeImagens(box, async files => {
+    for (const f of files) { try { imgs.push(await ospaReduzirImagem(f)); } catch (e) {} }
+    desenharImgs();
+  });
+
+  const botao = (rotulo, pri, fn) => {
+    const b = document.createElement('button'); b.className = 'marcar-btn' + (pri ? ' pri' : '');
+    b.textContent = rotulo; b.onclick = fn; acoes.appendChild(b); return b;
+  };
+  async function confirmar(comComentario) {
+    const texto = ta.value.trim();
+    if (inviavel && !texto) { toast('Explique o motivo para marcar Inviável.'); ta.focus(); return; }
+    acoes.querySelectorAll('button').forEach(b => b.disabled = true);
+    await saveDiscStatus(c, disciplina, status);
+    if (comComentario && (texto || imgs.length)) {
+      await postComment(c, texto || '(imagem da solução)', imgs, status, disciplina);
+    }
+    refreshProjSection(c);
+    refreshDiscStatusBlock(c);
+    renderSummary();
+  }
+  botao(inviavel ? 'Marcar Inviável' : 'Enviar', true, () => confirmar(true));
+  if (!inviavel) botao('Só marcar', false, () => confirmar(false));
+  botao('Cancelar', false, () => { box.remove(); aoCancelar(); });
+
+  onde.appendChild(box);
+  ta.focus();
 }
 
 function refreshDiscStatusBlock(c) {
@@ -863,6 +1032,10 @@ function renderProjSection(c) {
       const isModerator = ospaPode(USER_PROFILE.papel, 'moderar');
       const header = document.createElement('div'); header.className = 'comment-header';
       header.innerHTML =
+        // Comentário que acompanha uma marcação (fase 18): "✓ HID marcou Resolvido"
+        (cm.marcacao ? '<span class="comment-marca m-'+cm.marcacao+'">' +
+          (cm.marcacao === 'RESOLVIDO' ? '✓ ' : '✕ ') + esc(cm.disciplina || '') + ' marcou ' +
+          (cm.marcacao === 'RESOLVIDO' ? 'Resolvido' : 'Inviável') + '</span>' : '') +
         '<span class="comment-author">'+esc(cm.usuario_nome)+'</span>' +
         (cm.disciplina?'<span class="comment-disc">'+esc(cm.disciplina)+'</span>':'') +
         '<span class="comment-time">'+fmtDate(cm.created_at)+(cm.edited?' (editado)':'')+'</span>';
@@ -981,6 +1154,28 @@ function renderProjSection(c) {
 }
 
 // ── ACTIONS ──
+// Coordenação muda status ou crítico da ficha direto no relatório, como no Editor.
+// Gravado na tabela como o Editor faz (quando as tabelas forem fechadas, vira função).
+async function alterarFicha(c, campos) {
+  try {
+    await api('PATCH', 'conflitos', campos, 'id=eq.' + c._db);
+    if ('status' in campos) c.status = campos.status;
+    if ('alerta' in campos) c.alert = campos.alerta;
+    PARA_REVISAR.delete(c._db);          // mexer na ficha é revisá-la
+    atualizarCabecalho(c);
+    renderSummary(); renderFilters();
+    toast('status' in campos
+      ? (c.status === 'RESOLVIDO' ? 'Ficha ' + c.id + ' resolvida' : 'Ficha ' + c.id + ' reaberta')
+      : (c.alert ? 'Marcada como crítica' : 'Não é mais crítica'));
+  } catch (e) { toast('Erro: ' + e.message); }
+}
+
+// Redesenha só o cartão (a lista e a rolagem ficam como estão)
+function atualizarCabecalho(c) {
+  const velho = document.getElementById('card-' + c.id);
+  if (velho) velho.replaceWith(renderCard(c));
+}
+
 async function saveDiscStatus(c, disciplina, status) {
   const existing = (DISC_STATUS[c._db]||[]).find(x=>x.disciplina===disciplina);
   try {
@@ -1016,20 +1211,24 @@ async function saveDiscStatus(c, disciplina, status) {
   } catch(e) { toast('Erro: '+e.message); }
 }
 
-async function postComment(c, texto, imagens) {
+// marcacao/disciplina: quando o comentário acompanha uma marcação (fase 18)
+async function postComment(c, texto, imagens, marcacao, disciplina) {
   const payload = {
     conflito_id: c._db, projeto_id: PROJETO.id,
     usuario_id: USER_PROFILE.id,
     usuario_nome: USER_PROFILE.nome,
-    disciplina: USER_PROFILE.disciplinas[0] || '',
+    disciplina: disciplina || USER_PROFILE.disciplinas[0] || '',
     texto,
     imagens: (imagens && imagens.length) ? imagens : null,
     created_at: new Date().toISOString()
   };
+  if (marcacao) payload.marcacao = marcacao;
   try {
     const res = await api('POST','comentarios',payload);
     if (!COMMENTS[c._db]) COMMENTS[c._db] = [];
     COMMENTS[c._db].push(res[0]);
+    // Comentário da coordenação = revisão: a ficha sai da fila "Para revisar"
+    if (coordena() && PARA_REVISAR.delete(c._db)) { renderFilters(); atualizarCabecalho(c); }
     toast('Comentário enviado');
   } catch(e) { toast('Erro: '+e.message); }
 }

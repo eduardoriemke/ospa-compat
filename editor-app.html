@@ -428,6 +428,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .drag-handle:active{cursor:grabbing}
 .card.dragging{opacity:0.35;outline:2px dashed var(--border2)}
 .card.drag-over{outline:2px solid var(--text2);outline-offset:-2px}
+.card.ficha-alvo{outline:3px solid var(--text);outline-offset:2px;transition:outline-color .6s}
 .card.img-drop{outline:2px dashed var(--text2);outline-offset:-2px;background:rgba(25,25,25,0.02)}
 .card-new{
   background:transparent;border:1px dashed var(--border2);
@@ -588,6 +589,7 @@ const IS_EDITOR = !!document.getElementById('ed-panel');
 // arrastar um arquivo para a ficha também anexa. Arrastar a FICHA continua
 // reordenando — os dois se distinguem pelo tipo do que está sendo arrastado.
 const ED_ADICIONAR_IMAGENS = new WeakMap();   // elemento da ficha → adicionarImagensFicha
+let ED_FICHA_ALVO = null;                     // ficha pedida pelo Relatório (#ficha=), destacada
 let ED_FICHA_SOB_MOUSE = null;
 
 function edReduzirImagem(file) {
@@ -933,7 +935,8 @@ function buildCard(c) {
   const imgs     = getImages(c.id);
 
   const card = document.createElement('div');
-  card.className = 'card' + (isAlertOn ? ' is-alert' : '') + ' s-' + st.replace(/ /g,'_');
+  card.className = 'card' + (isAlertOn ? ' is-alert' : '') + ' s-' + st.replace(/ /g,'_') +
+                   (c.id === ED_FICHA_ALVO ? ' ficha-alvo' : '');
   card.id = 'card-' + c.id;
   // Drop target (card receives drops)
   if (IS_EDITOR) {
@@ -1537,6 +1540,27 @@ const ho=document.documentElement.outerHTML;
   downloadHTML(html, _filename(''));
 }
 render();
+
+// Aberto pelo "Abrir no Editor" do Relatório (#ficha=C-14): rola até a ficha e
+// destaca. O destaque fica em ED_FICHA_ALVO (e não só numa classe), porque o
+// editor redesenha os cartões depois de carregar e a classe se perderia.
+(function () {
+  const m = location.hash.match(/ficha=([^&]+)/);
+  if (!m) return;
+  ED_FICHA_ALVO = decodeURIComponent(m[1]);
+  let tentativas = 0;
+  (function procurar() {
+    const el = document.getElementById('card-' + ED_FICHA_ALVO);
+    if (!el) { if (++tentativas < 20) setTimeout(procurar, 150); return; }
+    el.classList.add('ficha-alvo');
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => {
+      const atual = document.getElementById('card-' + ED_FICHA_ALVO);
+      if (atual) atual.classList.remove('ficha-alvo');
+      ED_FICHA_ALVO = null;
+    }, 4000);
+  })();
+})();
 
 
 
