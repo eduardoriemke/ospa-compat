@@ -130,6 +130,12 @@ um HTML com o script embutido, mais arquivos compartilhados.
     própria. Mesma redução de sempre (1200 px, JPEG 0,75). Decidido não fazer
     marcação na imagem (o Lightshot já faz) nem pauta impressa (a reunião é no
     notebook, na própria tela)
+26. **16** — correções: "Virar ficha" falhava em projeto com mais de 99 fichas
+    (`lpad(x, 2)` corta: C-128 virava C-12) e com imagem (gravava numa coluna
+    `codigo` que a tabela `imagens` não tem). Editor: imagens da ficha numa lista
+    só — apagar uma imagem salva depois de já ter apagado outra não funcionava, e
+    a imagem nova às vezes virava a principal; agora entra no fim e a principal
+    só muda pela seta ↑
 
 ## Bilíngue (fase 11)
 

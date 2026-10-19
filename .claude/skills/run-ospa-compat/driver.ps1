@@ -242,6 +242,9 @@ function Run($passos) {
           Conectar $novo
           $fim = (Get-Date).AddSeconds(15)
           do { Start-Sleep -Milliseconds 200 } until ((Js 'document.readyState') -eq 'complete' -or (Get-Date) -gt $fim)
+          # A aba já estava carregada quando conectamos: o script de "aceitar diálogos"
+          # só valeria na próxima navegação. Sem isto, um confirm() do editor trava o teste.
+          $null = Js "window.alert=m=>console.warn('[alert] '+m);window.confirm=m=>(console.warn('[confirm] '+m),true);"
           Write-Host "  agora em: $(Js 'location.href.slice(0,80)')"
           GuardaProducao
         }

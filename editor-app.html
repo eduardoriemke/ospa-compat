@@ -647,6 +647,24 @@ function getImages(id) {
   return (customImages[id] || []).concat(kept);
 }
 
+// Uma lista só por ficha, para editar. Na primeira mudança, as imagens salvas
+// passam a fazer parte da lista editável, na ordem em que aparecem na tela.
+// Antes eram duas listas (novas na frente, salvas atrás): a imagem nova às
+// vezes virava a principal, às vezes não; e apagar uma salva usava a posição
+// da lista visível na lista original — depois de apagar uma, a seguinte não
+// saía mais.
+function edListaImagens(id) {
+  const orig = IMAGES_DB[id] || [];
+  const del  = deletedImages[id];
+  const jaUnificada = !!del && orig.every((_, i) => del.has(i));
+  if (!jaUnificada) {
+    customImages[id]  = getImages(id);
+    deletedImages[id] = new Set(orig.map((_, i) => i));
+  }
+  if (!customImages[id]) customImages[id] = [];
+  return customImages[id];
+}
+
 function cycleStatus(id) {
   const c = CONFLICTS.find(x => x.id === id);
   const idx = STATUS_CYCLE.indexOf(getStatus(c));
@@ -1138,10 +1156,10 @@ function buildCard(c) {
   // Images
   // Anexar, colar (Ctrl+V) e arrastar chegam todos aqui: reduz para 1200px,
   // JPEG 0,75 (como sempre), acrescenta às imagens da ficha e salva.
+  // A nova entra no FIM: a principal só muda pela seta ↑.
   async function adicionarImagensFicha(files) {
-    if (!customImages[c.id]) customImages[c.id] = [];
     for (const f of files) {
-      try { customImages[c.id].push(await edReduzirImagem(f)); } catch (e) { console.error(e); }
+      try { const dados = await edReduzirImagem(f); edListaImagens(c.id).push(dados); } catch (e) { console.error(e); }
     }
     rebuildImgSection();
     if (c._db) syncImages(c);
@@ -1166,9 +1184,7 @@ function buildCard(c) {
         del.onclick = e => {
           e.stopPropagation();
           if (!confirm('Remover esta imagem?\n\nEsta ação não poderá ser desfeita.')) return;
-          const custom = customImages[c.id] || [];
-          if (i < custom.length) { custom.splice(i, 1); }
-          else { const origIdx = i - custom.length; if (!deletedImages[c.id]) deletedImages[c.id] = new Set(); deletedImages[c.id].add(origIdx); }
+          edListaImagens(c.id).splice(i, 1);   // a posição na tela é a posição na lista
           rebuildImgSection();
           syncImages(c);
         };
