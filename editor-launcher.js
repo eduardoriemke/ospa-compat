@@ -112,6 +112,10 @@ async function ospaOpenEditor(id, papel) {
     // caminhos relativos não resolvem: injetamos o endereço completo.
     html = html.replace('/*__VIEWER_URL__*/', new URL('viewer-modelo.json', location.href).href);
 
+    // Ícone da aba: também precisa do endereço completo (o editor abre num blob)
+    html = html.replace('</head>',
+      '<link rel="icon" href="' + new URL('favicon.svg?v=1', location.href).href + '" type="image/svg+xml">\n</head>');
+
     // Pelo mesmo motivo (blob), o editor não sabe em que ambiente está:
     // herda o Supabase escolhido pelo auth.js desta página (local ou produção).
     html = html.replace(/const SB_URL = "[^"]*";/, 'const SB_URL = ' + JSON.stringify(SB_URL) + ';')
