@@ -448,6 +448,11 @@ async function loadApp() {
     // Initialize filters — start empty (all visible), narrow to user's disciplines if assigned
     S.discs = USER_PROFILE.disciplinas.length > 0 ? new Set(USER_PROFILE.disciplinas) : new Set();
     S.locs  = new Set();
+    // Filtro vindo de um link (Monitor de Conflitos, página inicial):
+    // ?disc=EST,ARQ e/ou ?local=TER têm prioridade sobre o padrão da pessoa
+    const _lista = v => (v || '').split(',').map(s => s.trim()).filter(Boolean);
+    if (params.get('disc'))  S.discs = new Set(_lista(params.get('disc')));
+    if (params.get('local')) S.locs  = new Set(_lista(params.get('local')));
 
     renderHeader();
     await ospaCarregarCores(projId);  // Cores das disciplinas vindas do banco (disciplinas.js)

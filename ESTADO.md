@@ -136,6 +136,15 @@ um HTML com o script embutido, mais arquivos compartilhados.
     só — apagar uma imagem salva depois de já ter apagado outra não funcionava, e
     a imagem nova às vezes virava a principal; agora entra no fim e a principal
     só muda pela seta ↑
+27. **17** — Monitor de Conflitos refeito: resumo com a rosca da saúde geral e
+    números (inclui novas em 30 dias e a mais antiga em aberto); saúde por
+    disciplina da pior para a melhor; linha do tempo com todas as disciplinas em
+    cinza e destaque por clique (coordenação abre com o total do projeto,
+    projetista com a sua disciplina), período 3/6/12 meses e números ao passar o
+    mouse; nova seção "Idade das pendências"; cartões, idade e pavimentos abrem o
+    Relatório filtrado (`projeto.html?disc=` / `?local=`, que o Relatório passou a
+    ler). SQL: `conflitos.resolvido_em`, marcado por gatilho — a curva fica exata
+    daqui para a frente (antes, estimada pela última alteração)
 
 ## Bilíngue (fase 11)
 

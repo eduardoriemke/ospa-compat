@@ -45,8 +45,15 @@ h2{font-family:var(--serif);font-weight:300;font-size:19px;color:var(--text)}
 .legend-swatch{display:inline-flex;align-items:center;gap:6px}
 .sw{width:12px;height:12px;border-radius:2px;display:inline-block}
 
-/* KPI row (resumo) */
-.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--border);border:1px solid var(--border)}
+/* Resumo: rosca da saúde geral em destaque + números */
+.resumo{display:flex;gap:1px;background:var(--border);border:1px solid var(--border);flex-wrap:wrap}
+.resumo-rosca{background:var(--surface);padding:22px 28px;display:flex;align-items:center;gap:18px;flex:0 0 auto}
+.resumo-rot{font-family:var(--sans);font-size:14px;font-weight:600;color:var(--text);display:flex;flex-direction:column;gap:4px}
+.resumo-rot span{font-family:var(--mono);font-size:10.5px;font-weight:400;color:var(--text2)}
+.resumo-kpis{flex:1;min-width:300px;display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border)}
+.kpi-value small{font-size:13px;color:var(--text2)}
+.kpi-sub{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:4px}
+.donut-label.grande{font-size:26px}
 .kpi{background:var(--surface);padding:20px 22px}
 .kpi-label{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
 .kpi-value{font-family:var(--serif);font-weight:300;font-size:30px;color:var(--text)}
@@ -56,6 +63,23 @@ h2{font-family:var(--serif);font-weight:300;font-size:19px;color:var(--text)}
 /* Chips */
 .chip-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
 .chip{font-family:var(--mono);font-size:10px;font-weight:600;padding:4px 10px;border-radius:2px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;transition:all .12s;user-select:none}
+.chip:hover{border-color:var(--text2);color:var(--text2)}
+.chip.on-neutro{background:var(--text);border-color:var(--text);color:var(--surface)}
+.chip-total{margin-right:10px}
+.periodo{display:flex;gap:4px;margin-right:14px;padding-right:14px;border-right:1px solid var(--border)}
+
+/* Cartões e linhas clicáveis (abrem o relatório filtrado) */
+.card-link{display:block;text-decoration:none;color:inherit;transition:border-color .12s,box-shadow .12s}
+.card-link:hover{border-color:var(--text2);box-shadow:0 4px 14px rgba(25,25,25,.06)}
+
+/* Idade das pendências */
+.aging-row{display:grid;grid-template-columns:60px 1fr 270px;align-items:center;gap:12px;padding:9px 0;border-top:1px solid var(--border);text-decoration:none;color:inherit}
+.aging-row:last-child{border-bottom:1px solid var(--border)}
+.aging-row:hover .aging-stats{color:var(--text)}
+.aging-track{height:16px;background:var(--surface2);border-radius:2px;overflow:hidden}
+.aging-bar{display:flex;height:100%;gap:1px}
+.aging-bar span{display:block;height:100%}
+.aging-stats{font-family:var(--mono);font-size:10.5px;color:var(--text2);text-align:right}
 svg text{font-family:var(--mono);fill:var(--text3);font-size:10px}
 .tl-legend{display:flex;gap:20px;margin-top:14px;font-family:var(--mono);font-size:10px;color:var(--text2);flex-wrap:wrap}
 .tl-legend span{display:inline-flex;align-items:center;gap:6px}
@@ -77,7 +101,8 @@ svg text{font-family:var(--mono);fill:var(--text3);font-size:10px}
 .frac-row{font-family:var(--mono);font-size:11px;color:var(--text2);border-top:1px solid var(--border);padding-top:9px;margin-top:14px}
 
 /* Floors — barra horizontal, um segmento por conflito */
-.floor{display:grid;grid-template-columns:74px 1fr 108px;align-items:center;gap:12px;border-top:1px solid var(--border);padding:11px 0}
+.floor{display:grid;grid-template-columns:74px 1fr 108px;align-items:center;gap:12px;border-top:1px solid var(--border);padding:11px 0;text-decoration:none;color:inherit}
+.floor:hover .floor-label,.floor:hover .floor-stats{color:var(--text)}
 .floor:last-child{border-bottom:1px solid var(--border)}
 .floor-label{font-family:var(--mono);font-size:11px;color:var(--text2);font-weight:500}
 .floor-plate{position:relative;height:22px;background:var(--surface2);border-radius:2px;overflow:hidden;border:1px solid var(--border);display:flex;align-items:stretch;gap:2px;padding:2px}
@@ -113,30 +138,39 @@ svg text{font-family:var(--mono);fill:var(--text3);font-size:10px}
   <div class="main">
     <section>
       <div class="section-head"><span class="section-num">01</span><h2>Resumo de conflitos</h2></div>
-      <p class="section-note">Panorama geral do projeto.</p>
-      <div class="kpi-row" id="kpiRow"></div>
+      <p class="section-note">Panorama geral do projeto. A saúde é a porcentagem de fichas resolvidas.</p>
+      <div class="resumo" id="kpiRow"></div>
     </section>
 
     <section>
       <div class="section-head"><span class="section-num">02</span><h2>Saúde por disciplina</h2></div>
-      <p class="section-note">O anel mostra o percentual resolvido, colorido por faixa (vermelho/amarelo/verde). Críticos em aberto aparecem como alerta no topo do card.</p>
+      <p class="section-note">Da pior para a melhor. O anel mostra o percentual resolvido (vermelho até 40%, âmbar até 70%, verde acima). Clique numa disciplina para abrir o relatório filtrado.</p>
       <div class="cards" id="cardsGrid"></div>
     </section>
 
     <section>
       <div class="section-head"><span class="section-num">03</span><h2>Conflitos em aberto ao longo do tempo</h2></div>
-      <p class="section-note">Quantos conflitos estavam em aberto ao final de cada mês, por disciplina — facilita comparar quem está reduzindo ou acumulando fila. Ligue/desligue disciplinas para comparar.</p>
+      <p class="section-note">Quantas fichas estavam em aberto ao final de cada mês. Todas as disciplinas aparecem em cinza; clique nelas para destacar e comparar. Passe o mouse nos pontos para ver os números.</p>
       <div class="panel">
         <div class="chip-row" id="chipRow"></div>
-        <svg id="timelineSvg" viewBox="0 0 760 260" width="100%" height="260"></svg>
+        <svg id="timelineSvg" viewBox="0 0 760 270" width="100%" height="270"></svg>
         <div class="tl-legend" id="tlLegend"></div>
-        <p class="chart-caveat">Estimativa: como ainda não há histórico completo de mudança de status, um conflito é considerado "aberto" até a última atualização que o marcou como resolvido.</p>
+        <p class="chart-caveat">A data de resolução de cada ficha passou a ser registrada em out/2026. Antes disso, ela é estimada pela última alteração da ficha — por isso os meses mais antigos são aproximados.</p>
       </div>
     </section>
 
     <section>
-      <div class="section-head"><span class="section-num">04</span><h2>Conflitos por pavimento</h2></div>
-      <p class="section-note">Cada barra é um conflito: verde = resolvido, vermelho = em aberto. Listrado diagonal = crítico. Ordem lida diretamente do cadastro de locais do projeto.</p>
+      <div class="section-head"><span class="section-num">04</span><h2>Idade das pendências</h2></div>
+      <p class="section-note">Fichas em aberto por tempo desde que foram abertas, por disciplina. Quem acumula pendência antiga aparece primeiro. Clique para abrir o relatório filtrado.</p>
+      <div class="panel">
+        <div id="agingRows"></div>
+        <div class="legend" id="agingLegend" style="margin-top:16px"></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head"><span class="section-num">05</span><h2>Conflitos por pavimento</h2></div>
+      <p class="section-note">Cada barra é um conflito: verde = resolvido, vermelho = em aberto. Listrado diagonal = crítico. Clique num pavimento para abrir o relatório filtrado.</p>
       <div class="panel">
         <div id="buildingStack"></div>
         <div class="legend" style="margin-top:16px">
@@ -237,7 +271,9 @@ async function loadApp(){
 
     CONFLICTS = cfls
       .filter(c => c.publicado !== false)
-      .map(c => ({ alerta:c.alerta, status:c.status, local:c.local, disciplinas:c.disciplinas||[], created_at:c.created_at, updated_at:c.updated_at }));
+      .map(c => ({ codigo:c.codigo, alerta:c.alerta, status:c.status, local:c.local, disciplinas:c.disciplinas||[],
+                   created_at:c.created_at, updated_at:c.updated_at,
+                   resolvido_em:c.resolvido_em || null }));   // fase 17; antes dela, vazio
 
     // Sidebar compartilhado (sidebar.js): alimenta via data-* e re-renderiza
     document.body.dataset.userName = USER_PROFILE.nome || '';
@@ -284,16 +320,35 @@ function getDiscColor(d){
 // ══════════════════════════════════════════════════════
 // DERIVED DATA
 // ══════════════════════════════════════════════════════
-function monthKey(dateStr){ const d=new Date(dateStr); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+const DIA = 86400000;
+function diasDesde(iso){ return Math.floor((Date.now() - new Date(iso).getTime()) / DIA); }
+// Quando a ficha foi resolvida: data registrada (fase 17) ou, nas antigas,
+// a última alteração — a estimativa que existia antes.
+function resolvidaEm(cf){ return new Date(cf.resolvido_em || cf.updated_at); }
+function abertaEm(cf, fim){
+  return new Date(cf.created_at) <= fim && (cf.status !== 'RESOLVIDO' || resolvidaEm(cf) > fim);
+}
 function lastMonths(n){
   const arr=[]; const now=new Date();
-  for(let i=n-1;i>=0;i--){ const d=new Date(now.getFullYear(), now.getMonth()-i, 1); arr.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), end:new Date(d.getFullYear(),d.getMonth()+1,0,23,59,59), label:d.toLocaleDateString('pt-BR',{month:'short'}).replace('.','')}); }
+  for(let i=n-1;i>=0;i--){
+    const d=new Date(now.getFullYear(), now.getMonth()-i, 1);
+    // mês corrente: conta até hoje, não até o fim do mês
+    const fimMes = new Date(d.getFullYear(), d.getMonth()+1, 0, 23, 59, 59);
+    arr.push({ end: fimMes > now ? now : fimMes,
+               label: d.toLocaleDateString('pt-BR',{month:'short'}).replace('.','') +
+                      (n > 6 && d.getMonth() === 0 ? ' ' + String(d.getFullYear()).slice(2) : '') });
+  }
   return arr;
 }
+function linkRelatorio(qs){ return 'projeto.html?id=' + encodeURIComponent(PROJ_ID) + qs; }
 
 let allDisc = [], disciplinasOrdenadas = [];
-let activeDiscs = new Set();
-const months = lastMonths(6);
+// Linha do tempo: disciplinas em destaque (as outras ficam em cinza), total, período
+let destacadas = new Set();
+let mostrarTotal = true;
+let mesesPeriodo = 6;
+
+function ehCoordenacao(){ return !!USER_PROFILE && ospaPode(USER_PROFILE.papel, 'configurar'); }
 
 function renderAnalytics(){
   allDisc = CONFIG.disciplines.filter(d => CONFLICTS.some(cf=>cf.disciplinas.includes(d)));
@@ -302,129 +357,236 @@ function renderAnalytics(){
   const totals = {};
   allDisc.forEach(d=>{ totals[d] = CONFLICTS.filter(cf=>cf.disciplinas.includes(d)).length; });
   disciplinasOrdenadas = [...allDisc].sort((a,b)=> totals[b]-totals[a]);
-  activeDiscs = new Set(disciplinasOrdenadas); // todas ligadas por padrão
+
+  // Projetista abre com a(s) sua(s) disciplina(s) em destaque; coordenação, com o
+  // total do projeto — as disciplinas ficam em cinza e se destacam com um clique.
+  const minhas = (USER_PROFILE.disciplinas || []).filter(d => allDisc.includes(d));
+  if (!ehCoordenacao() && minhas.length) { destacadas = new Set(minhas); mostrarTotal = false; }
+  else { destacadas = new Set(); mostrarTotal = true; }
 
   renderKpis();
+  renderHealthCards();
   renderChips();
   renderTimeline();
-  renderHealthCards();
+  renderAging();
   renderFloors();
 }
 
-// ---- 01: resumo (KPIs) ----
+// ---- 01: resumo ----
 function renderKpis(){
   const total = CONFLICTS.length;
-  const abertos = CONFLICTS.filter(cf=>cf.status!=='RESOLVIDO').length;
-  const criticos = CONFLICTS.filter(cf=>cf.alerta && cf.status!=='RESOLVIDO').length;
-  const pctResolvido = total ? Math.round(((total-abertos)/total)*100) : 0;
-  const grid = document.getElementById('kpiRow');
-  grid.innerHTML = `
-    <div class="kpi"><div class="kpi-label">Total de conflitos</div><div class="kpi-value">${total}</div></div>
-    <div class="kpi"><div class="kpi-label">Em aberto</div><div class="kpi-value alert">${abertos}</div></div>
-    <div class="kpi"><div class="kpi-label">Críticos em aberto</div><div class="kpi-value alert">${criticos}</div></div>
-    <div class="kpi"><div class="kpi-label">% resolvido geral</div><div class="kpi-value resol">${pctResolvido}%</div></div>
-  `;
+  const abertas = CONFLICTS.filter(cf=>cf.status!=='RESOLVIDO');
+  const criticos = abertas.filter(cf=>cf.alerta).length;
+  const resolvidas = total - abertas.length;
+  const pct = total ? Math.round(resolvidas/total*100) : 0;
+  const novas = CONFLICTS.filter(cf => diasDesde(cf.created_at) <= 30).length;
+  const maisAntiga = abertas.slice().sort((a,b) => new Date(a.created_at) - new Date(b.created_at))[0];
+
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="resumo-rosca">
+      ${donutSvg(pct, barColor(pct), 132)}
+      <div class="resumo-rot">Saúde geral<span>${resolvidas}/${total} fichas resolvidas</span></div>
+    </div>
+    <div class="resumo-kpis">
+      <div class="kpi"><div class="kpi-label">Total de fichas</div><div class="kpi-value">${total}</div></div>
+      <div class="kpi"><div class="kpi-label">Em aberto</div><div class="kpi-value alert">${abertas.length}</div></div>
+      <div class="kpi"><div class="kpi-label">Críticas em aberto</div><div class="kpi-value alert">${criticos}</div></div>
+      <div class="kpi"><div class="kpi-label">Resolvidas</div><div class="kpi-value resol">${resolvidas}</div></div>
+      <div class="kpi"><div class="kpi-label">Novas (30 dias)</div><div class="kpi-value">${novas}</div></div>
+      <div class="kpi"><div class="kpi-label">Mais antiga em aberto</div>
+        <div class="kpi-value">${maisAntiga ? diasDesde(maisAntiga.created_at) + '<small> dias</small>' : '—'}</div>
+        ${maisAntiga ? '<div class="kpi-sub">' + maisAntiga.codigo + '</div>' : ''}</div>
+    </div>`;
 }
 
-// ---- 02: chips (toggle simples, sem matriz) ----
+// ---- 02: saúde por disciplina (pior primeiro; clique abre o relatório filtrado) ----
+function barColor(pct){ if(pct<40) return '#C42828'; if(pct<70) return '#B8860B'; return '#1A6B48'; }
+function donutSvg(pct, color, size){
+  size = size || 64;
+  const sw = size > 100 ? 11 : 7, r=(size-sw)/2, c=2*Math.PI*r;
+  const offset = c - (pct/100)*c;
+  return `<svg class="donut" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <circle class="donut-track" cx="${size/2}" cy="${size/2}" r="${r}" stroke-width="${sw}"></circle>
+    <circle class="donut-fill" cx="${size/2}" cy="${size/2}" r="${r}" stroke-width="${sw}" stroke="${color}"
+      stroke-dasharray="${c}" stroke-dashoffset="${offset}" transform="rotate(-90 ${size/2} ${size/2})"></circle>
+    <text class="donut-label${size > 100 ? ' grande' : ''}" x="50%" y="52%" text-anchor="middle" dominant-baseline="middle">${pct}%</text>
+  </svg>`;
+}
+function renderHealthCards(){
+  const grid=document.getElementById('cardsGrid'); grid.innerHTML='';
+  const dados = disciplinasOrdenadas.map(d => {
+    const conf = CONFLICTS.filter(cf=>cf.disciplinas.includes(d));
+    const resolvidas = conf.filter(cf=>cf.status==='RESOLVIDO').length;
+    return { d, total: conf.length, resolvidas, abertas: conf.length - resolvidas,
+             pct: conf.length ? Math.round(resolvidas/conf.length*100) : 0,
+             crit: conf.filter(cf=>cf.alerta && cf.status!=='RESOLVIDO').length };
+  }).filter(x => x.total)
+    .sort((a,b) => a.pct - b.pct || b.abertas - a.abertas);   // pior primeiro
+
+  dados.forEach(x=>{
+    const col = getDiscColor(x.d);
+    const card=document.createElement('a'); card.className='card card-link';
+    card.href = linkRelatorio('&disc=' + encodeURIComponent(x.d));
+    card.title = 'Abrir o relatório filtrado por ' + x.d;
+    card.innerHTML = `
+      <div class="card-top">
+        <span class="d-tag" style="color:${col.c};background:${col.bg}">${x.d}</span>
+        ${x.crit>0 ? '<span class="crit-tag"><span class="dot"></span>'+x.crit+' crítico'+(x.crit===1?'':'s')+'</span>' : ''}
+      </div>
+      <div class="card-body">${donutSvg(x.pct, barColor(x.pct))}</div>
+      <div class="frac-row">${x.resolvidas}/${x.total} resolvidos${x.abertas ? ' · ' + x.abertas + ' em aberto' : ''}</div>`;
+    grid.appendChild(card);
+  });
+}
+
+// ---- 03: em aberto ao longo do tempo ----
 function renderChips(){
   const chipRow = document.getElementById('chipRow');
   chipRow.innerHTML='';
+
+  const per = document.createElement('div'); per.className = 'periodo';
+  [3, 6, 12].forEach(n => {
+    const b = document.createElement('button');
+    b.className = 'chip' + (mesesPeriodo === n ? ' on-neutro' : '');
+    b.textContent = n + ' meses';
+    b.onclick = () => { mesesPeriodo = n; renderChips(); renderTimeline(); };
+    per.appendChild(b);
+  });
+  chipRow.appendChild(per);
+
+  const tot = document.createElement('button');
+  tot.className = 'chip chip-total' + (mostrarTotal ? ' on-neutro' : '');
+  tot.textContent = 'Total do projeto';
+  tot.onclick = () => { mostrarTotal = !mostrarTotal; renderChips(); renderTimeline(); };
+  chipRow.appendChild(tot);
+
   disciplinasOrdenadas.forEach(d=>{
     const chip=document.createElement('button');
-    chip.className='chip'+(activeDiscs.has(d)?' on':'');
+    const on = destacadas.has(d);
+    chip.className='chip'+(on?' on':'');
     chip.textContent=d;
+    chip.title = on ? 'Tirar o destaque' : 'Destacar ' + d;
     const col=getDiscColor(d);
-    if(activeDiscs.has(d)){ chip.style.borderColor=col.c; chip.style.color=col.c; chip.style.background=col.bg; }
+    if(on){ chip.style.borderColor=col.c; chip.style.color=col.c; chip.style.background=col.bg; }
     chip.addEventListener('click', ()=>{
-      if(activeDiscs.has(d)) activeDiscs.delete(d); else activeDiscs.add(d);
+      if(destacadas.has(d)) destacadas.delete(d);
+      else {
+        // O total é bem maior que qualquer disciplina e achataria a escala:
+        // ao destacar uma disciplina, ele sai (dá para religar no chip).
+        if (!destacadas.size) mostrarTotal = false;
+        destacadas.add(d);
+      }
       renderChips(); renderTimeline();
     });
     chipRow.appendChild(chip);
   });
 }
 
-// ---- 03: conflitos em aberto ao longo do tempo ----
-// "Aberto no fim do mês X" = criado até o fim do mês E (ainda não resolvido, OU resolvido depois do fim do mês)
-function openSeriesFor(d){
-  return months.map(m => CONFLICTS.filter(cf=>
-    cf.disciplinas.includes(d) &&
-    new Date(cf.created_at) <= m.end &&
-    (cf.status!=='RESOLVIDO' || new Date(cf.updated_at) > m.end)
-  ).length);
-}
 function renderTimeline(){
   const svgNS="http://www.w3.org/2000/svg";
   const svg=document.getElementById('timelineSvg');
   svg.innerHTML='';
-  const active = disciplinasOrdenadas.filter(d=>activeDiscs.has(d));
-  const padL=30,padR=14,padT=14,padB=26,W=760,H=260;
+  const meses = lastMonths(mesesPeriodo);
+  const serie = filtro => meses.map(m => CONFLICTS.filter(cf => filtro(cf) && abertaEm(cf, m.end)).length);
+  const series = {};
+  disciplinasOrdenadas.forEach(d => { series[d] = serie(cf => cf.disciplinas.includes(d)); });
+  const serieTotal = serie(() => true);
+
+  const padL=34,padR=16,padT=14,padB=26,W=760,H=270;
   const plotW=W-padL-padR, plotH=H-padT-padB;
-  if(active.length===0){ const t=document.createElementNS(svgNS,'text'); t.setAttribute('x',W/2); t.setAttribute('y',H/2); t.setAttribute('text-anchor','middle'); t.textContent='Nenhuma disciplina selecionada'; svg.appendChild(t); document.getElementById('tlLegend').innerHTML=''; return; }
-  const allVals = active.flatMap(d=>openSeriesFor(d));
-  const maxVal = Math.max(2, ...allVals);
+  const valores = Object.values(series).flat().concat(mostrarTotal ? serieTotal : []);
+  const maxVal = Math.max(4, ...valores);
+  const passo = Math.max(1, Math.ceil(maxVal/4));
+  const topo = passo*4;
+  const X = i => padL + (meses.length===1 ? plotW/2 : (i/(meses.length-1))*plotW);
+  const Y = v => padT + plotH - (v/topo)*plotH;
+
   for(let i=0;i<=4;i++){
-    const y=padT+plotH-(i/4)*plotH;
+    const y=Y(i*passo);
     const line=document.createElementNS(svgNS,'line');
     line.setAttribute('x1',padL); line.setAttribute('x2',W-padR); line.setAttribute('y1',y); line.setAttribute('y2',y);
-    line.setAttribute('stroke','#E5E4E1'); line.setAttribute('stroke-width','1');
+    line.setAttribute('stroke','#EDECE9'); line.setAttribute('stroke-width','1');
     svg.appendChild(line);
-    const t=document.createElementNS(svgNS,'text'); t.setAttribute('x',padL-6); t.setAttribute('y',y+3); t.setAttribute('text-anchor','end'); t.textContent=Math.round((i/4)*maxVal); svg.appendChild(t);
+    const t=document.createElementNS(svgNS,'text'); t.setAttribute('x',padL-8); t.setAttribute('y',y+3); t.setAttribute('text-anchor','end'); t.textContent=i*passo; svg.appendChild(t);
   }
-  months.forEach((m,i)=>{
-    const x=padL+(i/(months.length-1))*plotW;
-    const t=document.createElementNS(svgNS,'text'); t.setAttribute('x',x); t.setAttribute('y',H-6); t.setAttribute('text-anchor','middle'); t.textContent=m.label; svg.appendChild(t);
+  meses.forEach((m,i)=>{
+    const t=document.createElementNS(svgNS,'text'); t.setAttribute('x',X(i)); t.setAttribute('y',H-6); t.setAttribute('text-anchor','middle'); t.textContent=m.label; svg.appendChild(t);
   });
-  function drawLine(values,color){
-    const pts=values.map((v,i)=>{ const x=padL+(i/(months.length-1))*plotW; const y=padT+plotH-(v/maxVal)*plotH; return [x,y]; });
+
+  function linha(valores, cor, largura, comPontos, rotulo){
+    const pts = valores.map((v,i)=>[X(i),Y(v)]);
     const path=document.createElementNS(svgNS,'path');
     path.setAttribute('d', pts.map((p,i)=>(i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' '));
-    path.setAttribute('fill','none'); path.setAttribute('stroke',color); path.setAttribute('stroke-width','2.3');
-    path.setAttribute('stroke-linecap','round');
+    path.setAttribute('fill','none'); path.setAttribute('stroke',cor); path.setAttribute('stroke-width',largura);
+    path.setAttribute('stroke-linecap','round'); path.setAttribute('stroke-linejoin','round');
     svg.appendChild(path);
-    pts.forEach(p=>{ const c=document.createElementNS(svgNS,'circle'); c.setAttribute('cx',p[0]); c.setAttribute('cy',p[1]); c.setAttribute('r','2.8'); c.setAttribute('fill',color); svg.appendChild(c); });
+    if(!comPontos) return;
+    pts.forEach((p,i)=>{
+      const c=document.createElementNS(svgNS,'circle'); c.setAttribute('cx',p[0]); c.setAttribute('cy',p[1]); c.setAttribute('r','3.2'); c.setAttribute('fill',cor);
+      // passar o mouse: "EST · ago: 24 em aberto"
+      const ttl=document.createElementNS(svgNS,'title'); ttl.textContent = rotulo + ' · ' + meses[i].label + ': ' + valores[i] + ' em aberto';
+      c.appendChild(ttl);
+      // área maior para facilitar o mouse
+      const alvo=document.createElementNS(svgNS,'circle'); alvo.setAttribute('cx',p[0]); alvo.setAttribute('cy',p[1]); alvo.setAttribute('r','9'); alvo.setAttribute('fill','transparent');
+      alvo.appendChild(ttl.cloneNode(true));
+      svg.appendChild(c); svg.appendChild(alvo);
+    });
   }
-  active.forEach(d=>{ drawLine(openSeriesFor(d), getDiscColor(d).c); });
-  document.getElementById('tlLegend').innerHTML = active.map(d=>'<span><span class="dot-leg" style="background:'+getDiscColor(d).c+'"></span>'+d+'</span>').join('');
+
+  // 1º as disciplinas em cinza (contexto), depois as destacadas, por cima o total
+  disciplinasOrdenadas.filter(d => !destacadas.has(d)).forEach(d => linha(series[d], '#DCDAD6', 1.3, false));
+  disciplinasOrdenadas.filter(d => destacadas.has(d)).forEach(d => linha(series[d], getDiscColor(d).c, 2.4, true, d));
+  if (mostrarTotal) linha(serieTotal, '#191919', 2.8, true, 'Total do projeto');
+
+  const leg = [];
+  if (mostrarTotal) leg.push('<span><span class="dot-leg" style="background:#191919;height:3px"></span>Total do projeto</span>');
+  disciplinasOrdenadas.filter(d => destacadas.has(d)).forEach(d =>
+    leg.push('<span><span class="dot-leg" style="background:'+getDiscColor(d).c+'"></span>'+d+'</span>'));
+  leg.push('<span><span class="dot-leg" style="background:#DCDAD6"></span>demais disciplinas</span>');
+  document.getElementById('tlLegend').innerHTML = leg.join('');
 }
 
-// ---- 04: saúde por disciplina ----
-function barColor(pct){ if(pct<40) return '#C42828'; if(pct<70) return '#B8860B'; return '#1A6B48'; }
-function donutSvg(pct, color){
-  const size=64, sw=7, r=(size-sw)/2, c=2*Math.PI*r;
-  const offset = c - (pct/100)*c;
-  return `<svg class="donut" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-    <circle class="donut-track" cx="${size/2}" cy="${size/2}" r="${r}" stroke-width="${sw}"></circle>
-    <circle class="donut-fill" cx="${size/2}" cy="${size/2}" r="${r}" stroke-width="${sw}" stroke="${color}"
-      stroke-dasharray="${c}" stroke-dashoffset="${offset}" transform="rotate(-90 ${size/2} ${size/2})"></circle>
-    <text class="donut-label" x="50%" y="52%" text-anchor="middle" dominant-baseline="middle">${pct}%</text>
-  </svg>`;
-}
-function renderHealthCards(){
-  const grid=document.getElementById('cardsGrid'); grid.innerHTML='';
-  disciplinasOrdenadas.forEach(d=>{
-    const conf = CONFLICTS.filter(cf=>cf.disciplinas.includes(d));
-    const total = conf.length;
-    if(total===0) return;
-    const resolved = conf.filter(cf=>cf.status==='RESOLVIDO');
-    const pct = Math.round((resolved.length/total)*100);
-    const crit = conf.filter(cf=>cf.alerta && cf.status!=='RESOLVIDO').length;
-    const bc = barColor(pct);
-    const col = getDiscColor(d);
-    const card=document.createElement('div'); card.className='card';
-    card.innerHTML = `
-      <div class="card-top">
-        <span class="d-tag" style="color:${col.c};background:${col.bg}">${d}</span>
-        ${crit>0 ? '<span class="crit-tag"><span class="dot"></span>'+crit+' crítico'+(crit===1?'':'s')+'</span>' : ''}
-      </div>
-      <div class="card-body">${donutSvg(pct, bc)}</div>
-      <div class="frac-row">${resolved.length}/${total} resolvidos</div>
-    `;
-    grid.appendChild(card);
+// ---- 04: idade das pendências ----
+// Quantas fichas em aberto há em cada faixa de idade, por disciplina:
+// mostra quem está acumulando atraso — não só quem tem muitas fichas.
+const FAIXAS = [
+  { ate: 15,       rotulo: 'até 15 dias', cor: '#E9D9A6' },
+  { ate: 30,       rotulo: '16–30 dias',  cor: '#D9A55B' },
+  { ate: 60,       rotulo: '31–60 dias',  cor: '#C26A3A' },
+  { ate: Infinity, rotulo: 'mais de 60 dias', cor: '#9E2A22' }
+];
+function faixaDe(cf){ const d = diasDesde(cf.created_at); return FAIXAS.findIndex(f => d <= f.ate); }
+
+function renderAging(){
+  const alvo = document.getElementById('agingRows'); alvo.innerHTML = '';
+  const abertas = CONFLICTS.filter(cf => cf.status !== 'RESOLVIDO');
+  if (!abertas.length) { alvo.innerHTML = '<div class="empty-note">Nenhuma ficha em aberto.</div>'; document.getElementById('agingLegend').innerHTML=''; return; }
+
+  const linhas = disciplinasOrdenadas.map(d => {
+    const fs = abertas.filter(cf => cf.disciplinas.includes(d));
+    const cont = FAIXAS.map(() => 0); fs.forEach(cf => cont[faixaDe(cf)]++);
+    const velha = fs.length ? Math.max(...fs.map(cf => diasDesde(cf.created_at))) : 0;
+    return { d, n: fs.length, cont, velha, peso: cont[3]*1000 + cont[2]*100 + cont[1]*10 + cont[0] };
+  }).filter(x => x.n).sort((a,b) => b.peso - a.peso);   // quem tem mais pendência antiga primeiro
+
+  const maxN = Math.max(...linhas.map(x => x.n));
+  linhas.forEach(x => {
+    const col = getDiscColor(x.d);
+    const row = document.createElement('a'); row.className = 'aging-row';
+    row.href = linkRelatorio('&disc=' + encodeURIComponent(x.d));
+    row.title = 'Abrir o relatório filtrado por ' + x.d;
+    const barra = x.cont.map((n,i) => n ? '<span style="flex:'+n+';background:'+FAIXAS[i].cor+'" title="'+FAIXAS[i].rotulo+': '+n+'"></span>' : '').join('');
+    row.innerHTML =
+      '<span class="d-tag" style="color:'+col.c+';background:'+col.bg+'">'+x.d+'</span>' +
+      '<span class="aging-track"><span class="aging-bar" style="width:'+(x.n/maxN*100)+'%">'+barra+'</span></span>' +
+      '<span class="aging-stats">'+x.n+' em aberto · mais antiga há '+x.velha+' dias</span>';
+    alvo.appendChild(row);
   });
+  document.getElementById('agingLegend').innerHTML = FAIXAS.map(f =>
+    '<span class="legend-swatch"><span class="sw" style="background:'+f.cor+'"></span>'+f.rotulo+'</span>').join('');
 }
 
-// ---- 05: conflitos por pavimento (barra de segmentos) ----
+// ---- 05: conflitos por pavimento (clique abre o relatório filtrado) ----
 function renderFloors(){
   const container=document.getElementById('buildingStack');
   container.innerHTML='';
@@ -435,7 +597,9 @@ function renderFloors(){
     const open = conf.filter(cf=>cf.status!=='RESOLVIDO');
     const resolved = conf.filter(cf=>cf.status==='RESOLVIDO');
     const total = conf.length;
-    const row=document.createElement('div'); row.className='floor';
+    const row=document.createElement('a'); row.className='floor';
+    row.href = linkRelatorio('&local=' + encodeURIComponent(loc));
+    row.title = 'Abrir o relatório filtrado por ' + loc;
     const plate=document.createElement('div'); plate.className='floor-plate';
     open.forEach(cf=>{
       const seg=document.createElement('div');
